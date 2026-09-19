@@ -1,0 +1,87 @@
+# OE Kildeanalyse
+
+**Systematisk dokumentanalyse i Claude Code og Codex, med kildebelegg og sporbar historikk.** Beskriv oppgaven i samtalen, avtal kriteriene, velg modell og tenkenivå, og la pluginen lese dokumentene etter samme plan. Inspiser sitater, rett vurderinger og eksporter til Excel eller videre rapportarbeid.
+
+Passer for å kode årsrapporter, kartlegge tiltak i rapporter og gjøre strukturerte dokumentgjennomganger. Hvert dokument leses i en egen CLI-sesjon. Arbeidet starter og fortsetter i appen; CLI-en er motoren under panseret. Egne dokumenter er normal arbeidsflyt, og eksempelfiler er valgfrie.
+
+## Last ned og del
+
+- **[Siste release](https://github.com/emilmsh/oe-kildeanalyse/releases/latest)** – versjonsnotater og filer.
+- **[Last ned Windows-pakken](https://github.com/emilmsh/oe-kildeanalyse/releases/latest/download/oe-kildeanalyse-windows.zip)** – samme ZIP for Claude Code, Codex eller begge.
+- [Alle releases](https://github.com/emilmsh/oe-kildeanalyse/releases).
+
+Repoet er privat. Mottakeren må ha GitHub-tilgang for å laste ned derfra. Du kan også sende ZIP-filen direkte til kolleger, uten at de trenger repo-tilgang. Pakken inneholder ingen innlogging, API-nøkler eller analysedata. Foreløpig støttes Windows, ikke macOS/Linux.
+
+## Installer
+
+1. Installer **Python 3.12 eller nyere** og CLI-en til appen du vil bruke (Claude Code og/eller Codex). Logg inn med din egen abonnementskonto. Skrivebordsappen alene er ikke tilstrekkelig dersom CLI-en mangler på PATH.
+2. Pakk ut ZIP-filen og dobbeltklikk **installer.cmd**. Velg Claude Code, Codex eller begge.
+3. Start en ny lokal samtale i valgt app med OE Kildeanalyse aktivert.
+
+Du kan også kjøre `installer.cmd claude`, `installer.cmd codex` eller `installer.cmd begge` fra PowerShell med `./` foran filnavnet. Første serveroppstart henter Python-avhengigheter fra PyPI. Ingen separat API-nøkkel brukes.
+
+Installasjonen kopierer pluginen til `%LOCALAPPDATA%/oe-kildeanalyse/plugins/<app>/oe-kildeanalyse` og registrerer markedsplassen `oe-kildeanalyse-lokal` med appens CLI. Codex får lokale Python- og serverstier generert på mottakerens PC. Begge appene bruker samme analysekjerne. Etter vellykket installasjon kan den utpakkede nedlastingsmappen slettes; behold installasjonsmappen i LocalAppData.
+
+**Oppdatering:** Last ned ny ZIP og kjør samme installer på nytt, og start deretter en ny samtale. Hvis en eldre utviklingsinstallasjon bruker samme markedsplassnavn fra en annen mappe, stopper Claude-installasjonen med forklaring uten å endre den registreringen. Oppdater den gamle kopien med `claude plugin marketplace update oe-kildeanalyse-lokal` og `claude plugin update oe-kildeanalyse@oe-kildeanalyse-lokal`, eller fjern den gamle markedsplassregistreringen før du installerer fra ZIP. Fjern/deaktiver en eldre Codex-installasjon fra `personal` dersom du bytter til ZIP-installasjonen, så samme MCP-server ikke lastes to ganger.
+
+Se [START_HER.md](START_HER.md) for kort brukerveiledning.
+
+## Start en analyse
+
+En vanlig mappe med PDF-filer er nok. Det kreves ingen spesielle filnavn eller Git-repo. Mappeimport tar PDF-er direkte i mappen, ikke undermapper; oppgi flere mapper ved behov. Filene må finnes lokalt og ha tekstlag. En enkel arbeidsmappe kan se slik ut:
+
+```text
+Min analyse/
+  dokumenter/
+    rapport-a.pdf
+    rapport-b.pdf
+  kriterier.json
+```
+
+Du trenger bare PDF-ene før start. Assistenten kan lage kriteriefilen sammen med deg. Åpne arbeidsmappen i appen og gi den tilgang til dokumentene og mulighet til å skrive kriteriefilen. Pluginen trenger ikke ligge i arbeidsmappen.
+
+> Bruk OE Kildeanalyse på PDF-ene i [full mappesti]. Jeg vil undersøke [problemstilling]. Hjelp meg å formulere kriterier og svaralternativer. Bruk claude_cli med sonnet og high. Vis planen og lesedekningen før vi starter. Etter min godkjenning: kjør dokumentene, vis svar med kildebelegg og eksporter resultatene.
+
+I Codex kan du erstatte motorvalget med `codex_cli`, for eksempel modellen `gpt-5.6-terra` og nivået `high`. Motoren kan velges uavhengig av appen.
+
+## Modell, kontroll og resultater
+
+| Lesemotor | Modell når ingen annen er valgt | Tenkenivå for nye planer |
+|---|---|---|
+| Claude Code (`claude_cli`) | `sonnet` | `high` |
+| Codex (`codex_cli`) | `gpt-5.6-terra` | `high` |
+
+Du kan velge et annet modellnavn eller full modell-ID. Et alias som `sonnet` er ikke en låst modellversjon. Tenkenivåene er `low`, `medium`, `high`, `xhigh` og `max`; Codex har også `ultra`. Tilgjengelighet avhenger av modell og konto. CLI-en kan tilpasse støttede nivåer; ønsket nivå registreres, mens faktisk nivå merkes ukjent når det ikke rapporteres.
+
+Valgene gjelder lesekjøringene og arves ikke fra app-samtalens modellinnstilling. Planen godkjennes før start. Endringer gir ny planversjon og endrer ikke tidligere kjøringer. Standard tidsgrense er 600 sekunder per dokument, og kan endres i planen.
+
+Hvert svar har kriterium, vurdering og belegg med fysisk PDF-side og sitat. Originale svar og senere rettelser bevares. KI-svar starter som «ikke kontrollert»; registrert menneskelig kontroll bygger på brukerens vurdering.
+
+Pluginen bevarer dokumentkopier og lagrer prosjekter, planer, kjøringer og eksport i `%LOCALAPPDATA%/oe-kildeanalyse`. Begge appene bruker dette lageret på samme PC. `OE_KILDEANALYSE_DATA` kan velge en annen datamappe. Eksportverktøyet viser resultatstien; du kan be assistenten kopiere eksporten til arbeidsmappen. CSV har semikolon og UTF-8 med BOM; JSON og Markdown følger med. Endringer i original-PDF-ene endrer ikke allerede importerte kopier.
+
+## Fem årsrapporter som eksempel
+
+[Startprompt og oppgave](eksempler/arsrapporter-2024/STARTPROMPT.md) undersøker egen bruk av KI i Datatilsynet, Språkrådet, Forbrukerrådet, Medietilsynet og Kulturtanken. Utvalget er illustrativt, ikke representativt. [Kildelisten](eksempler/arsrapporter-2024/kilder.json) peker til rapportutgivernes PDF-er.
+
+Utviklingskopi: kjør `.venv/Scripts/python.exe bin/hent_arsrapporter.py`. Rapportene legges lokalt i `eksempler/arsrapporter-2024/dokumenter/`. PDF-ene legges ikke i Git eller plugin-releases. Scriptet kan også kjøres med vanlig Python; `pypdf` gir kontroll av tekstlag og sidetall.
+
+## Begrensninger
+
+PDF med tekstlag og ett dokument per lesekjøring støttes. OCR, DOCX og automatisk oppdeling av store dokumenter er ikke implementert. Lange rapporter kan overskride modellens kontekst; lange inputvisninger avkortes. CLI-flaggene begrenser kontekst og verktøy, men gir ikke full OS-isolasjon eller beskytter resultatlageret mot direkte filskriving fra samme bruker. Faktisk kvotebelastning og eventuell ekstraforbruksordning bestemmes av abonnementet, ikke CLI-ens listepris-estimat.
+
+## Utvikling og releases
+
+- `src/kildeanalyse/`: felles analyse-, lagrings- og eksportkode; `adaptere/` kobler til CLI-ene.
+- `skills/kildeanalyse/SKILL.md`: arbeidsveiledningen som appen laster.
+- `bin/installer.py`: felles installasjon; `bin/lag_release.py`: bygger én ren ZIP og SHA-256-fil.
+- `tests/`: lokale kontroller og valgfrie syntetiske eksempler.
+- `dist/v<versjon>/`: generert distribusjon; skal ikke redigeres eller legges i Git.
+- [UTVIKLINGSSTRATEGI.md](UTVIKLINGSSTRATEGI.md): beslutninger og videre utvikling. [Testlogg](tests/TESTLOGG.md): gjennomførte kontroller.
+
+```powershell
+./oppsett.cmd
+.venv/Scripts/python.exe -m pytest -q
+.venv/Scripts/python.exe bin/lag_release.py
+```
+
+Ved en ny release oppdateres versjonen i `pyproject.toml`, `src/kildeanalyse/__init__.py` og plugin-/markedsplassmanifestene. Bygg ZIP, kontroller installasjon, commit og push, og opprett en GitHub Release med ZIP og `SHA256SUMS.txt`. Det stabile filnavnet gjør at nedlastingslenken øverst alltid peker til siste release.

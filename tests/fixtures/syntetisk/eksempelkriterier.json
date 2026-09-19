@@ -1,0 +1,35 @@
+{
+  "_merknad": "EKSEMPELKRITERIER for teknisk testing. Ikke faglig godkjent. Kollegaens faglige kriterier for årsrapportprosjektet erstatter disse når de foreligger.",
+  "navn": "Eksempel: inkluderingsarbeid i årsrapporter",
+  "versjon": "eksempel-1",
+  "analyseenhet": "ett dokument (én årsrapport) per kjøring",
+  "leseregel_ikke_omtalt": "Svaret 'ikke_omtalt' er bare gyldig når hele dokumentet er lest (lesedekning 100 prosent). Uleselig materiale gir stopp, aldri 'ikke_omtalt'.",
+  "kriterier": [
+    {
+      "id": "K1",
+      "navn": "omtaler_inkludering",
+      "spørsmål": "Omtaler rapporten arbeidstrening, praksis eller annen arbeidsinkludering av personer som står utenfor arbeidslivet?",
+      "tillatte_svar": ["ja", "nei", "ikke_omtalt"],
+      "krever_belegg_ved": ["ja", "nei"],
+      "sokeord": ["arbeidstrening", "praksis", "arbeidsinkludering"]
+    },
+    {
+      "id": "K2",
+      "navn": "antall_personer",
+      "spørsmål": "Hvor mange personer i arbeidstrening eller praksis oppgir rapporten for året?",
+      "tillatte_svar": ["<heltall>", "ikke_oppgitt", "uklart"],
+      "regel": "Bruk 'uklart' hvis rapporten oppgir motstridende tall, og oppgi begge steder som belegg.",
+      "krever_belegg_ved": ["<heltall>", "uklart"],
+      "sokeord": ["personer i arbeidstrening", "personer i praksis", "deltakere"]
+    },
+    {
+      "id": "K3",
+      "navn": "samarbeid_nav",
+      "spørsmål": "Nevner rapporten samarbeid med NAV eller en tiltaksarrangør om arbeidsinkludering?",
+      "tillatte_svar": ["ja", "nei", "ikke_omtalt"],
+      "krever_belegg_ved": ["ja", "nei"],
+      "sokeord": ["NAV", "tiltaksarrangør"]
+    }
+  ],
+  "_sokeord_merknad": "Feltet sokeord brukes bare av den simulerte motoren for å finne en setning i dokumentet. Ekte motorer får ikke feltet."
+}

@@ -1,0 +1,13 @@
+{
+  "name": "oe-kildeanalyse-lokal",
+  "description": "Lokal markedsplass for OE Kildeanalyse i Claude Code og Codex.",
+  "owner": { "name": "Oslo Economics" },
+  "plugins": [
+    {
+      "name": "oe-kildeanalyse",
+      "description": "Etterprøvbare lesekjøringer med lokal kjørekomponent.",
+      "source": "./",
+      "version": "0.4.0"
+    }
+  ]
+}

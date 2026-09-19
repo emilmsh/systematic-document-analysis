@@ -1,0 +1,19 @@
+{
+  "name": "oe-kildeanalyse",
+  "version": "0.4.0",
+  "description": "Etterpr\u00f8vbare dokumentanalyser med plan, belegg, kontrollhistorikk og eksport.",
+  "author": {
+    "name": "Oslo Economics"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OE Kildeanalyse",
+    "shortDescription": "Analyser dokumenter med sporbarhet og kildebelegg.",
+    "longDescription": "Arbeid med analysen i Codex eller Claude Code. Lokal kj\u00f8rekomponent med valgfri Codex- eller Claude-motor, registrert input og menneskelig kontroll.",
+    "developerName": "Oslo Economics",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Start en dokumentanalyse med OE Kildeanalyse."
+  },
+  "mcpServers": "./.mcp.json"
+}

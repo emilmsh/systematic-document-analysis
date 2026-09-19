@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+eksempler/arsrapporter-2024/dokumenter/
+eksempler/arsrapporter-2024/lesbarhet.json
+tmp/
+*.err
+*.log
+.env
+.env.*
+*.sqlite
+*.sqlite3
+*.db
