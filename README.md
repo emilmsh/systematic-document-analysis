@@ -1,133 +1,141 @@
-# OE Kildeanalyse
+# Systematic Document Analysis
 
-**Systematisk dokumentanalyse i ChatGPT desktop/Codex og Claude Code, med kildebelegg og sporbar historikk.** Beskriv oppgaven i samtalen, avtal kriteriene, velg modell og tenkenivå, og la pluginen lese dokumentene etter samme plan. Inspiser sitater, rett vurderinger og eksporter til Excel eller videre rapportarbeid.
+**Analyse documents against agreed criteria, with source quotations, human review and an audit trail. Work in English or Norwegian, in Codex or Claude Code.**
 
-Passer for å kode årsrapporter, kartlegge tiltak i rapporter og gjøre strukturerte dokumentgjennomganger. Hvert dokument leses i en egen CLI-sesjon eller et separat API-kall. Arbeidet starter og fortsetter i vertsappens samtale. Egne dokumenter er normal arbeidsflyt, og eksempelfiler er valgfrie.
+Use your own PDFs to classify annual reports, map policies or review evidence across documents. Discuss the question in your app, agree on a plan, choose a reader and inspect its answers. Each document gets a separate recorded attempt. Export the results for Excel or further reporting. Examples and simulation are optional.
 
-## To uavhengige valg
+[Norsk veiledning](README.no.md) · [Start here](START_HERE.md) · [Start her på norsk](START_HER.md)
 
-| Lag | Valg | Ansvar |
+## Download and install
+
+- **[Latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest)**
+- **[Windows ZIP for both apps](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)**
+
+This repository is private. Colleagues need repository access to download from GitHub; you can also share the ZIP directly. It contains no credentials, source documents or analysis data.
+
+1. Install Python 3.12+ and the CLI for your host app: Codex and/or Claude Code. The CLI must be on PATH. Sign in with your own account.
+2. Extract the ZIP and run `installer.cmd`. Choose Claude Code, Codex or both. PowerShell alternatives: `./installer.cmd claude`, `./installer.cmd codex`, `./installer.cmd both`.
+3. Start a new local conversation with **Systematic Document Analysis** enabled. The first server start installs Python dependencies from PyPI.
+
+The installer keeps separate copies in `%LOCALAPPDATA%/systematic-document-analysis/plugins/<app>/systematic-document-analysis`, registered under `systematic-document-analysis-local`. Keep these installed copies; you can delete the extracted download after installation. To update, run the new installer and start a new conversation. A conflicting marketplace registered from another directory is reported without replacing it.
+
+**Upgrading from OE Kildeanalyse:** install the new package, then disable the old plugin in each app to avoid loading two servers. Existing analysis databases are reused in their original location; they are not moved or rewritten. Old tool names, criteria fields and environment variables remain supported. See [compatibility](#data-and-compatibility).
+
+## Two independent choices
+
+| Layer | Choices | Role |
 |---|---|---|
-| Vertsapp / orkestrator | ChatGPT desktop med lokal Codex-plugin, eller Claude Code | Dialog, kriterier, planlegging, godkjenning og oppfølging |
-| Arbeidsagent / lesemotor | Codex CLI, Claude Code CLI, OpenAI API, Anthropic API, OpenRouter eller kompatibelt API | Ett dokument og ett registrert forsøk om gangen |
+| Host / orchestrator | Codex desktop local plugin, or Claude Code | Conversation, criteria, planning, approval and review |
+| Reader | Codex CLI, Claude Code CLI, OpenAI API, Anthropic API, OpenRouter, compatible API | One document and one recorded attempt at a time |
 
-Begge vertsappene tilbyr samme MCP-verktøy, arbeidsrutine og motorvalg. Modellvalget i vertsamtalen gjelder ikke automatisk arbeidsagentene. Lokal ChatGPT desktop/Codex-støtte innebærer ikke en egen integrasjon i vanlig ChatGPT-nettchat eller Claude Desktop.
+Both hosts use the same MCP tools and workflow. This is a local Codex plugin, not an integration into ordinary ChatGPT web chat or Claude Desktop. Reader model settings do not inherit the host conversation's settings.
 
-CLI-motorene har leverandørens agentlag (harness) rundt modellen, selv om vi begrenser verktøy og kontekst. API-motorene bruker ett direkte kall uten verktøy eller agentløkke. Samme modellnavn og tenkenivå garanterer derfor ikke identisk atferd på tvers av motorene. Kriterier, dokumenttekst, validering og historikk er felles.
+CLI readers include the vendor's agent harness, with context and tools restricted by the adapter. API readers make a direct call without a tool loop. The same model name and effort do not guarantee equivalent behaviour across these paths.
 
-## Last ned og del
+## Start with your documents
 
-- **[Siste release](https://github.com/emilmsh/oe-kildeanalyse/releases/latest)** – versjonsnotater og filer.
-- **[Last ned Windows-pakken](https://github.com/emilmsh/oe-kildeanalyse/releases/latest/download/oe-kildeanalyse-windows.zip)** – samme ZIP for Claude Code, Codex eller begge.
-- [Alle releases](https://github.com/emilmsh/oe-kildeanalyse/releases).
-
-Repoet er privat. Mottakeren må ha GitHub-tilgang for å laste ned derfra. Du kan også sende ZIP-filen direkte til kolleger, uten at de trenger repo-tilgang. Pakken inneholder ingen innlogging, API-nøkler eller analysedata. Foreløpig støttes Windows, ikke macOS/Linux.
-
-## Installer
-
-1. Installer **Python 3.12 eller nyere** og CLI-en til appen du vil bruke (Claude Code og/eller Codex). Logg inn med din egen abonnementskonto. Skrivebordsappen alene er ikke tilstrekkelig dersom CLI-en mangler på PATH.
-2. Pakk ut ZIP-filen og dobbeltklikk **installer.cmd**. Velg Claude Code, Codex eller begge.
-3. Start en ny lokal samtale i valgt app med OE Kildeanalyse aktivert.
-
-Du kan også kjøre `installer.cmd claude`, `installer.cmd codex` eller `installer.cmd begge` fra PowerShell med `./` foran filnavnet. Første serveroppstart henter Python-avhengigheter fra PyPI. API-nøkkel er bare nødvendig hvis du velger en API-lesemotor; CLI-ene brukes fortsatt til pluginregistrering.
-
-Installasjonen kopierer pluginen til `%LOCALAPPDATA%/oe-kildeanalyse/plugins/<app>/oe-kildeanalyse` og registrerer markedsplassen `oe-kildeanalyse-lokal` med appens CLI. Codex får lokale Python- og serverstier generert på mottakerens PC. Begge appene bruker samme analysekjerne. Etter vellykket installasjon kan den utpakkede nedlastingsmappen slettes; behold installasjonsmappen i LocalAppData.
-
-**Oppdatering:** Last ned ny ZIP og kjør samme installer på nytt, og start deretter en ny samtale. Hvis en eldre utviklingsinstallasjon bruker samme markedsplassnavn fra en annen mappe, stopper Claude-installasjonen med forklaring uten å endre den registreringen. Oppdater den gamle kopien med `claude plugin marketplace update oe-kildeanalyse-lokal` og `claude plugin update oe-kildeanalyse@oe-kildeanalyse-lokal`, eller fjern den gamle markedsplassregistreringen før du installerer fra ZIP. Fjern/deaktiver en eldre Codex-installasjon fra `personal` dersom du bytter til ZIP-installasjonen, så samme MCP-server ikke lastes to ganger.
-
-Se [START_HER.md](START_HER.md) for kort brukerveiledning.
-
-## Start en analyse
-
-En vanlig mappe med PDF-filer er nok. Det kreves ingen spesielle filnavn eller Git-repo. Mappeimport tar PDF-er direkte i mappen, ikke undermapper; oppgi flere mapper ved behov. Filene må finnes lokalt og ha tekstlag. En enkel arbeidsmappe kan se slik ut:
+A normal folder of local PDFs with text layers is enough. No Git repository or special filenames are required. Folder import includes PDFs directly inside the folder; supply subfolders separately.
 
 ```text
-Min analyse/
-  dokumenter/
-    rapport-a.pdf
-    rapport-b.pdf
-  kriterier.json
+My analysis/
+  documents/
+    report-a.pdf
+    report-b.pdf
+  criteria.json       # the assistant can create this with you
 ```
 
-Du trenger bare PDF-ene før start. Assistenten kan lage kriteriefilen sammen med deg. Åpne arbeidsmappen i appen og gi den tilgang til dokumentene og mulighet til å skrive kriteriefilen. Pluginen trenger ikke ligge i arbeidsmappen.
+Open this working folder in the host app and grant it access to your documents and permission to write the criteria file. The plugin itself is installed elsewhere.
 
-> Bruk OE Kildeanalyse på PDF-ene i [full mappesti]. Jeg vil undersøke [problemstilling]. Hjelp meg å formulere kriterier og svaralternativer. Bruk claude_cli med sonnet og high. Vis planen og lesedekningen før vi starter. Etter min godkjenning: kjør dokumentene, vis svar med kildebelegg og eksporter resultatene.
+> Use Systematic Document Analysis on the PDFs in [absolute folder path]. Investigate [question]. Help me define criteria and answer options. Use codex_cli with gpt-5.6-terra and high reasoning effort. Write commentary in English. Show the plan, text coverage and exact input package before I approve execution. Then run the documents, show answers with quotations and physical PDF pages, and export the results. Do not register human review on my behalf.
 
-I Codex kan du erstatte motorvalget med `codex_cli`, for eksempel modellen `gpt-5.6-terra` og nivået `high`. Motoren kan velges uavhengig av appen.
+For Claude, you can choose `claude_cli`, model `sonnet`, effort `high`. Either reader works from either host.
 
-## Modell, kontroll og resultater
+## Languages and criteria
 
-| Lesemotor | Modell når ingen annen er valgt | Tenkenivå for nye planer |
+The assistant responds in your language. Each plan records `language: en` or `nb` for reader commentary and notes. Quotations remain verbatim in the source language; answer labels stay exactly as agreed. A language change creates a new plan version. Older plans without a language field are treated as Norwegian.
+
+Criteria files can use English or existing Norwegian keys. For example:
+
+```json
+{
+  "name": "AI governance",
+  "version": "1",
+  "criteria": [{
+    "id": "ai_policy",
+    "name": "Documented AI policy",
+    "question": "Does the report explicitly describe an adopted AI policy?",
+    "allowed_answers": ["yes", "no", "not_mentioned"],
+    "evidence_required_for": ["yes", "no"],
+    "rule": "Use no only for an explicit statement that no policy exists."
+  }]
+}
+```
+
+`not_mentioned` and `not_reported` require full document coverage, like their Norwegian equivalents. The legacy marker `<heltall>` allows integer answers. English tools accept `engine_settings` with `max_output_tokens`, `timeout_seconds`, `base_url` and `provider`; existing Norwegian setting names also work. Do not supply API keys through tools or criteria files.
+
+English MCP tools are the primary interface. Norwegian tools remain as compatibility aliases. Some stored status codes and diagnostics are still Norwegian; the assistant explains them in your language. The internal Python module and audit schema retain their original names for compatibility.
+
+## Models, review and export
+
+| Reader engine | Default model | Default effort |
 |---|---|---|
-| Claude Code (`claude_cli`) | `sonnet` | `high` |
-| Codex (`codex_cli`) | `gpt-5.6-terra` | `high` |
-| OpenAI (`openai_api`) | Må velges eksplisitt | `standard` |
-| Anthropic (`anthropic_api`) | Må velges eksplisitt | `standard` |
-| OpenRouter (`openrouter_api`) | Må velges eksplisitt | `standard` |
-| Annet kompatibelt API (`kompatibel_api`) | Må velges eksplisitt | `standard` |
+| `claude_cli` | `sonnet` | `high` |
+| `codex_cli` | `gpt-5.6-terra` | `high` |
+| `openai_api`, `anthropic_api`, `openrouter_api`, `kompatibel_api` | Explicit provider model ID required | `standard` (parameter omitted) |
 
-Du kan velge et annet modellnavn eller full modell-ID. Et alias som `sonnet` er ikke en låst modellversjon. Tenkenivåene er `low`, `medium`, `high`, `xhigh` og `max`; Codex CLI har også `ultra`. API-valget `standard` utelater effort-parameteren og bruker leverandørens standard. OpenAI, OpenRouter og kompatible API-er kan også forespørres med `none` og `minimal` når modellen støtter dem. Tilgjengelighet avhenger av modell og konto. CLI-en og OpenRouter kan tilpasse nivåer; ønsket nivå registreres, mens faktisk nivå merkes ukjent når det ikke rapporteres.
+Choose model and effort in the plan. Supported requested levels depend on the engine and model: `low`, `medium`, `high`, `xhigh`, `max`; Codex CLI also allows `ultra`. OpenAI/OpenRouter/compatible APIs additionally accept `none` and `minimal` where supported. An alias such as `sonnet` is not a pinned model version. The requested settings are recorded; actual effort remains unknown when the provider does not report it. The default timeout is 600 seconds per document.
 
-Valgene gjelder lesekjøringene og arves ikke fra app-samtalens modellinnstilling. Planen godkjennes før start. Endringer gir ny planversjon og endrer ikke tidligere kjøringer. Standard tidsgrense er 600 sekunder per dokument, og kan endres i planen.
+Inspect and approve the plan before execution. Changes create a new version without changing earlier attempts. Automatic checks validate answer labels, source quotes and page coverage; they do not establish human review. A person can approve, correct or reject assessments with a recorded reason. Original answers remain available.
 
-Hvert svar har kriterium, vurdering og belegg med fysisk PDF-side og sitat. Originale svar og senere rettelser bevares. KI-svar starter som «ikke kontrollert»; registrert menneskelig kontroll bygger på brukerens vurdering.
+Exports include English `results.csv`, `evidence.csv`, `attempts.csv`, `reviews.csv`, `README.md` and `plan-summary.md`, alongside legacy files and the raw audit trail. CSV uses semicolons and UTF-8 with BOM. English CSV headers are translated; recorded labels, quotations and status codes are preserved, with a legend in the export README. Editing an export does not alter the authoritative database.
 
-Pluginen bevarer dokumentkopier og lagrer prosjekter, planer, kjøringer og eksport i `%LOCALAPPDATA%/oe-kildeanalyse`. Begge appene bruker dette lageret på samme PC. `OE_KILDEANALYSE_DATA` kan velge en annen datamappe. Eksportverktøyet viser resultatstien; du kan be assistenten kopiere eksporten til arbeidsmappen. CSV har semikolon og UTF-8 med BOM; JSON og Markdown følger med. Endringer i original-PDF-ene endrer ikke allerede importerte kopier.
+## Optional API keys
 
-## Valgfrie API-nøkler
-
-API-støtten i denne kildeutgaven er kontrollert lokalt med falsk HTTP-transport, ikke med betalte modellkall. Modelltilgang, leverandørens parametertolkning og faglig kvalitet må kontrolleres ved faktisk bruk.
-
-| Motor | Lokal miljøvariabel | API-format |
+| Reader | Local environment variable | Protocol |
 |---|---|---|
 | `openai_api` | `OPENAI_API_KEY` | OpenAI Responses |
 | `anthropic_api` | `ANTHROPIC_API_KEY` | Anthropic Messages |
 | `openrouter_api` | `OPENROUTER_API_KEY` | OpenRouter Chat Completions |
-| `kompatibel_api` | `OE_KILDEANALYSE_CUSTOM_API_KEY` | OpenAI-kompatibelt Chat Completions |
+| `kompatibel_api` | `SDA_CUSTOM_API_KEY` | OpenAI-compatible Chat Completions |
 
-Sett nøkkelen som en **brukermiljøvariabel i Windows** (søk etter «Rediger miljøvariablene for kontoen din»), og avslutt og start vertsappen helt på nytt. Ikke lim nøkkelen inn i samtalen, kriteriefilen eller motorinnstillingene. Miljøvariabler er lokal konfigurasjon, ikke et kryptert nøkkelhvelv. `vis_oppsett` viser bare om nøkkelen er tilgjengelig; det gjør ingen API-kall. Både vertsappene og deres lokale prosesser kjører under din bruker.
+Set keys using Windows **user environment variables**, then fully restart the host app. Do not paste keys into conversations, criteria or plans. `show_setup` checks local availability without API calls. Environment variables are local configuration, not an encrypted vault. API use is billed separately by the chosen provider.
 
-Nøkkelverdien brukes bare som autentisering ved kall; den tas ikke inn i input, plan eller eksport. Eventuelt ekko av kjente API-nøkler i råsvar maskeres. Ved CLI-kjøring fjernes API-nøklene fra underprosessmiljøet, og abonnementsinnlogging kontrolleres. API-nøkler aktivert på PC-en bytter altså ikke lesemotor automatisk.
+Keys authenticate requests and are excluded from stored inputs and exports; known key echoes are masked. CLI subprocesses strip API keys and require subscription sign-in. Configuring a key does not switch the selected reader.
 
-Eksempel i **begge vertsappene**:
+API plans show the recipient endpoint, explicit model, effort and output-token budget (default 16384). The exact request body without authentication headers is previewed, hashed and exported. Reported model, request ID and usage are retained when available. Unsupported parameters fail visibly instead of being silently removed.
 
-> Bruk OE Kildeanalyse på PDF-ene i [full mappesti]. Velg openai_api med gpt-6-astra og high som lesemotor. Jeg har konfigurert nøkkelen lokalt. Vis kriterier, mottaker, modell, tenkenivå og tokenbudsjett før godkjenning. Ikke start modellkall før planen er godkjent.
+OpenRouter accepts an optional `provider`; otherwise it chooses the provider for the named model. Requests require parameter support and disable provider fallbacks. Automatic model routing and model variant suffixes are unsupported. Requested effort may be translated by OpenRouter. Anthropic uses adaptive thinking when explicit effort is requested, requiring a model that supports it.
 
-API krever leverandørens modell-ID, ikke CLI-aliaset `sonnet`. For OpenRouter brukes for eksempel `openai/gpt-6-astra`. Velg bare modeller som støtter strukturert JSON etter skjemaet. Hvis en modell ikke støtter de valgte parametrene, beholdes feilen; pluginen fjerner dem ikke automatisk.
+For `kompatibel_api`, set an explicit HTTPS `base_url`, e.g. `https://provider.example/v1`. The provider must implement `/chat/completions` and JSON-schema `response_format`, plus `reasoning_effort` when requested. Compatibility is not a claim that every provider or model has been tested. Redirects and environment proxy settings are disabled.
 
-API-motorinnstillinger kan være `{"maks_output_tokens": 16384, "tidsavbrudd_sek": 600}`. Grensen på output gjelder leverandørens tokenbudsjett, som kan omfatte tenking; den er ikke en kronergrense. Anthropic bruker adaptive thinking når et eksplisitt tenkenivå er valgt, og krever en modell som støtter dette.
+Errors, quota stops, timeouts and cancellation stop the queue without automatic retry or engine switching. A cancelled connection does not guarantee the provider stopped processing or billing. API adapters are locally checked with fake HTTP transport; no paid calls were made for these checks.
 
-OpenRouter kan i tillegg bruke `{"provider": "OpenAI"}` for å begrense leverandøren. Uten dette velger OpenRouter leverandør for den navngitte modellen; dette vises i planen. Vi sender `require_parameters: true` og `allow_fallbacks: false`. Automatisk modellruting og variant-suffikser støttes ikke. OpenRouter kan oversette tenkenivåer, så faktisk levert nivå er fortsatt ukjent.
+## Data and compatibility
 
-For andre leverandører velges `kompatibel_api`, eksplisitt modell-ID og `{"base_url": "https://leverandor.example/v1"}`. Nøkkelen for denne motoren sendes til akkurat denne mottakeren. API-et må støtte `/chat/completions` og `response_format` med JSON-skjema; ved valgt tenkenivå må det også støtte `reasoning_effort`. «Kompatibel» betyr ikke at alle leverandører eller modeller er prøvd. Denne utgaven følger ikke HTTP-omdirigeringer og bruker ikke proxy-/sertifikatinnstillinger fra miljøvariabler.
+Fresh installations use `%LOCALAPPDATA%/systematic-document-analysis` for analysis data. Both hosts share this store. `SDA_DATA` selects a different directory. If the legacy `%LOCALAPPDATA%/oe-kildeanalyse/kildeanalyse.sqlite` exists, it is reused. If both default stores contain databases, choose explicitly with `SDA_DATA`; neither is merged or deleted.
 
-API-planen og inputpakken viser mottaker, modell, nivå, tokenbudsjett og forespørselen uten autentiseringsheaders. Den samme forespørselen inngår i inputhash og eksport. Rapportert modell, request-ID og forbruk bevares når leverandøren oppgir det. Feil, kvotestopp, tidsavbrudd og avbrudd gir ingen automatisk retry eller bytte til en annen motor; leverandøren kan likevel ha behandlet og fakturert et avbrutt kall.
+Legacy `OE_KILDEANALYSE_DATA` and `OE_KILDEANALYSE_CUSTOM_API_KEY` remain fallback aliases. Advanced runtime overrides `OE_KILDEANALYSE_PYTHON`, `OE_KILDEANALYSE_CODEX_BIN` and `OE_KILDEANALYSE_CLAUDE_BIN` retain their names. The internal module `kildeanalyse`, SQLite filename, technical engine IDs and recorded schemas remain stable. Imported source copies and historical raw attempts are not rewritten. Use `show_setup` to see the actual data directory; export returns its exact output path.
 
-API-formatene følger [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [OpenAI reasoning](https://developers.openai.com/api/docs/guides/reasoning), [Anthropic Structured Outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs), [Anthropic effort](https://platform.claude.com/docs/en/build-with-claude/effort) og [OpenRouter Structured Outputs](https://openrouter.ai/docs/guides/features/structured-outputs).
+## Limits and optional examples
 
-## Fem årsrapporter som eksempel
+Windows and PDFs with text layers are supported. OCR, DOCX, automatic chunking of large documents and cross-document synthesis are not implemented. Entire extracted documents are sent to the reader and may exceed its context window; long previews can be truncated. CLI restrictions do not provide full operating-system isolation. The host runs as the same local user and can access the data directory outside MCP.
 
-[Startprompt og oppgave](eksempler/arsrapporter-2024/STARTPROMPT.md) undersøker egen bruk av KI i Datatilsynet, Språkrådet, Forbrukerrådet, Medietilsynet og Kulturtanken. Utvalget er illustrativt, ikke representativt. [Kildelisten](eksempler/arsrapporter-2024/kilder.json) peker til rapportutgivernes PDF-er.
+Five optional Norwegian annual reports are listed in [the source manifest](eksempler/arsrapporter-2024/kilder.json), with a [Norwegian starting task](eksempler/arsrapporter-2024/STARTPROMPT.md). Download using `python bin/hent_arsrapporter.py`; PDFs stay outside Git and releases. The selection is illustrative, not representative. Synthetic fixtures are developer aids, never mandatory for normal work.
 
-Utviklingskopi: kjør `.venv/Scripts/python.exe bin/hent_arsrapporter.py`. Rapportene legges lokalt i `eksempler/arsrapporter-2024/dokumenter/`. PDF-ene legges ikke i Git eller plugin-releases. Scriptet kan også kjøres med vanlig Python; `pypdf` gir kontroll av tekstlag og sidetall.
+## Development
 
-## Begrensninger
-
-PDF med tekstlag og ett dokument per lesekjøring støttes. OCR, DOCX og automatisk oppdeling av store dokumenter er ikke implementert. Lange rapporter kan overskride modellens kontekst; lange inputvisninger avkortes. CLI-flaggene begrenser kontekst og verktøy, men gir ikke full OS-isolasjon eller beskytter resultatlageret mot direkte filskriving fra samme bruker. Faktisk kvotebelastning og eventuell ekstraforbruksordning bestemmes av abonnementet, ikke CLI-ens listepris-estimat.
-
-## Utvikling og releases
-
-- `src/kildeanalyse/`: felles analyse-, lagrings- og eksportkode; `adaptere/` kobler til CLI-ene.
-- `skills/kildeanalyse/SKILL.md`: arbeidsveiledningen som appen laster.
-- `bin/installer.py`: felles installasjon; `bin/lag_release.py`: bygger én ren ZIP og SHA-256-fil.
-- `tests/`: lokale kontroller og valgfrie syntetiske eksempler.
-- `dist/v<versjon>/`: generert distribusjon; skal ikke redigeres eller legges i Git.
-- [UTVIKLINGSSTRATEGI.md](UTVIKLINGSSTRATEGI.md): beslutninger og videre utvikling. [Testlogg](tests/TESTLOGG.md): gjennomførte kontroller.
+- `src/kildeanalyse/`: shared engine, storage, validation and export; `adaptere/` contains readers.
+- `skills/systematic-document-analysis/SKILL.md`: bilingual host workflow, written in English.
+- `bin/installer.py`: common installer; `bin/lag_release.py`: clean Windows ZIP and SHA-256.
+- `tests/`: local checks; `dist/v<version>/`: generated packages, ignored by Git.
+- [DEVELOPMENT.md](DEVELOPMENT.md): current decisions and development guide. [Test log](tests/TESTLOGG.md): verification history.
 
 ```powershell
 ./oppsett.cmd
 .venv/Scripts/python.exe -m pytest -q
 .venv/Scripts/python.exe bin/lag_release.py
+.venv/Scripts/python.exe tests/prov_plugin.py
+.venv/Scripts/python.exe tests/prov_installasjon.py
 ```
 
-Ved en ny release oppdateres versjonen i `pyproject.toml`, `src/kildeanalyse/__init__.py` og plugin-/markedsplassmanifestene. Bygg ZIP, kontroller installasjon, commit og push, og opprett en GitHub Release med ZIP og `SHA256SUMS.txt`. Det stabile filnavnet gjør at nedlastingslenken øverst alltid peker til siste release.
+Primary documentation and new public interfaces are English. Norwegian user instructions remain available. Legacy internal names are migrated only when there is a concrete benefit and a compatibility path.

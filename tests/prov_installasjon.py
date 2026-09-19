@@ -19,10 +19,10 @@ def main():
             print(f'Installasjonsrunde {iteration+1}',flush=True)
             subprocess.run([sys.executable,'-X','utf8',str(ROOT/'bin/installer.py'),'begge','--base-dir',str(base/'plugins')],
                            env=env,check=True,timeout=120)
-        codex=json.loads(subprocess.check_output(['codex','plugin','list','--marketplace','oe-kildeanalyse-lokal','--json'],env=env,encoding='utf-8'))
-        assert any(p['name']=='oe-kildeanalyse' and p['enabled'] for p in codex['installed'])
+        codex=json.loads(subprocess.check_output(['codex','plugin','list','--marketplace','systematic-document-analysis-local','--json'],env=env,encoding='utf-8'))
+        assert any(p['name']=='systematic-document-analysis' and p['enabled'] for p in codex['installed'])
         claude=json.loads(subprocess.check_output(['claude','plugin','list','--json'],env=env,encoding='utf-8'))
-        assert any(p['id']=='oe-kildeanalyse@oe-kildeanalyse-lokal' and p['enabled'] for p in claude)
+        assert any(p['id']=='systematic-document-analysis@systematic-document-analysis-local' and p['enabled'] for p in claude)
         print('BESTÅTT: ny installasjon og gjentatt oppdatering i begge CLI-er, med separate midlertidige appkonfigurasjoner.',flush=True)
 
 

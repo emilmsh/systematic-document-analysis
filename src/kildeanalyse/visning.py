@@ -14,7 +14,7 @@ def _merk(simulert: bool | int | None) -> str:
 
 
 def md_oppsett(d: dict[str, Any]) -> str:
-    ut = [f"# OE Kildeanalyse {d['app_versjon']}", "", f"- Datamappe: `{d['datamappe']}`", f"- Database: `{d['database']}`",
+    ut = [f"# Systematic Document Analysis {d['app_versjon']}", "", f"- Datamappe: `{d['datamappe']}`", f"- Database: `{d['database']}`",
           f"- Python {d['python']} på {d['plattform']}", f"- Plugin-rot: `{d.get('plugin_root') or 'ikke lastet som plugin'}`", "", "## Motorer", ""]
     for navn, m in d["motorer"].items():
         ut.append(f"### {navn} — {'klar' if m['ok'] else 'BLOKKERT'} ({_merk(m['simulert'])})")
@@ -61,6 +61,7 @@ def md_plan(d: dict[str, Any]) -> str:
                f"- Opprettet {v['opprettet']}" + (f", godkjent {v['godkjent']} av {v['godkjent_av']}" if v.get("godkjent") else ", ikke godkjent"),
                f"- Endringsnotat: {v.get('endringsnotat') or ''}",
                f"- Motor: **{p.motor}** ({_merk(p.motor == 'simulert')})" + (f", modell {p.modell}" if p.modell else ""),
+               f"- Språk / Language: {'English' if p.sprak == 'en' else 'Norsk bokmål'}. Sitater beholdes på originalspråket.",
                f"- Tenkenivå: **{fra_plan(p)['tenkenivaa']}**. Tidsgrense per dokument: {fra_plan(p)['tidsavbrudd_sek']:g} sekunder.",
                f"- Analyseenhet: {p.analyseenhet}. Sider uten tekst: {'tillatt (lesedekning merkes)' if p.tillat_sider_uten_tekst else 'stopper kjøringen'}.",
                f"- Kriteriesett: {p.kriteriesett_navn} {p.kriteriesett_versjon}. {p.kriteriesett_merknad}", "",

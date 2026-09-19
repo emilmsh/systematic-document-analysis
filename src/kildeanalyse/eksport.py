@@ -59,7 +59,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
         planrad = lager.planversjon(kj["planversjon_id"])
         parametre = fra_plan(planrad["plan"])
         api = parametre.get('api', {})
-        api_felter = {'api_endpoint': api.get('endpoint', ''), 'api_provider_valg': api.get('provider', ''),
+        api_felter = {'language': parametre['language'], 'api_endpoint': api.get('endpoint', ''), 'api_provider_valg': api.get('provider', ''),
                       'maks_output_tokens': api.get('maks_output_tokens', '')}
         forsok = lager.forsok_for_kjoring(kj["id"])
         gjeld = next((f for f in forsok if f["id"] == kj["gjeldende_forsok_id"]), forsok[-1] if forsok else None)
@@ -124,7 +124,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
                 shutil.copy2(kopi, kildemappe / f"{dok['id']}_{dok['navn']}")
 
     felter = ["kjoring_id", "dokument_id", "dokument", "sha256", "planversjon", "status", "forsok_id", "antall_forsok", "motor", "simulert",
-              "modell", "modell_onsket", "tenkenivaa_onsket", "api_endpoint", "api_provider_valg", "maks_output_tokens",
+              "modell", "modell_onsket", "tenkenivaa_onsket", "language", "api_endpoint", "api_provider_valg", "maks_output_tokens",
               "sesjon_id", "lesedekning", "kontrollert_av_totalt"]
     for kid in alle_kriterier:
         felter += [f"{kid}_svar", f"{kid}_kontroll", f"{kid}_validering"]
@@ -133,7 +133,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
     _skriv_csv(mappe / "belegg.csv", beleggrader, ["kjoring_id", "forsok_id", "dokument", "kriterium", "svar", "fysisk_side", "sitat",
                                                    "kilde", "sitat_funnet_paa_side"])
     _skriv_csv(mappe / "forsok.csv", forsokrader, ["id", "kjoring_id", "nr", "status", "startet", "avsluttet", "motor", "simulert",
-                                                   "modell_onsket", "modell_rapportert", "tenkenivaa_onsket", "api_endpoint", "api_provider_valg",
+                                                   "modell_onsket", "modell_rapportert", "tenkenivaa_onsket", "language", "api_endpoint", "api_provider_valg",
                                                    "maks_output_tokens", "sesjon_id", "input_hash", "feil"])
     _skriv_csv(mappe / "kontroll.csv", kontrollrader, ["id", "forsok_id", "tid", "ansvarlig", "handling", "kriterium_id", "begrunnelse",
                                                        "opprinnelig", "nytt"])
@@ -151,7 +151,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
         plantekst += [f"## Planversjon {v['versjon']} ({v['status']})", "",
                       f"- Opprettet: {v['opprettet']}", f"- Godkjent: {v.get('godkjent') or 'nei'}" + (f" av {v['godkjent_av']}" if v.get("godkjent_av") else ""),
                       f"- Endringsnotat: {v.get('endringsnotat') or ''}", f"- Motor: {p.motor}" + (f" (modell {p.modell})" if p.modell else ""),
-                      f"- Motorinnstillinger: {json.dumps(p.motorinnstillinger, ensure_ascii=False)}",
+                      f"- Språk / language: {p.sprak}", f"- Motorinnstillinger: {json.dumps(p.motorinnstillinger, ensure_ascii=False)}",
                       f"- Kriteriesett: {p.kriteriesett_navn} {p.kriteriesett_versjon}. {p.kriteriesett_merknad}", "",
                       "### Oppgavetekst (bestillingen)", "", v["oppgavetekst"], "", "### Kriterier", "",
                       "| ID | Navn | Spørsmål | Tillatte svar | Belegg kreves ved | Regel |", "|---|---|---|---|---|---|"]
@@ -167,7 +167,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
                "Resultatene kommer fra ekte modellkjøringer (kolonnen «simulert» = nei)." if ekte_finnes else "Ingen forsøk er gjennomført.")
     lesmeg = [
         f"# Resultatpakke: {analyse['navn']} ({analyse_id})", "",
-        f"Eksportert {datetime.now().strftime('%d.%m.%Y %H:%M')} med OE Kildeanalyse {VERSJON}. Prosjekt: {prosjekt['navn']} ({prosjekt['id']}).", "",
+        f"Eksportert {datetime.now().strftime('%d.%m.%Y %H:%M')} med Systematic Document Analysis {VERSJON}. Prosjekt: {prosjekt['navn']} ({prosjekt['id']}).", "",
         merking, "",
         "## Hva pakken inneholder", "",
         "- `resultater.csv`: én rad per kjøring (dokument). Kolonner per kriterium: gjeldende svar, kontrollstatus og valideringsutfall. "
@@ -191,6 +191,8 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
         "- Appens lagrede resultater er autoritative. Endringer i denne eksporten føres ikke tilbake.", "",
     ]
     (mappe / "LESMEG.md").write_text("\n".join(lesmeg), encoding="utf-8")
+    from .english_export import write_english_export
+    write_english_export(mappe, analyse, versjoner, alle_kriterier)
     lager.logg("eksportert", analyse_id=analyse_id, mappe=str(mappe), med_kilder=med_kilder)
     return {"mappe": str(mappe), "filer": sorted(p.name for p in mappe.iterdir()), "antall_kjoringer": len(kjoringer),
             "kontrollert_av_totalt": f"{kontrollert_totalt}/{vurderinger_totalt}", "simulert": simulert_finnes, "ekte": ekte_finnes, "teller": teller}

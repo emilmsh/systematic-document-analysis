@@ -1,19 +1,19 @@
 {
-  "name": "oe-kildeanalyse",
-  "version": "0.5.0",
-  "description": "Etterpr\u00f8vbare dokumentanalyser med plan, belegg, kontrollhistorikk og eksport.",
+  "name": "systematic-document-analysis",
+  "version": "0.6.0",
+  "description": "Auditable document analysis in English and Norwegian, with source evidence and human review.",
   "author": {
     "name": "Oslo Economics"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "OE Kildeanalyse",
-    "shortDescription": "Analyser dokumenter med sporbarhet og kildebelegg.",
-    "longDescription": "Arbeid med analysen i ChatGPT desktop/Codex eller Claude Code. Velg Codex CLI, Claude Code eller API fra OpenAI, Anthropic, OpenRouter eller kompatibel leverandør som lesemotor. Felles plan, kildebelegg og kontrollhistorikk.",
+    "displayName": "Systematic Document Analysis",
+    "shortDescription": "Analyse documents with evidence and an audit trail.",
+    "longDescription": "Work in English or Norwegian in Codex or Claude Code. Choose CLI or API readers, inspect source quotations, record human reviews and export results.",
     "developerName": "Oslo Economics",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "Start en dokumentanalyse med OE Kildeanalyse."
+    "defaultPrompt": "Help me analyse my documents with Systematic Document Analysis."
   },
   "mcpServers": "./.mcp.json"
 }

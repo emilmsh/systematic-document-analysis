@@ -1,13 +1,12 @@
-# v0.5.0 – valgfrie API-motorer i begge vertsappene
+# 0.6.0 — Systematic Document Analysis
 
-Last ned **oe-kildeanalyse-windows.zip**, pakk ut og start **installer.cmd**. Velg Claude Code, Codex eller begge. Python 3.12+ og valgt CLI med egen abonnementskonto er nødvendig. Start en ny lokal samtale etter installasjon.
+The plugin is now named **Systematic Document Analysis**, with English primary documentation and workflows for English and Norwegian users. One Windows ZIP supports Codex and Claude Code.
 
-- Samme arbeidsflyt i ChatGPT desktop/Codex og Claude Code, med motorvalg uavhengig av vertsappen.
-- Beholder Codex CLI og Claude Code CLI med abonnement. Legger til OpenAI Responses, Anthropic Messages, OpenRouter og eksplisitt HTTPS-adresse til kompatibelt Chat Completions API.
-- API-valg, mottaker, modell, tenkenivå og tokenbudsjett vises i planen. Forespørselen uten autentisering inngår i inputhash, historikk og eksport.
-- Nøkler hentes lokalt fra miljøvariabler og fjernes fra CLI-underprosessene. API bruker separat betaling; ingen automatisk fallback eller retry.
-- Oppdatert README, START_HER og arbeidsveiledning. Egne dokumenter er normal arbeidsflyt; eksemplene er valgfrie.
+- Select English (`en`) or Norwegian (`nb`) commentary in each plan. Language, model and effort are preserved through inputs, plan history, attempt manifests and exports. Quotes and answer labels remain verbatim.
+- English MCP tools and criteria/settings fields accompany the existing Norwegian interface.
+- English CSV headers, README and plan summary accompany the preserved audit files. Some technical status codes and diagnostics remain Norwegian; the host explains them in the user's language.
+- Existing databases are reused without moving them. Legacy environment variables and tools remain compatible. New installations use the new product name and data directory.
 
-Repoet er privat: GitHub-nedlasting krever tilgang. ZIP-filen kan deles direkte med kolleger. Den inneholder verken brukerdata, innlogging eller API-nøkler.
+Install with `installer.cmd`, then start a new conversation. When upgrading from OE Kildeanalyse, disable or uninstall the old plugin registration after installing the new one to avoid duplicate MCP servers. This does not delete the separate analysis database. See START_HERE.md or START_HER.md.
 
-Teknisk verifikasjon: 80 lokale kontroller med falsk HTTP-transport, samt ren MCP-oppstart og planhistorikk for alle motorer. Ingen modellkall. Ekte API-tilgang og klassifiseringskvalitet er ikke verifisert. Modellens støtte for strukturerte svar og tenkenivå varierer. Windows er støttet; macOS/Linux, OCR, full OS-isolasjon og automatisk oppdeling av store dokumenter er ikke implementert.
+Verification: 87 local tests passed; clean MCP bootstrap with 34 English/Norwegian tools, plan language changes, export and restart passed. Fresh installation and repeated update in both CLIs passed using temporary app configurations. No model calls were made. Real provider behaviour and substantive analysis quality were not measured.

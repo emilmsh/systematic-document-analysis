@@ -45,7 +45,7 @@ def prepare(root: Path, data: Path) -> Path:
         return python
     # Fjern bare ferdigmarkøren. Et avbrudd skal aldri ligne et ferdig oppsett.
     marker.unlink(missing_ok=True)
-    print(f"[kildeanalyse] Klargjorer Python-miljo i {runtime}", file=sys.stderr, flush=True)
+    print(f"[Systematic Document Analysis] Preparing Python environment in {runtime}", file=sys.stderr, flush=True)
     if not python.is_file():
         subprocess.run([sys.executable, "-X", "utf8", "-m", "venv", str(runtime)], check=True, stdout=sys.stderr)
     subprocess.run(
@@ -53,23 +53,23 @@ def prepare(root: Path, data: Path) -> Path:
         check=True, stdout=sys.stderr,
     )
     if not usable(python):
-        raise RuntimeError("Python-miljoet kunne ikke importere MCP-serveren etter installasjon.")
+        raise RuntimeError("The Python environment could not import the MCP server after installation.")
     marker.write_text(wanted, encoding="ascii")
     return python
 
 
 def main() -> int:
     if sys.version_info < (3, 12):
-        print("[kildeanalyse] Python 3.12 eller nyere kreves.", file=sys.stderr)
+        print("[Systematic Document Analysis] Python 3.12 or newer is required.", file=sys.stderr)
         return 1
     root = Path(__file__).resolve().parent.parent
     data = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or
-                str(Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "oe-kildeanalyse" / "plugin-data"))
+                str(Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "systematic-document-analysis" / "plugin-data"))
     try:
         python = prepare(root, data)
         return subprocess.call([str(python), "-I", "-X", "utf8", "-m", "kildeanalyse.mcp_server"])
     except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
-        print(f"[kildeanalyse] Oppstart feilet: {exc}. Rett feilen og start pluginen pa nytt.", file=sys.stderr)
+        print(f"[Systematic Document Analysis] Startup failed: {exc}. Resolve the error and restart the plugin.", file=sys.stderr)
         return 1
 
 

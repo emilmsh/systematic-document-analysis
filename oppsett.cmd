@@ -1,5 +1,5 @@
 @echo off
-rem Oppsett av OE Kildeanalyse på Windows: lager .venv, installerer pakken og viser motorstatus.
+rem Oppsett av Systematic Document Analysis på Windows: lager .venv, installerer pakken og viser motorstatus.
 setlocal
 set "PYTHONUTF8=1"
 cd /d "%~dp0"

@@ -15,7 +15,7 @@ from .tjeneste import TjenesteFeil
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="kildeanalyse", description=f"OE Kildeanalyse {VERSJON}")
+    p = argparse.ArgumentParser(prog="kildeanalyse", description=f"Systematic Document Analysis {VERSJON}")
     sub = p.add_subparsers(dest="kommando", required=True)
     sub.add_parser("oppsett", help="vis oppsett og motorstatus")
     s = sub.add_parser("prosjekt", help="opprett prosjekt"); s.add_argument("navn")

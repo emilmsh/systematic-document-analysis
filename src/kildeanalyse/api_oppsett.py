@@ -1,14 +1,22 @@
 """Offentlige API-valg. Nøkler leses først ved kjøring, aldri inn i planen."""
 from urllib.parse import urlsplit
+import os
 
 API_MOTORER = {
     'openai_api': ('https://api.openai.com/v1', 'OPENAI_API_KEY', 'responses'),
     'anthropic_api': ('https://api.anthropic.com/v1', 'ANTHROPIC_API_KEY', 'messages'),
     'openrouter_api': ('https://openrouter.ai/api/v1', 'OPENROUTER_API_KEY', 'chat/completions'),
-    'kompatibel_api': ('', 'OE_KILDEANALYSE_CUSTOM_API_KEY', 'chat/completions'),
+    'kompatibel_api': ('', 'SDA_CUSTOM_API_KEY', 'chat/completions'),
 }
-API_ENV = tuple(item[1] for item in API_MOTORER.values())
+API_ENV = tuple(item[1] for item in API_MOTORER.values()) + ('OE_KILDEANALYSE_CUSTOM_API_KEY',)
 API_FELT = {'tenkenivaa', 'tidsavbrudd_sek', 'maks_output_tokens', 'base_url', 'provider'}
+
+
+def local_key(motor):
+    key = os.environ.get(API_MOTORER[motor][1], '').strip()
+    if not key and motor == 'kompatibel_api':
+        key = os.environ.get('OE_KILDEANALYSE_CUSTOM_API_KEY', '').strip()
+    return key
 
 
 def api_valg(motor, valg):

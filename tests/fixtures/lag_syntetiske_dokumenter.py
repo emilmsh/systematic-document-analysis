@@ -1,4 +1,4 @@
-"""Lager syntetiske test-PDF-er for OE Kildeanalyse.
+"""Lager syntetiske test-PDF-er for Systematic Document Analysis.
 
 Alt innhold er oppdiktet. Selskapene finnes ikke. Kriteriene som dokumentene er
 laget for, er EKSEMPELKRITERIER (se tests/fixtures/syntetisk/eksempelkriterier.json)
@@ -12,7 +12,7 @@ from pathlib import Path
 import pymupdf
 
 UT = Path(__file__).parent / "syntetisk"
-TOPP = "SYNTETISK TESTDOKUMENT - oppdiktet innhold laget for testing av OE Kildeanalyse\n\n"
+TOPP = "SYNTETISK TESTDOKUMENT - oppdiktet innhold laget for testing av Systematic Document Analysis\n\n"
 
 
 def lag_pdf(navn: str, sider: list[str], *, som_bilde: bool = False) -> Path:

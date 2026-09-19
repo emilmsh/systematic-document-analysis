@@ -194,13 +194,15 @@ def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
     _, settings = package(engine)
     criteria = {'kriterier':[{'id':'k1','spørsmål':'Lokal kontroll','tillatte_svar':['ja']}]}
     created = tjeneste.opprett_analyse(lager, pr['id'], 'API', 'Bestilling', criteria,
-        motor=engine, modell='chosen-model', motorinnstillinger=settings)
+        motor=engine, modell='chosen-model', motorinnstillinger=settings, sprak='en')
     aid = created['analyse']['id']
     text = visning.md_plan(tjeneste.vis_plan(lager, aid))
     assert 'separat betaling' in text and '16384' in text
     kid = tjeneste.legg_til_kjoringer(lager, aid)['nye'][0]['id']
     preview = tjeneste.vis_inputpakke(lager, kid)['pakke']
     answer = dict(ANSWER, sider_lest=list(range(1, doc['antall_sider']+1)))
+    quote = doc['sider'][0]['tekst'].strip()[:80]
+    answer['vurderinger'] = [dict(ANSWER['vurderinger'][0], belegg=[{'side':1,'sitat':quote}])]
     requests=[]
     def handler(req):
         requests.append(req)
@@ -218,7 +220,17 @@ def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
     assert saved['input_hash'] == preview['input_hash'] and saved['api_foresporsel'] == preview['api_foresporsel']
     manifest = json.loads((export/'forsok'/attempt['id']/'manifest.json').read_text(encoding='utf-8'))
     assert manifest['modell_rapportert'] == 'reported-model'
+    assert manifest['kjoreparametre']['language'] == 'en'
+    assert 'in English' in saved['systeminstruks']
     assert manifest['motorinfo']['harness'].startswith('direkte API')
+    import csv
+    with (export/'evidence.csv').open(encoding='utf-8-sig', newline='') as source:
+        evidence = list(csv.DictReader(source, delimiter=';'))
+    assert evidence[0]['quote'] == quote and evidence[0]['answer'] == 'ja'
+    original = Path(attempt['input_sti'])
+    for name in ('input.json','manifest.json','raasvar.txt','systeminstruks.txt'):
+        if (original/name).is_file():
+            assert (export/'forsok'/attempt['id']/name).read_bytes() == (original/name).read_bytes()
     for file in export.rglob('*'):
         if file.is_file():
             assert b'fake-secret-for-offline-tests' not in file.read_bytes()

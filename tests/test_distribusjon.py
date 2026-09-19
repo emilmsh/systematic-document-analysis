@@ -10,7 +10,7 @@ from installer import prepare
 
 
 def test_felles_pakke_uten_maskinstier_og_byggemetadata(tmp_path):
-    target=tmp_path/'oe-kildeanalyse'
+    target=tmp_path/'systematic-document-analysis'
     pakk(target)
     (target/'build').mkdir()
     (target/'build'/'ikke_del.txt').write_text('generert')
@@ -24,8 +24,8 @@ def test_felles_pakke_uten_maskinstier_og_byggemetadata(tmp_path):
 def test_installer_forbereder_begge_verter_separat(tmp_path):
     claude=prepare('claude',tmp_path)
     codex=prepare('codex',tmp_path)
-    a=json.loads((claude/'.mcp.json').read_text(encoding='utf-8'))['mcpServers']['kildeanalyse']
-    b=json.loads((codex/'.mcp.json').read_text(encoding='utf-8'))['mcpServers']['kildeanalyse']
+    a=json.loads((claude/'.mcp.json').read_text(encoding='utf-8'))['mcpServers']['document_analysis']
+    b=json.loads((codex/'.mcp.json').read_text(encoding='utf-8'))['mcpServers']['document_analysis']
     assert a['command']=='cmd' and '${CLAUDE_PLUGIN_ROOT}' in a['args'][-1]
     assert b['args'][-1]==str(codex/'bin/start_server.py')
     assert Path(b['command']).is_absolute()

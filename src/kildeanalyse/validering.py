@@ -63,7 +63,7 @@ def valider(plan: Plan, dokument: dict[str, Any], svar: Any, sider_sendt: list[i
             belegg = []
         if krit.krever_belegg(svaret) and not belegg:
             legg_feil(kid, "belegg", f"Svaret «{svaret}» krever minst ett sitat med side.")
-        if svaret in ("ikke_omtalt", "ikke_oppgitt") and not lesedekning_fullstendig:
+        if svaret in ("ikke_omtalt", "ikke_oppgitt", "not_mentioned", "not_reported") and not lesedekning_fullstendig:
             legg_feil(kid, "lesedekning", f"Svaret «{svaret}» krever fullstendig lesedekning; sider_lest dekker ikke alle sendte sider.")
         for b in belegg:
             if not isinstance(b, dict):

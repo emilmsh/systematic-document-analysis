@@ -90,7 +90,9 @@ def test_parametre_i_input_historikk_og_eksport(engine, adapter, tmp_path, monke
     observed = []
     monkeypatch.setattr(adapter, 'sjekk_stotte', lambda self:Stotte(True))
     def local_run(self, pakke, modell, *args):
-        observed.append((modell, self.innstillinger['tenkenivaa']))
+        observed.append((modell, self.innstillinger['tenkenivaa'], pakke.kjoreparametre['language']))
+        if pakke.kjoreparametre['language'] == 'en':
+            assert 'Write commentary (kommentar) and notes (merknader) in English' in pakke.systeminstruks
         # Ingen leverandørkontakt. Prøver lagring også for et mislykket forsøk.
         return Motorsvar(raasvar='lokal kontroll', svar=None, feil='lokal kontroll uten modellkall')
     monkeypatch.setattr(adapter, 'kjor', local_run)
@@ -103,7 +105,7 @@ def test_parametre_i_input_historikk_og_eksport(engine, adapter, tmp_path, monke
     aid = an['analyse']['id']
     for level in ('medium', 'high'):
         if level == 'high':
-            tjeneste.ny_planversjon(lager, aid, 'Mer tenking', tenkenivaa=level)
+            tjeneste.ny_planversjon(lager, aid, 'Mer tenking, English', tenkenivaa=level, sprak='en')
         tjeneste.godkjenn_plan(lager, aid, 'Lokal kontroll')
         kid = tjeneste.legg_til_kjoringer(lager, aid)['nye'][0]['id']
         preview = tjeneste.vis_inputpakke(lager, kid)['pakke']
@@ -113,16 +115,18 @@ def test_parametre_i_input_historikk_og_eksport(engine, adapter, tmp_path, monke
         saved = Path(attempt['input_sti'])
         assert json.loads((saved/'input.json').read_text(encoding='utf-8'))['input_hash'] == preview['input_hash']
         assert json.loads((saved/'manifest.json').read_text(encoding='utf-8'))['kjoreparametre']['tenkenivaa'] == level
-    assert observed == [('valgt-modell','medium'),('valgt-modell','high')]
+    assert observed == [('valgt-modell','medium','nb'),('valgt-modell','high','en')]
     out = Path(tjeneste.eksporter(lager, aid)['mappe'])
     exported = json.loads((out/'resultater.json').read_text(encoding='utf-8'))
     assert [v['plan']['motorinnstillinger']['tenkenivaa'] for v in exported['planversjoner']] == ['medium','high']
+    assert [v['plan']['sprak'] for v in exported['planversjoner']] == ['nb','en']
     plantext = (out/'plan.md').read_text(encoding='utf-8')
     assert 'medium' in plantext and 'high' in plantext and 'valgt-modell' in plantext
     for file in ('resultater.csv','forsok.csv'):
         with (out/file).open(encoding='utf-8-sig', newline='') as f:
             rows = list(csv.DictReader(f, delimiter=';'))
         assert [r['tenkenivaa_onsket'] for r in rows] == ['medium','high']
+        assert [r['language'] for r in rows] == ['nb','en']
         if engine.endswith('_api'):
             assert all(r['api_endpoint'].startswith('https://') and r['maks_output_tokens'] == '16384' for r in rows)
     for kid in lager.kjoringer(aid):

@@ -76,6 +76,7 @@ class Plan:
     modell: str = ""
     motorinnstillinger: dict[str, Any] = field(default_factory=dict)
     tilleggsinstruks: str = ""
+    sprak: str = "nb"
 
     @classmethod
     def fra_kriteriefil(
@@ -88,6 +89,7 @@ class Plan:
         motorinnstillinger: dict[str, Any] | None = None,
         tilleggsinstruks: str = "",
         tillat_sider_uten_tekst: bool = False,
+        sprak: str = "nb",
     ) -> "Plan":
         return cls(
             formaal=formaal,
@@ -95,13 +97,14 @@ class Plan:
             kriteriesett_navn=str(kriteriefil.get("navn", "")),
             kriteriesett_versjon=str(kriteriefil.get("versjon", "")),
             kriteriesett_merknad=str(kriteriefil.get("_merknad", "")),
-            analyseenhet=str(kriteriefil.get("analyseenhet", "ett dokument per kjøring")),
+            analyseenhet=str(kriteriefil.get("analyseenhet", "one document per run" if sprak == "en" else "ett dokument per kjøring")),
             leseregel_ikke_omtalt=str(kriteriefil.get("leseregel_ikke_omtalt", "")),
             tillat_sider_uten_tekst=tillat_sider_uten_tekst,
             motor=motor,
             modell=modell,
             motorinnstillinger=dict(motorinnstillinger or {}),
             tilleggsinstruks=tilleggsinstruks,
+            sprak=sprak,
         )
 
     @classmethod

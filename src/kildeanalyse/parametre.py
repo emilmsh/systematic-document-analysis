@@ -56,6 +56,7 @@ def fra_plan(plan):
     """Vis eksplisitte valg, også når eldre planer mangler parametre."""
     result = {
         "motor": plan.motor,
+        "language": plan.sprak,
         "modell": plan.modell or MODELLER.get(plan.motor, "simulert"),
         "tenkenivaa": plan.motorinnstillinger.get("tenkenivaa") or
             ("low" if plan.motor == "codex_cli" else "ikke fastsatt (eldre plan)" if plan.motor == "claude_cli" else "ikke relevant"),

@@ -11,7 +11,7 @@ import httpx
 from jsonschema import Draft202012Validator
 
 from .base import Adapter, AdapterFeil
-from ..api_oppsett import API_MOTORER, API_ENV, api_metadata
+from ..api_oppsett import API_MOTORER, API_ENV, api_metadata, local_key
 from ..modell import Motorsvar, Stotte
 
 
@@ -101,7 +101,7 @@ class ApiAdapter(Adapter):
 
     def sjekk_stotte(self):
         metadata = api_metadata(self.navn, self.innstillinger)
-        ready = bool(os.environ.get(metadata['nokkelvariabel'], '').strip())
+        ready = bool(local_key(self.navn))
         messages = ['Separat API-forbruk. Nøkkelen er bare kontrollert lokalt; konto, modell og saldo er ikke verifisert.']
         if not ready:
             messages.append(f"Sett {metadata['nokkelvariabel']} lokalt og start vertsappen på nytt. Ikke lim nøkkelen inn i samtalen.")
@@ -139,7 +139,7 @@ class ApiAdapter(Adapter):
         support = self.sjekk_stotte()
         if not support.ok:
             raise AdapterFeil('; '.join(support.meldinger))
-        key = os.environ[API_MOTORER[self.navn][1]].strip()
+        key = local_key(self.navn)
         request = bygg_request(self.navn, pakke, modell, self.innstillinger)
         if pakke.api_foresporsel != request:
             raise AdapterFeil('API-forespørselen avviker fra inputpakken. Lag en ny plan og inputpakke.')

@@ -87,6 +87,11 @@ def _les_kriteriefil(kriteriefil: str | dict[str, Any]) -> dict[str, Any]:
             data = json.loads(p.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
             raise TjenesteFeil(f"Kriteriefilen er ikke gyldig JSON: {e}") from e
+    if isinstance(data, dict) and 'criteria' in data:
+        if 'kriterier' in data:
+            raise TjenesteFeil('Use either criteria or kriterier, not both.')
+        from .languages import normalize_criteria
+        data = normalize_criteria(data)
     if not isinstance(data, dict) or not isinstance(data.get("kriterier"), list) or not data["kriterier"]:
         raise TjenesteFeil("Kriteriefilen må være et JSON-objekt med en ikke-tom liste «kriterier».")
     for k in data["kriterier"]:
@@ -99,10 +104,12 @@ def _les_kriteriefil(kriteriefil: str | dict[str, Any]) -> dict[str, Any]:
 def opprett_analyse(lager: Lager, prosjekt_id: str, navn: str, oppgavetekst: str, kriteriefil: str | dict[str, Any], *,
                     formaal: str = "", motor: str = "simulert", modell: str = "", tilleggsinstruks: str = "",
                     tillat_sider_uten_tekst: bool = False, motorinnstillinger: dict[str, Any] | None = None,
-                    tenkenivaa: str | None = None) -> dict[str, Any]:
+                    tenkenivaa: str | None = None, sprak: str = 'nb') -> dict[str, Any]:
     lager.prosjekt(prosjekt_id)
     if motor not in ADAPTERE:
         raise TjenesteFeil(f"Ukjent motor «{motor}». Tilgjengelige: {', '.join(ADAPTERE)}.")
+    from .languages import language_code
+    sprak = language_code(sprak)
     data = _les_kriteriefil(kriteriefil)
     try:
         modell, motorinnstillinger = normaliser(motor, modell, motorinnstillinger, tenkenivaa)
@@ -110,7 +117,7 @@ def opprett_analyse(lager: Lager, prosjekt_id: str, navn: str, oppgavetekst: str
         raise TjenesteFeil(str(e)) from e
     plan = Plan.fra_kriteriefil(data, formaal=formaal or oppgavetekst, motor=motor, modell=modell,
                                 motorinnstillinger=motorinnstillinger, tilleggsinstruks=tilleggsinstruks,
-                                tillat_sider_uten_tekst=tillat_sider_uten_tekst)
+                                tillat_sider_uten_tekst=tillat_sider_uten_tekst, sprak=sprak)
     analyse = lager.opprett_analyse(prosjekt_id, navn.strip() or "Analyse")
     versjon = lager.opprett_planversjon(analyse["id"], oppgavetekst, plan, endringsnotat="Første versjon")
     lager.logg("analyse_opprettet", analyse_id=analyse["id"], planversjon_id=versjon["id"])
@@ -145,13 +152,17 @@ def godkjenn_plan(lager: Lager, analyse_id: str, ansvarlig: str, planversjon_id:
 def ny_planversjon(lager: Lager, analyse_id: str, endringsnotat: str, *, oppgavetekst: str | None = None, formaal: str | None = None,
                    kriteriefil: str | dict[str, Any] | None = None, motor: str | None = None, modell: str | None = None,
                    tilleggsinstruks: str | None = None, tillat_sider_uten_tekst: bool | None = None,
-                   motorinnstillinger: dict[str, Any] | None = None, tenkenivaa: str | None = None) -> dict[str, Any]:
+                   motorinnstillinger: dict[str, Any] | None = None, tenkenivaa: str | None = None,
+                   sprak: str | None = None) -> dict[str, Any]:
     if not endringsnotat.strip():
         raise TjenesteFeil("En ny planversjon krever et endringsnotat som forklarer hva som er endret og hvorfor.")
     gjeldende = lager.gjeldende_planversjon(analyse_id)
     if gjeldende is None:
         raise TjenesteFeil("Analysen har ingen planversjon.")
     d = gjeldende["plan"].til_dict()
+    if sprak is not None:
+        from .languages import language_code
+        d['sprak'] = language_code(sprak)
     if motor is not None and motor != d["motor"]:
         # Leverandørspesifikke valg skal ikke følge med til en annen motor.
         d["modell"] = ""
@@ -160,7 +171,7 @@ def ny_planversjon(lager: Lager, analyse_id: str, endringsnotat: str, *, oppgave
         data = _les_kriteriefil(kriteriefil)
         ny = Plan.fra_kriteriefil(data, formaal=d["formaal"], motor=d["motor"], modell=d["modell"],
                                   motorinnstillinger=d["motorinnstillinger"], tilleggsinstruks=d["tilleggsinstruks"],
-                                  tillat_sider_uten_tekst=d["tillat_sider_uten_tekst"]).til_dict()
+                                  tillat_sider_uten_tekst=d["tillat_sider_uten_tekst"], sprak=d['sprak']).til_dict()
         d.update({k: ny[k] for k in ("kriterier", "kriteriesett_navn", "kriteriesett_versjon", "kriteriesett_merknad",
                                      "analyseenhet", "leseregel_ikke_omtalt")})
     for nokkel, verdi in (("formaal", formaal), ("motor", motor), ("modell", modell), ("tilleggsinstruks", tilleggsinstruks),

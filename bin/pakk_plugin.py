@@ -1,6 +1,6 @@
 """Lag en liten plugin-kopi uten venv, cache eller analysedata.
 
-Bruk: python bin/pakk_plugin.py <mappe>/oe-kildeanalyse
+Bruk: python bin/pakk_plugin.py <mappe>/systematic-document-analysis
 Målkatalogen er en distribusjonskopi; navngitte pakkefiler oppdateres der.
 """
 import argparse
@@ -10,7 +10,7 @@ import json
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
-FILER=('pyproject.toml','.mcp.json','oppsett.cmd','installer.cmd','README.md','START_HER.md','UTVIKLINGSSTRATEGI.md','tests/TESTLOGG.md',
+FILER=('pyproject.toml','.mcp.json','oppsett.cmd','installer.cmd','README.md','START_HER.md','START_HERE.md','README.no.md','DEVELOPMENT.md','UTVIKLINGSSTRATEGI.md','tests/TESTLOGG.md',
        'eksempler/arsrapporter-2024/kilder.json','eksempler/arsrapporter-2024/STARTPROMPT.md')
 MAPPER=('.codex-plugin','.claude-plugin','bin','skills','src/kildeanalyse','tests/fixtures/syntetisk')
 
@@ -24,8 +24,8 @@ def pakkefiler(root=ROOT):
 
 def pakk(maal, codex=False):
     maal=Path(maal).resolve()
-    if maal==ROOT or maal.name!='oe-kildeanalyse':
-        raise ValueError('Bruk en separat målmappe med navnet oe-kildeanalyse.')
+    if maal==ROOT or maal.name!='systematic-document-analysis':
+        raise ValueError('Bruk en separat målmappe med navnet systematic-document-analysis.')
     maal.mkdir(parents=True,exist_ok=True)
     for name in FILER:
         target=maal/name
@@ -36,16 +36,16 @@ def pakk(maal, codex=False):
     if codex:
         # Lokal Codex-installasjon med eksplisitt Python og plugin-kopi.
         # Den personlige kildekopien må beholdes etter installasjon.
-        config = {'mcpServers': {'kildeanalyse': {
+        config = {'mcpServers': {'document_analysis': {
             'command': sys._base_executable,
             'args': ['-X', 'utf8', str(maal/'bin'/'start_server.py')],
             'env': {'PYTHONUTF8': '1'},
-            'env_vars': ['OE_KILDEANALYSE_DATA', 'CODEX_HOME', 'OE_KILDEANALYSE_CODEX_BIN',
-                         'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'OE_KILDEANALYSE_CUSTOM_API_KEY'],
+            'env_vars': ['SDA_DATA', 'OE_KILDEANALYSE_DATA', 'CODEX_HOME', 'OE_KILDEANALYSE_CODEX_BIN',
+                         'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'SDA_CUSTOM_API_KEY', 'OE_KILDEANALYSE_CUSTOM_API_KEY'],
             'startup_timeout_sec': 120,
         }}}
         (maal/'.mcp.json').write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')
-    print(f'Plugin-kopi: {maal}')
+    print(f'Plugin copy: {maal}')
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)

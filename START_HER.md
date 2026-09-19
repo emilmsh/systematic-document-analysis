@@ -1,35 +1,19 @@
-# Start med OE Kildeanalyse
+# Start med Systematic Document Analysis
 
-**Samme Windows-pakke fungerer i ChatGPT desktop/Codex og Claude Code. Begge kan bruke alle lesemotorene.**
+1. Installer Python 3.12+ og Codex CLI eller Claude Code CLI. Logg inn med egen konto.
+2. Pakk ut ZIP-filen, kjør **installer.cmd** og velg appen din eller begge. Menyen er på engelsk.
+3. Start en ny lokal samtale med **Systematic Document Analysis** aktivert. Første serverstart installerer Python-avhengigheter.
 
-1. Du trenger Python 3.12+ og CLI-en til appen du bruker, innlogget med din egen abonnementskonto. CLI-en må finnes på PATH.
-2. Pakk ut ZIP-filen. Dobbeltklikk `installer.cmd` og velg 1 (Claude Code), 2 (Codex) eller 3 (begge). Menyen registrerer pluginen, uten modellkall eller endring av innlogging.
-3. Start en ny lokal samtale i appen med OE Kildeanalyse aktivert. Første serverstart installerer Python-avhengigheter og kan ta litt tid.
+En vanlig mappe med lokale PDF-er med tekstlag er nok. Oppgi hele mappestien; undermapper oppgis separat. Assistenten hjelper deg å formulere kriteriene og lager kriteriefilen i arbeidsmappen.
 
-## Dine dokumenter
+> Bruk Systematic Document Analysis på PDF-ene i [full mappesti]. Jeg vil undersøke [problemstilling]. Hjelp meg å formulere kriterier og svaralternativer. Bruk CLI-motoren til appen jeg arbeider i, med tenkenivå high. Skriv kommentarer på norsk og behold sitatene på originalspråket. Vis modell, plan, lesedekning og inputpakken før jeg godkjenner oppstart. Kjør deretter materialet og eksporter svar med sitater og PDF-sidetall. Ikke registrer menneskelig kontroll på mine vegne.
 
-En vanlig mappe med PDF-er er nok. Oppgi hele stien. Mappeimport leser filene direkte i mappen; undermapper oppgis separat. PDF må ha tekstlag og ligge lokalt, også ved bruk av OneDrive. Kriterier kan assistenten hjelpe deg å formulere og lagre i en fil i arbeidsmappen.
+Planen lagrer motor, modell, tenkenivå og språk (`nb` for norsk, `en` for engelsk). Modellvalg arves ikke fra app-samtalen. Egne dokumenter er vanlig arbeidsflyt; eksempler og simulering er valgfrie.
 
-> Bruk OE Kildeanalyse på PDF-ene i [full mappesti]. Jeg vil undersøke [problemstilling]. Hjelp meg å formulere kriterier og svaralternativer. Bruk motoren til appen jeg arbeider i, med tenkenivå high. Vis modell, plan og lesedekning før vi starter. Etter min godkjenning: kjør materialet, vis svar med sitater og PDF-sidetall og eksporter tabellen. Ikke registrer menneskelig kontroll på mine vegne.
+API-motorer er `openai_api`, `anthropic_api`, `openrouter_api` og `kompatibel_api`. Oppgi modell-ID og sett nøkkelen lokalt som brukermiljøvariabel i Windows; start hele appen på nytt. Ikke lim nøkkelen inn i samtalen. API innebærer separat betaling. Se [README](README.md) for innstillinger og begrensninger.
 
-Du kan velge modell selv: for eksempel `claude_cli / sonnet / high` eller `codex_cli / gpt-5.6-terra / high`. Lesemotorens modellvalg er uavhengig av samtalens modell. Endringer får ny planversjon. Simulering og eksempler er valgfrie.
+Nye analyser lagres som standard i `%LOCALAPPDATA%/systematic-document-analysis`. Har du allerede en database fra OE Kildeanalyse, brukes den i den gamle mappen. `show_setup` viser faktisk datamappe. Eksporten inneholder både engelske og norske CSV-filer og hele kontrollsporet.
 
-## Bruke API som lesemotor
+Oppdater fra [siste release](https://github.com/emilmsh/systematic-document-analysis/releases/latest). Ved overgang fra det gamle navnet: installer den nye pluginen og deaktiver den gamle i begge appene. Data slettes ikke. Behold installasjonsmappene i LocalAppData; utpakket nedlasting kan slettes etter installasjon.
 
-Velg `openai_api`, `anthropic_api`, `openrouter_api` eller `kompatibel_api` i samtalen, og oppgi modell-ID. Du fortsetter arbeidet i samme vertsapp. API innebærer separat betaling hos valgt leverandør.
-
-Sett henholdsvis `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY` eller `OE_KILDEANALYSE_CUSTOM_API_KEY` som brukermiljøvariabel i Windows, og start hele appen på nytt. Ikke send nøkkelverdien i samtalen eller legg den i dokumentmappen. `vis_oppsett` kontrollerer bare lokal tilgjengelighet. Se README for oppsett, kompatibilitet og valg av mottaker for andre leverandører.
-
-Eksempel: «Bruk openai_api med gpt-6-astra og high. Vis API-mottaker, modell og tokenbudsjett sammen med planen før jeg godkjenner.» API-nivået `standard` bruker leverandørens standardinnstilling. Alle API-modeller må støtte strukturert svar; støtten varierer. Ingen motorbytting eller nye API-forsøk skjer automatisk.
-
-## Hvor havner ting?
-
-- Installasjon: `%LOCALAPPDATA%/oe-kildeanalyse/plugins/<app>/oe-kildeanalyse`. Behold denne mappen.
-- Prosjektdata og eksport: `%LOCALAPPDATA%/oe-kildeanalyse`, eller valgt `OE_KILDEANALYSE_DATA`. Eksportverktøyet viser filstien.
-- Etter vellykket installasjon kan du slette den utpakkede nedlastingsmappen. Innlogging og analyser følger ikke med ZIP-filen.
-
-Oppdater ved å laste ned [siste release](https://github.com/emilmsh/oe-kildeanalyse/releases/latest), kjøre installer på nytt og åpne en ny samtale. Det private repoet krever GitHub-tilgang, men ZIP-filen kan deles direkte.
-
-En gammel utviklingsinstallasjon kan bruke samme markedsplassnavn fra en annen mappe. Da gir installer en forklaring og bevarer den eksisterende registreringen. Se README for oppdatering eller flytting. Hvis en gammel Codex-plugin fra `personal` er aktivert, deaktiver den når du går over til ZIP-installasjonen.
-
-Verktøyet støtter foreløpig Windows og PDF med tekstlag. Full OS-isolasjon og automatisk oppdeling av store dokumenter er ikke implementert. API-adapterne er kontrollert lokalt uten leverandørkall. Se README for arbeidsflyt og begrensninger. Ved feil: ta med feilmeldingen til utvikleren, uten API-nøkler.
+[Kort norsk oversikt](README.no.md) · [English guide](START_HERE.md)

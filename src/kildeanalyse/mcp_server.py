@@ -17,13 +17,15 @@ from .lager import Lager, LagerFeil
 from .tjeneste import TjenesteFeil
 
 server = MCPServer(
-    name="kildeanalyse",
+    name="systematic-document-analysis",
     version=VERSJON,
     instructions=(
-        "OE Kildeanalyse: registrerte, etterprøvbare lesekjøringer (ett dokument per kjøring). "
-        "Rekkefølge: vis_oppsett → opprett_prosjekt → importer_dokumenter → opprett_analyse → vis_plan "
-        "→ legg_til_kjoringer → vis_inputpakke → godkjenn_plan → start_kjoringer → vis_status → vis_kjoring → registrer_kontroll → eksporter. "
-        "Resultater fra motoren «simulert» er alltid merket SIMULERT."
+        "Systematic Document Analysis: auditable reading, one document per run. Respond in the user's language. "
+        "Prefer the English tools: show_setup → create_project → import_documents → create_analysis → show_plan "
+        "→ add_runs → show_input_package → approve_plan → start_runs → show_status → show_run → record_review → export_results. "
+        "Choose language en or nb explicitly in the plan. Use the user's own documents; simulation is optional. "
+        "Never translate source quotes or answer labels. Explain legacy diagnostics/status codes in the user's language. "
+        "Norwegian tool names remain available for compatibility."
     ),
 )
 
@@ -58,7 +60,7 @@ def opprett_prosjekt(navn: str) -> str:
     try:
         p = tjeneste.opprett_prosjekt(_lager(), navn)
         return f"Prosjekt {p['id']} «{p['navn']}» er opprettet. Importer dokumenter med importer_dokumenter."
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -66,7 +68,7 @@ def opprett_prosjekt(navn: str) -> str:
 def importer_dokumenter(prosjekt_id: str, stier: list[str]) -> str:
     try:
         return visning.md_import(tjeneste.importer_dokumenter(_lager(), prosjekt_id, stier))
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -83,15 +85,15 @@ def importer_dokumenter(prosjekt_id: str, stier: list[str]) -> str:
 ))
 def opprett_analyse(prosjekt_id: str, navn: str, oppgavetekst: str, kriteriefil: str, formaal: str = "", motor: str = "",
                     modell: str = "", tilleggsinstruks: str = "", tillat_sider_uten_tekst: bool = False,
-                    motorinnstillinger_json: str = "", tenkenivaa: str = "") -> str:
+                    motorinnstillinger_json: str = "", tenkenivaa: str = "", sprak: str = "nb") -> str:
     try:
         r = tjeneste.opprett_analyse(_lager(), prosjekt_id, navn, oppgavetekst, kriteriefil, formaal=formaal, motor=motor, modell=modell,
                                      tilleggsinstruks=tilleggsinstruks, tillat_sider_uten_tekst=tillat_sider_uten_tekst,
                                      motorinnstillinger=_json_arg(motorinnstillinger_json, "motorinnstillinger_json") or None,
-                                     tenkenivaa=tenkenivaa or None)
+                                     tenkenivaa=tenkenivaa or None, sprak=sprak)
         return (f"Analyse {r['analyse']['id']} «{r['analyse']['navn']}» er opprettet med planversjon {r['planversjon']['versjon']} (utkast). "
                 "Se planen med vis_plan, kontroller en inputpakke med vis_inputpakke, og godkjenn med godkjenn_plan.")
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -99,7 +101,7 @@ def opprett_analyse(prosjekt_id: str, navn: str, oppgavetekst: str, kriteriefil:
 def vis_plan(analyse_id: str) -> str:
     try:
         return visning.md_plan(tjeneste.vis_plan(_lager(), analyse_id))
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -107,7 +109,7 @@ def vis_plan(analyse_id: str) -> str:
 def vis_inputpakke(kjoring_id: str) -> str:
     try:
         return visning.md_inputpakke(tjeneste.vis_inputpakke(_lager(), kjoring_id))
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -116,7 +118,7 @@ def godkjenn_plan(analyse_id: str, ansvarlig: str) -> str:
     try:
         v = tjeneste.godkjenn_plan(_lager(), analyse_id, ansvarlig)
         return f"Planversjon {v['versjon']} for analyse {analyse_id} er godkjent av {v['godkjent_av']} ({v['godkjent']}). Legg til kjøringer med legg_til_kjoringer."
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -127,12 +129,12 @@ def godkjenn_plan(analyse_id: str, ansvarlig: str) -> str:
 ))
 def ny_planversjon(analyse_id: str, endringsnotat: str, oppgavetekst: str = "", formaal: str = "", kriteriefil: str = "", motor: str = "",
                    modell: str = "", tilleggsinstruks: str = "", tillat_sider_uten_tekst: str = "",
-                   tenkenivaa: str = "", motorinnstillinger_json: str = "") -> str:
+                   tenkenivaa: str = "", motorinnstillinger_json: str = "", sprak: str = "") -> str:
     try:
         r = tjeneste.ny_planversjon(
             _lager(), analyse_id, endringsnotat, oppgavetekst=oppgavetekst or None, formaal=formaal or None, kriteriefil=kriteriefil or None,
             motor=motor or None, modell=modell or None, tilleggsinstruks=tilleggsinstruks or None,
-            tenkenivaa=tenkenivaa or None,
+            tenkenivaa=tenkenivaa or None, sprak=sprak or None,
             motorinnstillinger=_json_arg(motorinnstillinger_json, "motorinnstillinger_json") or None,
             tillat_sider_uten_tekst=None if tillat_sider_uten_tekst == "" else tillat_sider_uten_tekst.lower() in ("ja", "true", "1"),
         )
@@ -141,7 +143,7 @@ def ny_planversjon(analyse_id: str, endringsnotat: str, oppgavetekst: str = "", 
         if r["aktive_kjoringer_paa_forrige"]:
             tekst += f" Aktive kjøringer på forrige versjon fortsetter uendret: {', '.join(r['aktive_kjoringer_paa_forrige'])}."
         return tekst
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -151,7 +153,7 @@ def legg_til_kjoringer(analyse_id: str, dokument_ider: list[str] | None = None) 
         r = tjeneste.legg_til_kjoringer(_lager(), analyse_id, dokument_ider)
         return (f"Planversjon {r['planversjon_id']}: {len(r['nye'])} nye kjøringer ({', '.join(k['id'] for k in r['nye']) or 'ingen'})."
                 + (f" Fantes allerede for dokument: {', '.join(r['finnes_allerede'])}." if r["finnes_allerede"] else ""))
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -165,7 +167,7 @@ def start_kjoringer(analyse_id: str, kjoring_ider: list[str] | None = None, maks
         r = tjeneste.start_i_bakgrunnen(_lager(), analyse_id, kjoring_ider, maks)
         return (f"Køen for analyse {analyse_id} er startet i bakgrunnen med motor {r['motor']} ({visning._merk(r['simulert'])}). "
                 + " ".join(r["meldinger"]) + " Bruk vis_status for fremdrift og stopp for å stanse.")
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -175,7 +177,7 @@ def stopp(analyse_id: str) -> str:
         r = tjeneste.stopp(_lager(), analyse_id)
         return (f"Stopp er forespurt for analyse {analyse_id}. Aktiv arbeider: {r['aktiv_arbeider'] or 'ingen'}. "
                 f"Aktive forsøk som avbrytes: {', '.join(r['aktive_forsok']) or 'ingen'}. Fullførte resultater beholdes.")
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -185,7 +187,7 @@ def gjenoppta(analyse_id: str) -> str:
         r = tjeneste.gjenoppta(_lager(), analyse_id, i_bakgrunnen=True)
         return (f"Gjenopptatt i bakgrunnen. Uavklarte forsøk merket: {', '.join(r.get('ryddet_uavklart') or []) or 'ingen'}. "
                 "Kjøringer med status «uavklart» sendes ikke på nytt automatisk; bruk nytt_forsok for dem. Følg med via vis_status.")
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -193,7 +195,7 @@ def gjenoppta(analyse_id: str) -> str:
 def vis_status(analyse_id: str) -> str:
     try:
         return visning.md_status(tjeneste.vis_status(_lager(), analyse_id))
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -201,7 +203,7 @@ def vis_status(analyse_id: str) -> str:
 def vis_kjoring(kjoring_id: str) -> str:
     try:
         return visning.md_kjoring(tjeneste.vis_kjoring(_lager(), kjoring_id))
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -209,7 +211,7 @@ def vis_kjoring(kjoring_id: str) -> str:
 def nytt_forsok(kjoring_id: str, begrunnelse: str) -> str:
     try:
         return tjeneste.nytt_forsok(_lager(), kjoring_id, begrunnelse)["melding"]
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -227,7 +229,7 @@ def registrer_kontroll(forsok_id: str, ansvarlig: str, handling: str, begrunnels
         linjer = [f"Kontroll {ko['id']} registrert: {ko['handling']} {ko['kriterium_id'] or '(hele forsøket)'} av {ko['ansvarlig']} {ko['tid']}.", ""]
         linjer += [f"- {kid}: {v['svar']} ({v['kilde']}, {v['kontrollstatus']})" for kid, v in r["vurderinger"].items()]
         return "\n".join(linjer)
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
 
@@ -235,8 +237,12 @@ def registrer_kontroll(forsok_id: str, ansvarlig: str, handling: str, begrunnels
 def eksporter(analyse_id: str, med_kilder: bool = False) -> str:
     try:
         return visning.md_eksport(tjeneste.eksporter(_lager(), analyse_id, med_kilder))
-    except (TjenesteFeil, LagerFeil) as e:
+    except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
+
+
+from .english_tools import register
+register(server, _lager)
 
 
 def main() -> None:

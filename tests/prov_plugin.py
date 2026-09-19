@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 async def probe(root: Path, data: Path, *, expected_project: bool = False) -> None:
     env = dict(os.environ, CLAUDE_PLUGIN_DATA=str(data / "runtime"),
-               OE_KILDEANALYSE_DATA=str(data / "analyse"),
+               SDA_DATA=str(data / "analyse"), OE_KILDEANALYSE_DATA=str(data / "analyse"),
                OE_KILDEANALYSE_PYTHON=sys.executable, PYTHONUTF8="1")
     params = StdioServerParameters(command="cmd.exe", args=["/d", "/c", str(root / "bin" / "start_server.cmd")], env=env)
     async with stdio_client(params) as (read, write):
@@ -33,7 +33,7 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
             initialized = await session.initialize()
             assert initialized.server_info.version == VERSJON
             names = {tool.name for tool in (await session.list_tools()).tools}
-            assert len(names) == 17, names
+            assert len(names) == 34 and 'create_analysis' in names and 'opprett_analyse' in names, names
             # Ingen vis_oppsett her: testen trenger verken innlogging eller leverandørkontakt.
             result = await session.call_tool("opprett_prosjekt", {"navn": "Røykprøve æøå"})
             text = "\n".join(c.text for c in result.content if hasattr(c, "text"))
@@ -68,6 +68,12 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
                                              'motorinnstillinger_json':json.dumps(settings)})
                 body = await call('vis_plan', {'analyse_id':aid})
                 assert engine in body and model in body and 'separat betaling' in body
+            await call('new_plan_version', {'analysis_id':aid, 'change_note':'English commentary', 'language':'en'})
+            english = json.loads(await call('show_plan', {'analysis_id':aid}))
+            assert english['current']['plan']['language'] == 'en', english
+            assert english['versions'][0]['plan']['language'] == 'nb', english
+            exported = json.loads(await call('export_results', {'analysis_id':aid}))
+            assert (Path(exported['directory'])/'plan-summary.md').is_file(), exported
 
 
 async def main(plugin_root: Path | None = None) -> None:
@@ -88,7 +94,7 @@ async def main(plugin_root: Path | None = None) -> None:
         python = data / "runtime" / "venv" / "Scripts" / "python.exe"
         origin = subprocess.check_output([str(python), "-I", "-X", "utf8", "-c", "import kildeanalyse; print(kildeanalyse.__file__)"], encoding="utf-8")
         assert str(ROOT) not in origin and "site-packages" in origin, origin
-        print(f"BESTÅTT: {'installert kopi' if plugin_root else 'ren kopi uten .venv'}, MCP initialize, 17 verktøy, norske tegn, parametervalg, planhistorikk, omstart og uavhengig installasjon.")
+        print(f"PASS: {'installed copy' if plugin_root else 'clean copy without .venv'}, MCP initialize, 34 tools, English/Norwegian plans, exports, restart and independent runtime.")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 @echo off
-rem Starter MCP-serveren for OE Kildeanalyse. Kalles fra .mcp.json via cmd /c.
+rem Starter MCP-serveren for Systematic Document Analysis. Kalles fra .mcp.json via cmd /c.
 rem stdout er reservert for MCP-protokollen; alt annet skrives til stderr.
 setlocal
 set "ROOT=%~dp0.."
@@ -10,7 +10,7 @@ where py >nul 2>nul
 if not errorlevel 1 goto :py_launcher
 where python >nul 2>nul
 if not errorlevel 1 goto :python_path
-echo [kildeanalyse] Fant ikke Python. Installer Python 3.12+ eller sett OE_KILDEANALYSE_PYTHON til python.exe. 1>&2
+echo [Systematic Document Analysis] Python not found. Install Python 3.12+ or set OE_KILDEANALYSE_PYTHON to python.exe. 1>&2
 exit /b 1
 :valgt_python
 "%OE_KILDEANALYSE_PYTHON%" "%~dp0start_server.py"

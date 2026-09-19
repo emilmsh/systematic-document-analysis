@@ -9,12 +9,12 @@ from pakk_plugin import ROOT, pakk, pakkefiler
 def main():
     version = tomllib.loads((ROOT/'pyproject.toml').read_text(encoding='utf-8'))['project']['version']
     out = ROOT/'dist'/f'v{version}'
-    source = out/'oe-kildeanalyse'
+    source = out/'systematic-document-analysis'
     pakk(source)
-    archive = out/'oe-kildeanalyse-windows.zip'
+    archive = out/'systematic-document-analysis-windows.zip'
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
         for file in pakkefiler(source):
-            z.write(file, Path('oe-kildeanalyse')/file.relative_to(source))
+            z.write(file, Path('systematic-document-analysis')/file.relative_to(source))
     with zipfile.ZipFile(archive) as z:
         if z.testzip():
             raise RuntimeError('ZIP-kontrollen feilet')

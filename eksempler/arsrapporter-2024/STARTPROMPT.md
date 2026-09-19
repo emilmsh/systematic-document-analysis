@@ -6,9 +6,9 @@ Last ned med `python bin/hent_arsrapporter.py` fra prosjektmappen. PDF-ene legge
 
 Kontroll 19. september 2026: Rapportene har henholdsvis 76, 85, 46, 111 og 77 sider og tekstlag. Kulturtankens fysiske side 77 gir ikke tekst ved uttrekk; visuell kontroll viser en grafisk bakside med logo og organisasjonsnavn. Pluginen vil varsle om den siden. Godkjenn eventuelt videre arbeid med merket lesedekning. Originalfilene er bevart uendret.
 
-## Lim inn i en ny samtale med OE Kildeanalyse aktivert
+## Lim inn i en ny samtale med Systematic Document Analysis aktivert
 
-> Bruk OE Kildeanalyse på de fem årsrapportene i [full sti til dokumenter-mappen]. Undersøk hvordan virksomhetene rapporterer om egen bruk av kunstig intelligens i 2024. Skill klart mellom KI som tema i samfunnsoppdraget og KI brukt internt i organisasjonen.
+> Bruk Systematic Document Analysis på de fem årsrapportene i [full sti til dokumenter-mappen]. Undersøk hvordan virksomhetene rapporterer om egen bruk av kunstig intelligens i 2024. Skill klart mellom KI som tema i samfunnsoppdraget og KI brukt internt i organisasjonen.
 >
 > Lag en kriteriefil sammen med meg med disse fire spørsmålene: (1) Er konkret intern bruk av KI omtalt? (2) Er intern opplæring i KI omtalt? (3) Er interne regler eller retningslinjer for KI omtalt? (4) Er oppnådde, målte virkninger av intern KI-bruk omtalt? Foreslå presise definisjoner før vi starter. Bruk svaralternativene «ja», «eksplisitt_nei», «uklart» og «ikke_omtalt». Planer, ambisjoner og forventede effekter teller ikke som gjennomførte tiltak eller målte virkninger. Manglende omtale betyr ikke at tiltaket ikke finnes.
 >
