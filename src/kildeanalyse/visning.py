@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 from .parametre import fra_plan, MODELLER, TENKENIVAA, STANDARD_TENKENIVAA
+from .api_oppsett import API_MOTORER
 
 SIMULERT_MERKE = "⚠ SIMULERT"
 
@@ -21,6 +22,9 @@ def md_oppsett(d: dict[str, Any]) -> str:
         if navn in MODELLER:
             ut.append(f"- Nye planer: modell `{MODELLER[navn]}`, tenkenivå `{STANDARD_TENKENIVAA}` hvis ikke annet velges.")
             ut.append(f"- Valgbare nivåer: {', '.join(TENKENIVAA[navn])}. Tilgjengelighet avhenger av modellen.")
+        elif navn in API_MOTORER:
+            ut.append(f"- Velg modell-ID eksplisitt. Nivåer: {', '.join(TENKENIVAA[navn])}. standard = leverandørens standard uten effort-parameter.")
+            ut.append(f"- Nøkkelvariabel: `{m['egenskaper'].get('nokkelvariabel')}`. Lokal sjekk gjør ingen API-kall.")
         for melding in m["meldinger"]:
             ut.append(f"- {melding}")
         inn = m["egenskaper"].get("innlogging")
@@ -65,6 +69,13 @@ def md_plan(d: dict[str, Any]) -> str:
         ut += [f"| {k.id} | {k.navn} | {k.sporsmal} | {', '.join(k.tillatte_svar)} | {', '.join(k.krever_belegg_ved)} | {k.regel} |" for k in p.kriterier]
         if p.tilleggsinstruks:
             ut += ["", f"**Tilleggsinstruks:** {p.tilleggsinstruks}"]
+        if p.motor in API_MOTORER:
+            api = fra_plan(p)['api']
+            ut += ['', '**API-valg (separat betaling):**',
+                   f"- Mottaker: `{api['endpoint']}`. Leverandørvalg: {api['provider']}.",
+                   f"- Maks output-tokenbudsjett: {api['maks_output_tokens']}. Nøkkel hentes lokalt fra `{api['nokkelvariabel']}`.",
+                   '- standard betyr at tenkeparameter utelates. Støtte og tolkning av nivå avhenger av modellen.',
+                   '- Ett API-kall per forsøk, ingen modellverktøy. Ingen automatisk bytting eller nytt forsøk.']
         ut.append("")
     kj = d["kjoringer"]
     ut += [f"## Kjøringer: {len(kj)}", ""]
@@ -85,6 +96,9 @@ def md_inputpakke(d: dict[str, Any]) -> str:
         "## Kjøreparametre", "", "```json", json.dumps(p.get("kjoreparametre", {"merknad": "Eldre inputpakke: se forsøksmanifest."}), ensure_ascii=False, indent=2), "```", "",
         "## Brukermelding (dokumentet)", "", "```", p["brukermelding"][:6000] + ("\n… (avkortet i visningen; hele teksten er lagret)" if len(p["brukermelding"]) > 6000 else ""), "```", "",
         "## Svarskjema", "", "```json", json.dumps(p["svarskjema"], ensure_ascii=False, indent=1), "```",
+        *( ["", "## API-forespørsel (uten autentisering; dokumentteksten kan være avkortet her)",
+             "```json", json.dumps(p['api_foresporsel'], ensure_ascii=False, indent=2)[:10000], "```",
+             "Full forespørsel inngår i inputhash og lagres i input.json ved start."] if p.get('api_foresporsel') else [] ),
     ])
 
 
@@ -154,7 +168,12 @@ def md_kjoring(d: dict[str, Any]) -> str:
         forbruk = m.get("forbruk") or {}
         if forbruk:
             u = forbruk.get("usage") or {}
-            ut.append(f"- Forbruk: {forbruk.get('merknad', '')} " + (f"input {u.get('input_tokens')} + cache {u.get('cache_read_input_tokens')}/{u.get('cache_creation_input_tokens')}, output {u.get('output_tokens')}; listepris USD {forbruk.get('total_cost_usd_listepris')}" if u else ""))
+            tekst = f"- Forbruk: {forbruk.get('merknad', '')}"
+            if u:
+                tekst += f" Input {u.get('input_tokens', u.get('prompt_tokens', 'ukjent'))}, output {u.get('output_tokens', u.get('completion_tokens', 'ukjent'))}."
+            if forbruk.get('total_cost_usd_listepris') is not None:
+                tekst += f" Listepris-estimat USD {forbruk['total_cost_usd_listepris']}."
+            ut.append(tekst)
     return "\n".join(ut)
 
 

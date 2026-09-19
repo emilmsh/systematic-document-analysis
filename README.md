@@ -1,8 +1,19 @@
 # OE Kildeanalyse
 
-**Systematisk dokumentanalyse i Claude Code og Codex, med kildebelegg og sporbar historikk.** Beskriv oppgaven i samtalen, avtal kriteriene, velg modell og tenkenivå, og la pluginen lese dokumentene etter samme plan. Inspiser sitater, rett vurderinger og eksporter til Excel eller videre rapportarbeid.
+**Systematisk dokumentanalyse i ChatGPT desktop/Codex og Claude Code, med kildebelegg og sporbar historikk.** Beskriv oppgaven i samtalen, avtal kriteriene, velg modell og tenkenivå, og la pluginen lese dokumentene etter samme plan. Inspiser sitater, rett vurderinger og eksporter til Excel eller videre rapportarbeid.
 
-Passer for å kode årsrapporter, kartlegge tiltak i rapporter og gjøre strukturerte dokumentgjennomganger. Hvert dokument leses i en egen CLI-sesjon. Arbeidet starter og fortsetter i appen; CLI-en er motoren under panseret. Egne dokumenter er normal arbeidsflyt, og eksempelfiler er valgfrie.
+Passer for å kode årsrapporter, kartlegge tiltak i rapporter og gjøre strukturerte dokumentgjennomganger. Hvert dokument leses i en egen CLI-sesjon eller et separat API-kall. Arbeidet starter og fortsetter i vertsappens samtale. Egne dokumenter er normal arbeidsflyt, og eksempelfiler er valgfrie.
+
+## To uavhengige valg
+
+| Lag | Valg | Ansvar |
+|---|---|---|
+| Vertsapp / orkestrator | ChatGPT desktop med lokal Codex-plugin, eller Claude Code | Dialog, kriterier, planlegging, godkjenning og oppfølging |
+| Arbeidsagent / lesemotor | Codex CLI, Claude Code CLI, OpenAI API, Anthropic API, OpenRouter eller kompatibelt API | Ett dokument og ett registrert forsøk om gangen |
+
+Begge vertsappene tilbyr samme MCP-verktøy, arbeidsrutine og motorvalg. Modellvalget i vertsamtalen gjelder ikke automatisk arbeidsagentene. Lokal ChatGPT desktop/Codex-støtte innebærer ikke en egen integrasjon i vanlig ChatGPT-nettchat eller Claude Desktop.
+
+CLI-motorene har leverandørens agentlag (harness) rundt modellen, selv om vi begrenser verktøy og kontekst. API-motorene bruker ett direkte kall uten verktøy eller agentløkke. Samme modellnavn og tenkenivå garanterer derfor ikke identisk atferd på tvers av motorene. Kriterier, dokumenttekst, validering og historikk er felles.
 
 ## Last ned og del
 
@@ -18,7 +29,7 @@ Repoet er privat. Mottakeren må ha GitHub-tilgang for å laste ned derfra. Du k
 2. Pakk ut ZIP-filen og dobbeltklikk **installer.cmd**. Velg Claude Code, Codex eller begge.
 3. Start en ny lokal samtale i valgt app med OE Kildeanalyse aktivert.
 
-Du kan også kjøre `installer.cmd claude`, `installer.cmd codex` eller `installer.cmd begge` fra PowerShell med `./` foran filnavnet. Første serveroppstart henter Python-avhengigheter fra PyPI. Ingen separat API-nøkkel brukes.
+Du kan også kjøre `installer.cmd claude`, `installer.cmd codex` eller `installer.cmd begge` fra PowerShell med `./` foran filnavnet. Første serveroppstart henter Python-avhengigheter fra PyPI. API-nøkkel er bare nødvendig hvis du velger en API-lesemotor; CLI-ene brukes fortsatt til pluginregistrering.
 
 Installasjonen kopierer pluginen til `%LOCALAPPDATA%/oe-kildeanalyse/plugins/<app>/oe-kildeanalyse` og registrerer markedsplassen `oe-kildeanalyse-lokal` med appens CLI. Codex får lokale Python- og serverstier generert på mottakerens PC. Begge appene bruker samme analysekjerne. Etter vellykket installasjon kan den utpakkede nedlastingsmappen slettes; behold installasjonsmappen i LocalAppData.
 
@@ -50,14 +61,49 @@ I Codex kan du erstatte motorvalget med `codex_cli`, for eksempel modellen `gpt-
 |---|---|---|
 | Claude Code (`claude_cli`) | `sonnet` | `high` |
 | Codex (`codex_cli`) | `gpt-5.6-terra` | `high` |
+| OpenAI (`openai_api`) | Må velges eksplisitt | `standard` |
+| Anthropic (`anthropic_api`) | Må velges eksplisitt | `standard` |
+| OpenRouter (`openrouter_api`) | Må velges eksplisitt | `standard` |
+| Annet kompatibelt API (`kompatibel_api`) | Må velges eksplisitt | `standard` |
 
-Du kan velge et annet modellnavn eller full modell-ID. Et alias som `sonnet` er ikke en låst modellversjon. Tenkenivåene er `low`, `medium`, `high`, `xhigh` og `max`; Codex har også `ultra`. Tilgjengelighet avhenger av modell og konto. CLI-en kan tilpasse støttede nivåer; ønsket nivå registreres, mens faktisk nivå merkes ukjent når det ikke rapporteres.
+Du kan velge et annet modellnavn eller full modell-ID. Et alias som `sonnet` er ikke en låst modellversjon. Tenkenivåene er `low`, `medium`, `high`, `xhigh` og `max`; Codex CLI har også `ultra`. API-valget `standard` utelater effort-parameteren og bruker leverandørens standard. OpenAI, OpenRouter og kompatible API-er kan også forespørres med `none` og `minimal` når modellen støtter dem. Tilgjengelighet avhenger av modell og konto. CLI-en og OpenRouter kan tilpasse nivåer; ønsket nivå registreres, mens faktisk nivå merkes ukjent når det ikke rapporteres.
 
 Valgene gjelder lesekjøringene og arves ikke fra app-samtalens modellinnstilling. Planen godkjennes før start. Endringer gir ny planversjon og endrer ikke tidligere kjøringer. Standard tidsgrense er 600 sekunder per dokument, og kan endres i planen.
 
 Hvert svar har kriterium, vurdering og belegg med fysisk PDF-side og sitat. Originale svar og senere rettelser bevares. KI-svar starter som «ikke kontrollert»; registrert menneskelig kontroll bygger på brukerens vurdering.
 
 Pluginen bevarer dokumentkopier og lagrer prosjekter, planer, kjøringer og eksport i `%LOCALAPPDATA%/oe-kildeanalyse`. Begge appene bruker dette lageret på samme PC. `OE_KILDEANALYSE_DATA` kan velge en annen datamappe. Eksportverktøyet viser resultatstien; du kan be assistenten kopiere eksporten til arbeidsmappen. CSV har semikolon og UTF-8 med BOM; JSON og Markdown følger med. Endringer i original-PDF-ene endrer ikke allerede importerte kopier.
+
+## Valgfrie API-nøkler
+
+API-støtten i denne kildeutgaven er kontrollert lokalt med falsk HTTP-transport, ikke med betalte modellkall. Modelltilgang, leverandørens parametertolkning og faglig kvalitet må kontrolleres ved faktisk bruk.
+
+| Motor | Lokal miljøvariabel | API-format |
+|---|---|---|
+| `openai_api` | `OPENAI_API_KEY` | OpenAI Responses |
+| `anthropic_api` | `ANTHROPIC_API_KEY` | Anthropic Messages |
+| `openrouter_api` | `OPENROUTER_API_KEY` | OpenRouter Chat Completions |
+| `kompatibel_api` | `OE_KILDEANALYSE_CUSTOM_API_KEY` | OpenAI-kompatibelt Chat Completions |
+
+Sett nøkkelen som en **brukermiljøvariabel i Windows** (søk etter «Rediger miljøvariablene for kontoen din»), og avslutt og start vertsappen helt på nytt. Ikke lim nøkkelen inn i samtalen, kriteriefilen eller motorinnstillingene. Miljøvariabler er lokal konfigurasjon, ikke et kryptert nøkkelhvelv. `vis_oppsett` viser bare om nøkkelen er tilgjengelig; det gjør ingen API-kall. Både vertsappene og deres lokale prosesser kjører under din bruker.
+
+Nøkkelverdien brukes bare som autentisering ved kall; den tas ikke inn i input, plan eller eksport. Eventuelt ekko av kjente API-nøkler i råsvar maskeres. Ved CLI-kjøring fjernes API-nøklene fra underprosessmiljøet, og abonnementsinnlogging kontrolleres. API-nøkler aktivert på PC-en bytter altså ikke lesemotor automatisk.
+
+Eksempel i **begge vertsappene**:
+
+> Bruk OE Kildeanalyse på PDF-ene i [full mappesti]. Velg openai_api med gpt-6-astra og high som lesemotor. Jeg har konfigurert nøkkelen lokalt. Vis kriterier, mottaker, modell, tenkenivå og tokenbudsjett før godkjenning. Ikke start modellkall før planen er godkjent.
+
+API krever leverandørens modell-ID, ikke CLI-aliaset `sonnet`. For OpenRouter brukes for eksempel `openai/gpt-6-astra`. Velg bare modeller som støtter strukturert JSON etter skjemaet. Hvis en modell ikke støtter de valgte parametrene, beholdes feilen; pluginen fjerner dem ikke automatisk.
+
+API-motorinnstillinger kan være `{"maks_output_tokens": 16384, "tidsavbrudd_sek": 600}`. Grensen på output gjelder leverandørens tokenbudsjett, som kan omfatte tenking; den er ikke en kronergrense. Anthropic bruker adaptive thinking når et eksplisitt tenkenivå er valgt, og krever en modell som støtter dette.
+
+OpenRouter kan i tillegg bruke `{"provider": "OpenAI"}` for å begrense leverandøren. Uten dette velger OpenRouter leverandør for den navngitte modellen; dette vises i planen. Vi sender `require_parameters: true` og `allow_fallbacks: false`. Automatisk modellruting og variant-suffikser støttes ikke. OpenRouter kan oversette tenkenivåer, så faktisk levert nivå er fortsatt ukjent.
+
+For andre leverandører velges `kompatibel_api`, eksplisitt modell-ID og `{"base_url": "https://leverandor.example/v1"}`. Nøkkelen for denne motoren sendes til akkurat denne mottakeren. API-et må støtte `/chat/completions` og `response_format` med JSON-skjema; ved valgt tenkenivå må det også støtte `reasoning_effort`. «Kompatibel» betyr ikke at alle leverandører eller modeller er prøvd. Denne utgaven følger ikke HTTP-omdirigeringer og bruker ikke proxy-/sertifikatinnstillinger fra miljøvariabler.
+
+API-planen og inputpakken viser mottaker, modell, nivå, tokenbudsjett og forespørselen uten autentiseringsheaders. Den samme forespørselen inngår i inputhash og eksport. Rapportert modell, request-ID og forbruk bevares når leverandøren oppgir det. Feil, kvotestopp, tidsavbrudd og avbrudd gir ingen automatisk retry eller bytte til en annen motor; leverandøren kan likevel ha behandlet og fakturert et avbrutt kall.
+
+API-formatene følger [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [OpenAI reasoning](https://developers.openai.com/api/docs/guides/reasoning), [Anthropic Structured Outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs), [Anthropic effort](https://platform.claude.com/docs/en/build-with-claude/effort) og [OpenRouter Structured Outputs](https://openrouter.ai/docs/guides/features/structured-outputs).
 
 ## Fem årsrapporter som eksempel
 

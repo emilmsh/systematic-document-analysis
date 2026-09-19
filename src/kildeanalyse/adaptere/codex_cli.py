@@ -109,17 +109,17 @@ class CodexCliAdapter(Adapter):
     def _bin(self):
         return self.innstillinger.get('codex_bin') or os.environ.get('OE_KILDEANALYSE_CODEX_BIN') or shutil.which('codex')
 
+    def _env(self):
+        return {k: v for k, v in os.environ.items() if k not in FORBUDTE_ENV and not k.upper().endswith('_API_KEY')}
+
     def sjekk_stotte(self):
         binary = self._bin()
         if not binary:
             return Stotte(False, ['Fant ikke codex på PATH. Installer Codex CLI.'])
-        satt = [name for name in FORBUDTE_ENV if os.environ.get(name)]
-        if satt:
-            return Stotte(False, ['Start blokkert: API-/tokenmiljø er satt (' + ', '.join(satt) + '). Bruk ChatGPT-innlogging.'])
         try:
-            version = subprocess.run([binary, '--version'], capture_output=True, timeout=20, stdin=subprocess.DEVNULL)
+            version = subprocess.run([binary, '--version'], capture_output=True, timeout=20, stdin=subprocess.DEVNULL, env=self._env())
             self._versjon = version.stdout.decode('utf-8', 'replace').strip()
-            auth = subprocess.run([binary, 'login', 'status'], capture_output=True, timeout=20, stdin=subprocess.DEVNULL)
+            auth = subprocess.run([binary, 'login', 'status'], capture_output=True, timeout=20, stdin=subprocess.DEVNULL, env=self._env())
             status = (auth.stdout + auth.stderr).decode('utf-8', 'replace')
         except (OSError, subprocess.SubprocessError) as exc:
             return Stotte(False, [f'Kunne ikke kontrollere Codex CLI: {exc}'])
@@ -161,7 +161,7 @@ class CodexCliAdapter(Adapter):
         args.append('-')
         start = time.monotonic()
         timeout = float(self.innstillinger.get('tidsavbrudd_sek', 600))
-        proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self._env())
         self._prosess = proc
         avbrutt, tidsavbrudd = False, False
         data = pakke.brukermelding.encode('utf-8')

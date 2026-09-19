@@ -143,11 +143,13 @@ class Inputpakke:
     brukermelding: str
     svarskjema: dict[str, Any]
     kjoreparametre: dict[str, Any] = field(default_factory=dict)
+    api_foresporsel: dict[str, Any] | None = None
 
     def hash(self) -> str:
         innhold = json.dumps(
             {"systeminstruks": self.systeminstruks, "brukermelding": self.brukermelding, "svarskjema": self.svarskjema,
-             **({"kjoreparametre": self.kjoreparametre} if self.kjoreparametre else {})},
+             **({"kjoreparametre": self.kjoreparametre} if self.kjoreparametre else {}),
+             **({"api_foresporsel": self.api_foresporsel} if self.api_foresporsel else {})},
             ensure_ascii=False,
             sort_keys=True,
         )
@@ -165,6 +167,7 @@ class Inputpakke:
             "brukermelding": self.brukermelding,
             "svarskjema": self.svarskjema,
             "kjoreparametre": self.kjoreparametre,
+            **({"api_foresporsel": self.api_foresporsel} if self.api_foresporsel else {}),
             "input_hash": self.hash(),
         }
 

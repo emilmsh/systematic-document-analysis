@@ -12,6 +12,7 @@ from kildeanalyse.prompt import bygg_inputpakke
 from kildeanalyse.parametre import normaliser
 from kildeanalyse.adaptere.codex_cli import CodexCliAdapter
 from kildeanalyse.adaptere.claude_cli import ClaudeCliAdapter
+from kildeanalyse.adaptere.api import OpenAiApiAdapter, AnthropicApiAdapter, OpenRouterApiAdapter, KompatibelApiAdapter
 
 FIX = Path(__file__).parent / "fixtures/syntetisk"
 
@@ -62,6 +63,8 @@ def test_parametre_sendes_til_prosess(adapter, tmp_path, monkeypatch):
     monkeypatch.setattr('subprocess.Popen', Process)
     monkeypatch.setenv('CLAUDE_CODE_EFFORT_LEVEL', 'low')
     monkeypatch.setenv('MAX_THINKING_TOKENS', '0')
+    for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'OE_KILDEANALYSE_CUSTOM_API_KEY'):
+        monkeypatch.setenv(key, 'local-fake-key')
     motor = adapter({'tenkenivaa':'high'})
     monkeypatch.setattr(motor, '_bin', lambda:'cli')
     from kildeanalyse.modell import Inputpakke, Stotte
@@ -69,6 +72,7 @@ def test_parametre_sendes_til_prosess(adapter, tmp_path, monkeypatch):
     pakke = Inputpakke('f','k','d','dok','sha',[],'instruks','tekst',{'type':'object','properties':{}})
     result = motor.kjor(pakke, 'chosen-model', lambda:False, str(tmp_path))
     args, env = calls[0][0], calls[0][1].get('env', {})
+    assert env and not any(k.endswith('_API_KEY') for k in env)
     assert args[args.index('--model')+1] == 'chosen-model'
     if adapter is ClaudeCliAdapter:
         assert args[args.index('--effort')+1] == 'high'
@@ -78,7 +82,9 @@ def test_parametre_sendes_til_prosess(adapter, tmp_path, monkeypatch):
     assert result.motorinfo['tenkenivaa_onsket'] == 'high'
 
 
-@pytest.mark.parametrize('engine,adapter', [('claude_cli',ClaudeCliAdapter),('codex_cli',CodexCliAdapter)])
+@pytest.mark.parametrize('engine,adapter', [('claude_cli',ClaudeCliAdapter),('codex_cli',CodexCliAdapter),
+    ('openai_api',OpenAiApiAdapter),('anthropic_api',AnthropicApiAdapter),
+    ('openrouter_api',OpenRouterApiAdapter),('kompatibel_api',KompatibelApiAdapter)])
 def test_parametre_i_input_historikk_og_eksport(engine, adapter, tmp_path, monkeypatch):
     from kildeanalyse.modell import Stotte, Motorsvar
     observed = []
@@ -92,7 +98,8 @@ def test_parametre_i_input_historikk_og_eksport(engine, adapter, tmp_path, monke
     pr = tjeneste.opprett_prosjekt(lager, 'Parametre')
     tjeneste.importer_dokumenter(lager, pr['id'], [str(FIX/'fjordblikk_2025.pdf')])
     an = tjeneste.opprett_analyse(lager, pr['id'], 'Analyse', 'Bestilling', str(FIX/'eksempelkriterier.json'),
-                                motor=engine, modell='valgt-modell', tenkenivaa='medium')
+                                motor=engine, modell='valgt-modell', tenkenivaa='medium',
+                                motorinnstillinger={'base_url':'https://example.org/v1'} if engine == 'kompatibel_api' else None)
     aid = an['analyse']['id']
     for level in ('medium', 'high'):
         if level == 'high':
@@ -116,6 +123,8 @@ def test_parametre_i_input_historikk_og_eksport(engine, adapter, tmp_path, monke
         with (out/file).open(encoding='utf-8-sig', newline='') as f:
             rows = list(csv.DictReader(f, delimiter=';'))
         assert [r['tenkenivaa_onsket'] for r in rows] == ['medium','high']
+        if engine.endswith('_api'):
+            assert all(r['api_endpoint'].startswith('https://') and r['maks_output_tokens'] == '16384' for r in rows)
     for kid in lager.kjoringer(aid):
         fid = lager.forsok_for_kjoring(kid['id'])[0]['id']
         assert (out/'forsok'/fid/'input.json').is_file()

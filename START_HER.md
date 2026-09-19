@@ -1,6 +1,6 @@
 # Start med OE Kildeanalyse
 
-**Samme Windows-pakke fungerer i Claude Code og Codex.**
+**Samme Windows-pakke fungerer i ChatGPT desktop/Codex og Claude Code. Begge kan bruke alle lesemotorene.**
 
 1. Du trenger Python 3.12+ og CLI-en til appen du bruker, innlogget med din egen abonnementskonto. CLI-en må finnes på PATH.
 2. Pakk ut ZIP-filen. Dobbeltklikk `installer.cmd` og velg 1 (Claude Code), 2 (Codex) eller 3 (begge). Menyen registrerer pluginen, uten modellkall eller endring av innlogging.
@@ -14,6 +14,14 @@ En vanlig mappe med PDF-er er nok. Oppgi hele stien. Mappeimport leser filene di
 
 Du kan velge modell selv: for eksempel `claude_cli / sonnet / high` eller `codex_cli / gpt-5.6-terra / high`. Lesemotorens modellvalg er uavhengig av samtalens modell. Endringer får ny planversjon. Simulering og eksempler er valgfrie.
 
+## Bruke API som lesemotor
+
+Velg `openai_api`, `anthropic_api`, `openrouter_api` eller `kompatibel_api` i samtalen, og oppgi modell-ID. Du fortsetter arbeidet i samme vertsapp. API innebærer separat betaling hos valgt leverandør.
+
+Sett henholdsvis `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY` eller `OE_KILDEANALYSE_CUSTOM_API_KEY` som brukermiljøvariabel i Windows, og start hele appen på nytt. Ikke send nøkkelverdien i samtalen eller legg den i dokumentmappen. `vis_oppsett` kontrollerer bare lokal tilgjengelighet. Se README for oppsett, kompatibilitet og valg av mottaker for andre leverandører.
+
+Eksempel: «Bruk openai_api med gpt-6-astra og high. Vis API-mottaker, modell og tokenbudsjett sammen med planen før jeg godkjenner.» API-nivået `standard` bruker leverandørens standardinnstilling. Alle API-modeller må støtte strukturert svar; støtten varierer. Ingen motorbytting eller nye API-forsøk skjer automatisk.
+
 ## Hvor havner ting?
 
 - Installasjon: `%LOCALAPPDATA%/oe-kildeanalyse/plugins/<app>/oe-kildeanalyse`. Behold denne mappen.
@@ -24,4 +32,4 @@ Oppdater ved å laste ned [siste release](https://github.com/emilmsh/oe-kildeana
 
 En gammel utviklingsinstallasjon kan bruke samme markedsplassnavn fra en annen mappe. Da gir installer en forklaring og bevarer den eksisterende registreringen. Se README for oppdatering eller flytting. Hvis en gammel Codex-plugin fra `personal` er aktivert, deaktiver den når du går over til ZIP-installasjonen.
 
-Verktøyet støtter foreløpig Windows og PDF med tekstlag. Full OS-isolasjon og automatisk oppdeling av store dokumenter er ikke implementert. Se README for arbeidsflyt og begrensninger. Ved feil: ta med feilmeldingen til utvikleren; API-nøkler er ikke nødvendig.
+Verktøyet støtter foreløpig Windows og PDF med tekstlag. Full OS-isolasjon og automatisk oppdeling av store dokumenter er ikke implementert. API-adapterne er kontrollert lokalt uten leverandørkall. Se README for arbeidsflyt og begrensninger. Ved feil: ta med feilmeldingen til utvikleren, uten API-nøkler.

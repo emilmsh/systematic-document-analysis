@@ -102,12 +102,13 @@ def bygg_svarskjema(plan: Plan) -> dict[str, Any]:
 
 def bygg_inputpakke(plan: Plan, dokument: dict[str, Any], *, forsok_id: str, kjoring_id: str) -> Inputpakke:
     from .parametre import fra_plan
+    from .api_oppsett import API_MOTORER
     sider = [Side(nr=s["nr"], tekst=s["tekst"], tegn=s["tegn"]) for s in dokument["sider"]]
     skjema = bygg_svarskjema(plan)
-    if plan.motor == "codex_cli":
+    if plan.motor == "codex_cli" or plan.motor in API_MOTORER:
         from .adaptere.codex_cli import strengt_skjema
         skjema = strengt_skjema(skjema)
-    return Inputpakke(
+    pakke = Inputpakke(
         forsok_id=forsok_id,
         kjoring_id=kjoring_id,
         dokument_id=dokument["id"],
@@ -119,3 +120,7 @@ def bygg_inputpakke(plan: Plan, dokument: dict[str, Any], *, forsok_id: str, kjo
         svarskjema=skjema,
         kjoreparametre=fra_plan(plan),
     )
+    if plan.motor in API_MOTORER:
+        from .adaptere.api import bygg_request
+        pakke.api_foresporsel = bygg_request(plan.motor, pakke, plan.modell, plan.motorinnstillinger)
+    return pakke

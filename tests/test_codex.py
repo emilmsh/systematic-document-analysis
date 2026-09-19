@@ -32,6 +32,15 @@ def test_strict_schema_preserves_original():
 def test_no_api_fallback(monkeypatch):
     monkeypatch.setenv('OPENAI_API_KEY','not-a-real-key')
     monkeypatch.setattr(CodexCliAdapter,'_bin',lambda self:'codex')
+    from types import SimpleNamespace
+    observed = []
+    def run(args, **kwargs):
+        observed.append(kwargs['env'])
+        return SimpleNamespace(returncode=0, stdout=b'Logged in using ChatGPT', stderr=b'')
+    monkeypatch.setattr('subprocess.run', run)
+    assert CodexCliAdapter().sjekk_stotte().ok
+    assert observed and all('OPENAI_API_KEY' not in env for env in observed)
+    monkeypatch.setattr('subprocess.run', lambda *a, **kw: SimpleNamespace(returncode=0, stdout=b'Logged in using API key', stderr=b''))
     assert not CodexCliAdapter().sjekk_stotte().ok
 
 def test_codex_input_schema_is_the_sent_schema():

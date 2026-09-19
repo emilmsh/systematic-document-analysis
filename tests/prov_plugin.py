@@ -59,6 +59,15 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
                                          "motorinnstillinger_json":'{"tidsavbrudd_sek":1200}'})
             plan = await call("vis_plan", {"analyse_id":aid})
             assert all(x in plan for x in ("sonnet", "medium", "gpt-5.6-terra", "high", "1200")), plan
+            # Planlegging i den felles MCP-flaten krever ingen API-nøkkel eller modellkall.
+            for engine, model in [('openai_api','gpt-6-astra'), ('anthropic_api','claude-sonnet-4-6'),
+                                  ('openrouter_api','openai/gpt-6-astra'), ('kompatibel_api','chosen-model')]:
+                settings = {'base_url':'https://example.org/v1'} if engine == 'kompatibel_api' else {}
+                await call('ny_planversjon', {'analyse_id':aid, 'endringsnotat':'API-plan uten kall',
+                                             'motor':engine, 'modell':model, 'tenkenivaa':'high',
+                                             'motorinnstillinger_json':json.dumps(settings)})
+                body = await call('vis_plan', {'analyse_id':aid})
+                assert engine in body and model in body and 'separat betaling' in body
 
 
 async def main(plugin_root: Path | None = None) -> None:

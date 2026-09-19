@@ -1,7 +1,7 @@
-"""MCP-server for Claude Code-pluginen. Start: python -m kildeanalyse.mcp_server
+"""Felles MCP-server for ChatGPT desktop/Codex og Claude Code.
 
-Verktøyene returnerer lesbar tekst. Kjørekomponenten håndhever reglene; verten (Claude
-Code) kan ikke skrive direkte til lagringen gjennom disse verktøyene.
+Verktøyene returnerer lesbar tekst. Kjørekomponenten håndhever reglene; vertsappene
+kan ikke skrive direkte til lagringen gjennom disse verktøyene.
 """
 from __future__ import annotations
 
@@ -73,9 +73,12 @@ def importer_dokumenter(prosjekt_id: str, stier: list[str]) -> str:
 @server.tool(description=(
     "Opprett en analyse med planversjon 1 (utkast). kriteriefil er en sti til en JSON-fil med «kriterier» "
     "(id, navn, spørsmål, tillatte_svar, krever_belegg_ved, regel). motor: «simulert» (ingen modellkall), «claude_cli» "
-    "(Claude-abonnement) eller «codex_cli» (ChatGPT-innlogging i Codex CLI). Velg motor eksplisitt. "
-    "modell angir modellnavn/ID; tomt gir sonnet for Claude og gpt-5.6-terra for Codex. "
-    "tenkenivaa: low, medium, high, xhigh, max (og ultra for Codex); standard high. Støtte avhenger av valgt modell. "
+    "(Claude-abonnement), «codex_cli» (ChatGPT-innlogging), eller API: «openai_api», «anthropic_api», "
+    "«openrouter_api», «kompatibel_api». API krever eksplisitt modell-ID og lokal nøkkel; separat betaling. "
+    "API-innstillinger: maks_output_tokens, tidsavbrudd_sek; kompatibel_api krever base_url; OpenRouter har valgfri provider. "
+    "API-tenkenivå standard utelater effort; øvrige nivåer avhenger av modellen. Aldri send nøkkelverdier til verktøyet. Velg motor eksplisitt. "
+    "CLI-modell: tomt gir sonnet for Claude og gpt-5.6-terra for Codex. "
+    "CLI-tenkenivaa: low, medium, high, xhigh, max (og ultra for Codex); CLI-standard high. Støtte avhenger av valgt modell. "
     "Bruk prosjektets dokumenter og kriterier. Hjelp brukeren å formulere kriterier i JSON fra bestillingen."
 ))
 def opprett_analyse(prosjekt_id: str, navn: str, oppgavetekst: str, kriteriefil: str, formaal: str = "", motor: str = "",

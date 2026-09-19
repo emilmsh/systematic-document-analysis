@@ -55,7 +55,7 @@ class ClaudeCliAdapter(Adapter):
         return self.innstillinger.get("claude_bin") or os.environ.get("OE_KILDEANALYSE_CLAUDE_BIN") or shutil.which("claude")
 
     def _env(self) -> dict[str, str]:
-        ut = {k: v for k, v in os.environ.items() if k not in FORBUDTE_ENV}
+        ut = {k: v for k, v in os.environ.items() if k not in FORBUDTE_ENV and not k.upper().endswith('_API_KEY')}
         if self.innstillinger.get("tenkenivaa"):
             for k in ("CLAUDE_CODE_EFFORT_LEVEL", "MAX_THINKING_TOKENS", "CLAUDE_CODE_DISABLE_THINKING",
                       "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING", "CLAUDE_EFFORT"):
@@ -87,13 +87,6 @@ class ClaudeCliAdapter(Adapter):
             self._auth = json.loads(ut) if ut.strip().startswith("{") else {"raatekst": ut.strip(), "stderr": feil.strip()}
         except Exception as e:  # noqa: BLE001
             self._auth = {"feil": str(e)}
-        satt = [v for v in FORBUDTE_ENV if os.environ.get(v)]
-        if satt:
-            ok = False
-            meldinger.append(
-                "Miljøvariabler for API-nøkkel, token eller skyleverandør er satt: " + ", ".join(satt)
-                + ". Start blokkeres for å unngå utilsiktet API-/betalingsoppsett. Fjern variablene og prøv igjen."
-            )
         if not self._auth.get("loggedIn"):
             ok = False
             meldinger.append("Claude Code er ikke innlogget i dette miljøet. Kjør `claude` i en terminal og logg inn med Teams-brukeren.")

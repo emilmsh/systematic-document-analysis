@@ -58,9 +58,13 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
         dok = lager.dokument(kj["dokument_id"])
         planrad = lager.planversjon(kj["planversjon_id"])
         parametre = fra_plan(planrad["plan"])
+        api = parametre.get('api', {})
+        api_felter = {'api_endpoint': api.get('endpoint', ''), 'api_provider_valg': api.get('provider', ''),
+                      'maks_output_tokens': api.get('maks_output_tokens', '')}
         forsok = lager.forsok_for_kjoring(kj["id"])
         gjeld = next((f for f in forsok if f["id"] == kj["gjeldende_forsok_id"]), forsok[-1] if forsok else None)
         rad: dict[str, Any] = {
+            **api_felter,
             "kjoring_id": kj["id"], "dokument_id": dok["id"], "dokument": dok["navn"], "sha256": dok["sha256"],
             "planversjon": planrad["versjon"], "status": kj["status"], "forsok_id": gjeld["id"] if gjeld else "",
             "antall_forsok": len(forsok), "motor": gjeld["motor"] if gjeld else "", "simulert": "" if not gjeld else ("JA" if gjeld["simulert"] else "nei"),
@@ -99,7 +103,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
         for f in forsok:
             forsokrader.append({k: f.get(k) for k in ("id", "kjoring_id", "nr", "status", "startet", "avsluttet", "motor", "simulert",
                                                      "modell_onsket", "modell_rapportert", "sesjon_id", "input_hash", "feil")}
-                               | {"tenkenivaa_onsket": parametre["tenkenivaa"]})
+                               | {"tenkenivaa_onsket": parametre["tenkenivaa"]} | api_felter)
             for ko in lager.kontroller(f["id"]):
                 kontrollrader.append({k: ko.get(k) for k in ("id", "forsok_id", "tid", "ansvarlig", "handling", "kriterium_id", "begrunnelse")}
                                      | {"opprinnelig": json.dumps(ko["opprinnelig"], ensure_ascii=False), "nytt": json.dumps(ko["nytt"], ensure_ascii=False)})
@@ -120,7 +124,8 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
                 shutil.copy2(kopi, kildemappe / f"{dok['id']}_{dok['navn']}")
 
     felter = ["kjoring_id", "dokument_id", "dokument", "sha256", "planversjon", "status", "forsok_id", "antall_forsok", "motor", "simulert",
-              "modell", "modell_onsket", "tenkenivaa_onsket", "sesjon_id", "lesedekning", "kontrollert_av_totalt"]
+              "modell", "modell_onsket", "tenkenivaa_onsket", "api_endpoint", "api_provider_valg", "maks_output_tokens",
+              "sesjon_id", "lesedekning", "kontrollert_av_totalt"]
     for kid in alle_kriterier:
         felter += [f"{kid}_svar", f"{kid}_kontroll", f"{kid}_validering"]
     felter.append("merknad")
@@ -128,7 +133,8 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
     _skriv_csv(mappe / "belegg.csv", beleggrader, ["kjoring_id", "forsok_id", "dokument", "kriterium", "svar", "fysisk_side", "sitat",
                                                    "kilde", "sitat_funnet_paa_side"])
     _skriv_csv(mappe / "forsok.csv", forsokrader, ["id", "kjoring_id", "nr", "status", "startet", "avsluttet", "motor", "simulert",
-                                                   "modell_onsket", "modell_rapportert", "tenkenivaa_onsket", "sesjon_id", "input_hash", "feil"])
+                                                   "modell_onsket", "modell_rapportert", "tenkenivaa_onsket", "api_endpoint", "api_provider_valg",
+                                                   "maks_output_tokens", "sesjon_id", "input_hash", "feil"])
     _skriv_csv(mappe / "kontroll.csv", kontrollrader, ["id", "forsok_id", "tid", "ansvarlig", "handling", "kriterium_id", "begrunnelse",
                                                        "opprinnelig", "nytt"])
     (mappe / "resultater.json").write_text(json.dumps({

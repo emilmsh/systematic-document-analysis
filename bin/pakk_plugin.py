@@ -40,7 +40,8 @@ def pakk(maal, codex=False):
             'command': sys._base_executable,
             'args': ['-X', 'utf8', str(maal/'bin'/'start_server.py')],
             'env': {'PYTHONUTF8': '1'},
-            'env_vars': ['OE_KILDEANALYSE_DATA', 'CODEX_HOME', 'OE_KILDEANALYSE_CODEX_BIN'],
+            'env_vars': ['OE_KILDEANALYSE_DATA', 'CODEX_HOME', 'OE_KILDEANALYSE_CODEX_BIN',
+                         'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'OE_KILDEANALYSE_CUSTOM_API_KEY'],
             'startup_timeout_sec': 120,
         }}}
         (maal/'.mcp.json').write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')

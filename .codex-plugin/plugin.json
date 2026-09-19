@@ -1,6 +1,6 @@
 {
   "name": "oe-kildeanalyse",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Etterpr\u00f8vbare dokumentanalyser med plan, belegg, kontrollhistorikk og eksport.",
   "author": {
     "name": "Oslo Economics"
@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "OE Kildeanalyse",
     "shortDescription": "Analyser dokumenter med sporbarhet og kildebelegg.",
-    "longDescription": "Arbeid med analysen i Codex eller Claude Code. Lokal kj\u00f8rekomponent med valgfri Codex- eller Claude-motor, registrert input og menneskelig kontroll.",
+    "longDescription": "Arbeid med analysen i ChatGPT desktop/Codex eller Claude Code. Velg Codex CLI, Claude Code eller API fra OpenAI, Anthropic, OpenRouter eller kompatibel leverandør som lesemotor. Felles plan, kildebelegg og kontrollhistorikk.",
     "developerName": "Oslo Economics",
     "category": "Productivity",
     "capabilities": [],
