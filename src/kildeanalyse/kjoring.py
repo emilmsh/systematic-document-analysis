@@ -209,6 +209,7 @@ class Koer:
             "sider_sendt": [s.nr for s in pakke.sider], "sider_uten_tekst": uten, "input_hash": pakke.hash(),
             "motor": adapter.navn, "simulert": adapter.simulert, "modell_onsket": plan.modell, "motoregenskaper": motoregenskaper,
             "kjoreparametre": pakke.kjoreparametre,
+            "source_metadata": pakke.source_metadata,
             "startet": naa(), "arbeider_pid": os.getpid(),
         }
         (mappe / "input.json").write_text(json.dumps(pakke.til_dict(), ensure_ascii=False, indent=2), encoding="utf-8")

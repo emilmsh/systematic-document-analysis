@@ -44,6 +44,11 @@ def write_english_export(directory, analysis, versions, criterion_ids):
 Start with **results.csv**, **evidence.csv**, **attempts.csv**, **reviews.csv** and **plan-summary.md**.
 CSV files use semicolons and UTF-8 with BOM. Language is recorded per plan/run; quotations and
 answer labels are preserved exactly. A mixture of plan versions, languages or engines may affect comparability.
+Evidence includes source_format, source_unit and source_location. Only PDFs have physical_page values.
+Other locators identify Word blocks, text lines, CSV records or workbook sheets and cell ranges.
+The legacy fields side/sider_lest are source-unit IDs, not page numbers for non-PDF files.
+Source profiles in resultater.json record extraction scope, structure and missing formula caches.
+Full reading coverage refers to extracted units only; omitted objects are not evidence of absence.
 
 The English CSV files are reading copies with translated headers. Recorded values remain unchanged:
 `ja`/`JA` = yes, `nei`/`NEI` = no; `simulert` = simulated (no model call).

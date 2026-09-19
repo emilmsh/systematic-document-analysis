@@ -21,7 +21,7 @@ def fingerprint(root: Path) -> str:
 
 
 def usable(python: Path, source: Path | None = None) -> bool:
-    code = "import kildeanalyse, pypdf; import kildeanalyse.mcp_server"
+    code = "import kildeanalyse, pypdf, docx, openpyxl; import kildeanalyse.mcp_server"
     if source is not None:
         code += "; import pathlib, sys; assert pathlib.Path(kildeanalyse.__file__).resolve().is_relative_to(pathlib.Path(sys.argv[1]).resolve())"
     try:

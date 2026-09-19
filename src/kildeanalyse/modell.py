@@ -130,6 +130,7 @@ class Side:
     nr: int  # fysisk side fra 1
     tekst: str
     tegn: int
+    source: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -147,6 +148,7 @@ class Inputpakke:
     svarskjema: dict[str, Any]
     kjoreparametre: dict[str, Any] = field(default_factory=dict)
     api_foresporsel: dict[str, Any] | None = None
+    source_metadata: dict[str, Any] = field(default_factory=dict)
 
     def hash(self) -> str:
         innhold = json.dumps(
@@ -166,6 +168,8 @@ class Inputpakke:
             "dokument_navn": self.dokument_navn,
             "dokument_sha256": self.dokument_sha256,
             "sider_sendt": [s.nr for s in self.sider],
+            "source_units": [{'unit_id':s.nr, **(s.source or {'kind':'pdf_page', 'page':s.nr, 'location':f'PDF page {s.nr}'})} for s in self.sider],
+            "source_metadata": self.source_metadata,
             "systeminstruks": self.systeminstruks,
             "brukermelding": self.brukermelding,
             "svarskjema": self.svarskjema,

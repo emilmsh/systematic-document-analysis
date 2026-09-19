@@ -5,6 +5,7 @@ import json
 from typing import Any
 from .parametre import fra_plan, MODELLER, TENKENIVAA, STANDARD_TENKENIVAA
 from .api_oppsett import API_MOTORER
+from .source_formats import location, metadata
 
 SIMULERT_MERKE = "⚠ SIMULERT"
 
@@ -46,8 +47,9 @@ def md_import(d: dict[str, Any]) -> str:
             continue
         dok = r["dokument"]
         status = {"lesbar": "lesbar", "delvis": f"DELVIS lesbar, sider uten tekst: {r['sider_uten_tekst']}", "uleselig": "ULESELIG (ingen tekstlag)"}[dok["lesbarhet"]]
-        ut.append(f"- {'✓' if r['nytt'] else '='} {dok['id']}: `{dok['navn']}` — {dok['antall_sider']} sider, {status}, SHA-256 {dok['sha256'][:12]}…"
+        ut.append(f"- {'✓' if r['nytt'] else '='} {dok['id']}: `{dok['navn']}` — {dok['antall_sider']} kildeenheter, {status}, SHA-256 {dok['sha256'][:12]}…"
                   + ("" if r["nytt"] else " (fantes allerede, samme innhold)"))
+        ut.append('  - Uttrekksomfang: ' + json.dumps(metadata(dok), ensure_ascii=False))
     return "\n".join(ut)
 
 
@@ -78,6 +80,9 @@ def md_plan(d: dict[str, Any]) -> str:
                    '- standard betyr at tenkeparameter utelates. Støtte og tolkning av nivå avhenger av modellen.',
                    '- Ett API-kall per forsøk, ingen modellverktøy. Ingen automatisk bytting eller nytt forsøk.']
         ut.append("")
+    ut += ['', '## Kilder og felles struktur', '',
+           'Kontroller at filene kan vurderes med samme kriterier. Ulik struktur eller utelatt innhold kan begrense sammenlignbarheten.',
+           '```json', json.dumps(d.get('source_profiles', []), ensure_ascii=False, indent=2), '```']
     kj = d["kjoringer"]
     ut += [f"## Kjøringer: {len(kj)}", ""]
     teller: dict[str, int] = {}
@@ -92,7 +97,7 @@ def md_inputpakke(d: dict[str, Any]) -> str:
     p = d["pakke"]
     return "\n".join([
         f"# Inputpakke for kjøring {d['kjoring']['id']} ({d['kilde']})", "",
-        f"- Dokument: {p['dokument_navn']} ({p['dokument_id']}, SHA-256 {p['dokument_sha256'][:12]}…), fysiske sider sendt: {p['sider_sendt']}",
+        f"- Dokument: {p['dokument_navn']} ({p['dokument_id']}, SHA-256 {p['dokument_sha256'][:12]}…), kildeenheter sendt: {p['sider_sendt']}",
         f"- Input-hash: `{p['input_hash']}`", "", "## Fastlagt instruks (systemrolle)", "", "```", p["systeminstruks"], "```", "",
         "## Kjøreparametre", "", "```json", json.dumps(p.get("kjoreparametre", {"merknad": "Eldre inputpakke: se forsøksmanifest."}), ensure_ascii=False, indent=2), "```", "",
         "## Brukermelding (dokumentet)", "", "```", p["brukermelding"][:6000] + ("\n… (avkortet i visningen; hele teksten er lagret)" if len(p["brukermelding"]) > 6000 else ""), "```", "",
@@ -149,14 +154,14 @@ def md_kjoring(d: dict[str, Any]) -> str:
         val = fd["validering"]
         if val:
             ld = val["lesedekning"]
-            ut.append(f"- Validering: {'gyldig' if val['gyldig'] else 'FEIL'}. Lesedekning: sider lest {ld['sider_lest_oppgitt']} av {ld['sider_i_dokument']}"
+            ut.append(f"- Validering: {'gyldig' if val['gyldig'] else 'FEIL'}. Lesedekning: kildeenheter lest {ld['sider_lest_oppgitt']} av {ld['sider_i_dokument']}"
                       + (" (fullstendig)" if ld["fullstendig"] else " (UFULLSTENDIG)"))
             for a in val.get("advarsler", []):
                 ut.append(f"  - Advarsel: {a['melding']}")
         if fd["vurderinger"]:
-            ut += ["", "| Kriterium | Svar | Kilde | Validering | Kontroll | Belegg (fysisk side: sitat) |", "|---|---|---|---|---|---|"]
+            ut += ["", "| Kriterium | Svar | Kilde | Validering | Kontroll | Belegg (kildeplassering: sitat) |", "|---|---|---|---|---|---|"]
             for kid, v in fd["vurderinger"].items():
-                belegg = "<br>".join(f"s.{b.get('side')}: «{str(b.get('sitat', ''))[:160]}»" for b in v["belegg"]) or "–"
+                belegg = "<br>".join(f"{location(dok, b.get('side'))['location']}: «{str(b.get('sitat', ''))[:160]}»" for b in v["belegg"]) or "–"
                 valid = "ok" if v["validering_gyldig"] else ("FEIL: " + "; ".join(v["valideringsfeil"]))
                 kontroll = v["kontrollstatus"] + (f" ({v['kontroll']['ansvarlig']}, {v['kontroll']['tid'][:16]})" if v["kontroll"] else "")
                 ut.append(f"| {kid} {v['kriterium']} | **{v['svar']}** | {v['kilde']} | {valid} | {kontroll} | {belegg} |")

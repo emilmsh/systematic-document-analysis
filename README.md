@@ -2,7 +2,7 @@
 
 **Analyse documents against agreed criteria, with source quotations, human review and an audit trail. Work in English or Norwegian, in Codex or Claude Code.**
 
-Use your own PDFs to classify annual reports, map policies or review evidence across documents. Discuss the question in your app, agree on a plan, choose a reader and inspect its answers. Each document gets a separate recorded attempt. Export the results for Excel or further reporting. Examples and simulation are optional.
+Apply one agreed analysis routine to a list of files with a shared structure: reports, documents, workbooks or tabular records. Define the common fields, criteria and interpretation rules before execution. File format determines extraction and source references, not the analysis method. Discuss the question in your app, agree on a plan, choose a reader and inspect its answers. Each document gets a separate recorded attempt. Export the results for Excel or further reporting. Examples and simulation are optional.
 
 [Norsk veiledning](README.no.md) · [Start here](START_HERE.md) · [Start her på norsk](START_HER.md)
 
@@ -34,7 +34,7 @@ CLI readers include the vendor's agent harness, with context and tools restricte
 
 ## Start with your documents
 
-A normal folder of local PDFs with text layers is enough. No Git repository or special filenames are required. Folder import includes PDFs directly inside the folder; supply subfolders separately.
+Supply a list of local files or a normal folder. PDF, DOCX, XLSX, CSV/TSV, TXT and Markdown are supported. No Git repository or special filenames are required. Folder import includes supported files directly inside the folder; supply subfolders separately. Each whole file is one analysis unit. Inspect the source profiles and agree how structural differences will be handled. See [supported formats and extraction scope](docs/SOURCE_FORMATS.md).
 
 ```text
 My analysis/
@@ -46,7 +46,7 @@ My analysis/
 
 Open this working folder in the host app and grant it access to your documents and permission to write the criteria file. The plugin itself is installed elsewhere.
 
-> Use Systematic Document Analysis on the PDFs in [absolute folder path]. Investigate [question]. Help me define criteria and answer options. Use codex_cli with gpt-5.6-terra and high reasoning effort. Write commentary in English. Show the plan, text coverage and exact input package before I approve execution. Then run the documents, show answers with quotations and physical PDF pages, and export the results. Do not register human review on my behalf.
+> Use Systematic Document Analysis on the files in [absolute folder path]. Investigate [question]. Help me define criteria and answer options. Use codex_cli with gpt-5.6-terra and high reasoning effort. Write commentary in English. Show the plan, text coverage and exact input package before I approve execution. Then run the documents, show answers with quotations and source locations, and export the results. Do not register human review on my behalf.
 
 For Claude, you can choose `claude_cli`, model `sonnet`, effort `high`. Either reader works from either host.
 
@@ -85,7 +85,7 @@ English MCP tools are the primary interface. Norwegian tools remain as compatibi
 
 Choose model and effort in the plan. Supported requested levels depend on the engine and model: `low`, `medium`, `high`, `xhigh`, `max`; Codex CLI also allows `ultra`. OpenAI/OpenRouter/compatible APIs additionally accept `none` and `minimal` where supported. An alias such as `sonnet` is not a pinned model version. The requested settings are recorded; actual effort remains unknown when the provider does not report it. The default timeout is 600 seconds per document.
 
-Inspect and approve the plan before execution. Changes create a new version without changing earlier attempts. Automatic checks validate answer labels, source quotes and page coverage; they do not establish human review. A person can approve, correct or reject assessments with a recorded reason. Original answers remain available.
+Inspect and approve the plan before execution. Changes create a new version without changing earlier attempts. Automatic checks validate answer labels, source quotes and coverage of extracted source units; they do not establish human review. A person can approve, correct or reject assessments with a recorded reason. Original answers remain available.
 
 Exports include English `results.csv`, `evidence.csv`, `attempts.csv`, `reviews.csv`, `README.md` and `plan-summary.md`, alongside legacy files and the raw audit trail. CSV uses semicolons and UTF-8 with BOM. English CSV headers are translated; recorded labels, quotations and status codes are preserved, with a legend in the export README. Editing an export does not alter the authoritative database.
 
@@ -118,7 +118,7 @@ Legacy `OE_KILDEANALYSE_DATA` and `OE_KILDEANALYSE_CUSTOM_API_KEY` remain fallba
 
 ## Limits and optional examples
 
-Windows and PDFs with text layers are supported. OCR, DOCX, automatic chunking of large documents and cross-document synthesis are not implemented. Entire extracted documents are sent to the reader and may exceed its context window; long previews can be truncated. CLI restrictions do not provide full operating-system isolation. The host runs as the same local user and can access the data directory outside MCP.
+Windows is supported. Extraction limits differ by format: Word uses body paragraphs/tables, Excel uses cell contents and stored formula caches, and PDF requires a text layer. Images and embedded objects are not analysed. OCR, automatic chunking of large files, row/sheet selection as separate runs and cross-document synthesis are not implemented. Entire extracted documents are sent to the reader and may exceed its context window; long previews can be truncated. CLI restrictions do not provide full operating-system isolation. The host runs as the same local user and can access the data directory outside MCP.
 
 Five optional Norwegian annual reports are listed in [the source manifest](eksempler/arsrapporter-2024/kilder.json), with a [Norwegian starting task](eksempler/arsrapporter-2024/STARTPROMPT.md). Download using `python bin/hent_arsrapporter.py`; PDFs stay outside Git and releases. The selection is illustrative, not representative. Synthetic fixtures are developer aids, never mandatory for normal work.
 

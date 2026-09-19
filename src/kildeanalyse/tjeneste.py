@@ -14,7 +14,7 @@ from typing import Any
 
 from . import VERSJON
 from .adaptere import ADAPTERE, lag_adapter
-from .dokument import DokumentFeil, importer_dokument, sider_uten_tekst, sitat_finnes
+from .dokument import DokumentFeil, importer_dokument, sider_uten_tekst, sitat_finnes, belegg_finnes
 from .kjoring import KoFeil, Koer
 from .lager import (
     FS_FULLFORT, FS_UAVKLART, FS_VALIDERINGSFEIL, KJ_AKTIV, KJ_PLANLAGT, KONTROLL_AVVIST, KONTROLL_GODKJENT, KONTROLL_RETTET,
@@ -23,6 +23,7 @@ from .lager import (
 from .modell import Plan
 from .prompt import bygg_inputpakke
 from .parametre import normaliser
+from .source_formats import SUPPORTED, metadata, annotate_assessments
 
 
 class TjenesteFeil(Exception):
@@ -62,9 +63,9 @@ def importer_dokumenter(lager: Lager, prosjekt_id: str, stier: list[str]) -> dic
     resultater = []
     for sti in stier:
         p = Path(sti)
-        kandidater = sorted(p.glob("*.pdf")) if p.is_dir() else [p]
+        kandidater = sorted(f for f in p.iterdir() if f.is_file() and f.suffix.lower() in SUPPORTED) if p.is_dir() else [p]
         if not kandidater:
-            resultater.append({"sti": sti, "feil": "Mappen inneholder ingen PDF-filer."})
+            resultater.append({"sti": sti, "feil": "No supported files in this directory."})
         for fil in kandidater:
             try:
                 dok, nytt = importer_dokument(lager, prosjekt_id, fil)
@@ -129,7 +130,9 @@ def vis_plan(lager: Lager, analyse_id: str) -> dict[str, Any]:
     versjoner = lager.planversjoner(analyse_id)
     gjeldende = lager.gjeldende_planversjon(analyse_id)
     return {"analyse": analyse, "prosjekt": lager.prosjekt(analyse["prosjekt_id"]), "versjoner": versjoner, "gjeldende": gjeldende,
-            "kjoringer": lager.kjoringer(analyse_id)}
+            "kjoringer": lager.kjoringer(analyse_id),
+            'source_profiles':[{'id':d['id'], 'name':d['navn'], 'unit_count':d['antall_sider'], **metadata(d)}
+                               for d in lager.dokumenter(analyse['prosjekt_id'])]}
 
 
 def godkjenn_plan(lager: Lager, analyse_id: str, ansvarlig: str, planversjon_id: str | None = None) -> dict[str, Any]:
@@ -356,7 +359,7 @@ def vis_kjoring(lager: Lager, kjoring_id: str) -> dict[str, Any]:
     for f in forsok:
         detaljer.append({
             "forsok": f, "validering": json.loads(f["validering_json"]) if f.get("validering_json") else None,
-            "vurderinger": gjeldende_vurderinger(lager, f, planrad["plan"]) if f.get("svar_json") else None,
+            "vurderinger": annotate_assessments(dok, gjeldende_vurderinger(lager, f, planrad["plan"])) if f.get("svar_json") else None,
             "kontroller": lager.kontroller(f["id"]), "manifest": json.loads(f["manifest_json"]) if f.get("manifest_json") else None,
         })
     return {"kjoring": kj, "dokument": dok, "planversjon": planrad, "forsok": detaljer,
@@ -418,8 +421,9 @@ def registrer_kontroll(lager: Lager, forsok_id: str, ansvarlig: str, handling: s
         sidetekst = {s["nr"]: s["tekst"] for s in dok["sider"]}
         for b in belegg:
             side, sitat = b.get("side"), str(b.get("sitat", "")).strip()
-            if side not in sidetekst or not sitat_finnes(sitat, sidetekst[side]):
-                raise TjenesteFeil(f"Belegget «{sitat[:60]}» finnes ikke på fysisk side {side} i bevart kopi. Rettelsen er ikke lagret.")
+            enhet = next((s for s in dok['sider'] if s['nr'] == side), None)
+            if enhet is None or not belegg_finnes(sitat, enhet):
+                raise TjenesteFeil(f"Belegget «{sitat[:60]}» finnes ikke på kildeenhet {side} i bevart kopi. Rettelsen er ikke lagret.")
         opprinnelig = {"svar": vurd[kriterium_id]["svar"], "belegg": vurd[kriterium_id]["belegg"], "kilde": vurd[kriterium_id]["kilde"]}
         nytt = {"svar": nytt_svar, "belegg": belegg}
     elif handling == KONTROLL_GODKJENT:

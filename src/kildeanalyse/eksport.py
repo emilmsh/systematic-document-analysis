@@ -17,6 +17,7 @@ from .konfig import undermappe
 from .lager import FS_FULLFORT, FS_VALIDERINGSFEIL, KONTROLL_GODKJENT, KONTROLL_RETTET, Lager
 from .prompt import bygg_systeminstruks
 from .parametre import fra_plan
+from .source_formats import location, metadata, annotate_assessments
 
 
 def _skriv_csv(sti: Path, rader: list[dict[str, Any]], felter: list[str]) -> None:
@@ -78,10 +79,10 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
             simulert_finnes |= bool(gjeld["simulert"])
             ekte_finnes |= not gjeld["simulert"]
         if gjeld and gjeld["status"] in (FS_FULLFORT, FS_VALIDERINGSFEIL) and gjeld.get("svar_json"):
-            vurd = gjeldende_vurderinger(lager, gjeld, planrad["plan"])
+            vurd = annotate_assessments(dok, gjeldende_vurderinger(lager, gjeld, planrad["plan"]))
             validering = json.loads(gjeld["validering_json"]) if gjeld.get("validering_json") else {}
             ld = validering.get("lesedekning", {})
-            rad["lesedekning"] = f"{len(ld.get('sider_lest_oppgitt', []))}/{len(ld.get('sider_i_dokument', []))} sider" + ("" if ld.get("fullstendig") else " (ufullstendig)")
+            rad["lesedekning"] = f"{len(ld.get('sider_lest_oppgitt', []))}/{len(ld.get('sider_i_dokument', []))} kildeenheter" + ("" if ld.get("fullstendig") else " (ufullstendig)")
             kontrollert = sum(1 for v in vurd.values() if v["kontrollstatus"] in (KONTROLL_GODKJENT, KONTROLL_RETTET))
             rad["kontrollert_av_totalt"] = f"{kontrollert}/{len(vurd)}"
             kontrollert_totalt += kontrollert
@@ -91,13 +92,15 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
                 rad[f"{kid}_kontroll"] = v["kontrollstatus"] + (" (rettet)" if v["kilde"] == "rettet" and v["kontrollstatus"] != KONTROLL_RETTET else "")
                 rad[f"{kid}_validering"] = "ok" if v["validering_gyldig"] else ("feil: " + " | ".join(v["valideringsfeil"]))
                 sidetekst = {s["nr"]: s["tekst"] for s in dok["sider"]}
-                from .dokument import sitat_finnes
+                from .dokument import belegg_finnes
 
                 for b in v["belegg"]:
                     beleggrader.append({
                         "kjoring_id": kj["id"], "forsok_id": gjeld["id"], "dokument": dok["navn"], "kriterium": kid, "svar": v["svar"],
-                        "fysisk_side": b.get("side"), "sitat": b.get("sitat"), "kilde": v["kilde"],
-                        "sitat_funnet_paa_side": "ja" if b.get("side") in sidetekst and sitat_finnes(str(b.get("sitat", "")), sidetekst[b["side"]]) else "NEI",
+                        "fysisk_side": b.get("side") if metadata(dok)['format'] == 'pdf' else '',
+                        'source_unit':b.get('side'), 'source_location':location(dok,b.get('side'))['location'],
+                        'source_format':metadata(dok)['format'], "sitat": b.get("sitat"), "kilde": v["kilde"],
+                        "sitat_funnet_paa_side": "ja" if any(s['nr'] == b.get('side') and belegg_finnes(str(b.get('sitat','')), s) for s in dok['sider']) else "NEI",
                     })
         resultatrader.append(rad)
         for f in forsok:
@@ -115,6 +118,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
                     if (kilde / navn).is_file():
                         shutil.copy2(kilde / navn, maal / navn)
         json_kjoringer.append({"kjoring": kj, "dokument": {k: dok[k] for k in ("id", "navn", "sha256", "antall_sider", "lesbarhet")},
+                               'source_metadata':metadata(dok), 'source_units':dok['sider'],
                                "gjeldende_forsok": gjeld, "vurderinger": vurd, "kontroller": [lager.kontroller(f["id"]) for f in forsok]})
         if med_kilder:
             kildemappe = mappe / "kilder"
@@ -131,7 +135,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
     felter.append("merknad")
     _skriv_csv(mappe / "resultater.csv", resultatrader, felter)
     _skriv_csv(mappe / "belegg.csv", beleggrader, ["kjoring_id", "forsok_id", "dokument", "kriterium", "svar", "fysisk_side", "sitat",
-                                                   "kilde", "sitat_funnet_paa_side"])
+                                                   "kilde", "sitat_funnet_paa_side", 'source_format', 'source_unit', 'source_location'])
     _skriv_csv(mappe / "forsok.csv", forsokrader, ["id", "kjoring_id", "nr", "status", "startet", "avsluttet", "motor", "simulert",
                                                    "modell_onsket", "modell_rapportert", "tenkenivaa_onsket", "language", "api_endpoint", "api_provider_valg",
                                                    "maks_output_tokens", "sesjon_id", "input_hash", "feil"])
@@ -172,7 +176,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
         "## Hva pakken inneholder", "",
         "- `resultater.csv`: én rad per kjøring (dokument). Kolonner per kriterium: gjeldende svar, kontrollstatus og valideringsutfall. "
         "Skilletegn «;», UTF-8 med BOM (åpnes direkte i Excel).",
-        "- `belegg.csv`: ett sitat per rad med fysisk side (fra 1) og om sitatet ble funnet på siden i bevart kopi.",
+        "- `belegg.csv`: ett sitat per rad med kildeplassering og kildeenhet (fra 1) og om sitatet ble funnet på siden i bevart kopi.",
         "- `forsok.csv`: alle forsøk, også mislykkede og avbrutte. `kontroll.csv`: alle godkjenninger, rettelser og avvisninger.",
         "- `plan.md`: bestilling, kriterier og den fastlagte instruksen per planversjon. `resultater.json`: alt strukturert.",
         "- `forsok/<forsøk-ID>/`: nøyaktig input som ble sendt (input.json), manifest med motor, modell, sesjon og forbruk, og råsvar.",
@@ -187,7 +191,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
         "- Status «stoppet_uleselig» betyr at dokumentet manglet tekstlag; det er ikke vurdert og ikke «ikke omtalt».",
         "- Status «valideringsfeil» betyr at motoren svarte, men svaret brøt reglene (ugyldig svar, manglende eller feil belegg). Slike svar kan ikke godkjennes uendret.",
         "- Status «feilet»/«uavklart»/«stoppet» har en synlig feilpost i kolonnen merknad og ingen faglig verdi.",
-        "- Fysisk side teller fra 1 i PDF-filen; trykte sidetall i dokumentet er ikke brukt.",
+        "- PDF bruker fysiske sider fra 1. Andre formater bruker avsnitt, poster, linjer eller ark/celleområder; se source_location. Uttrekksomfang og strukturer er lagret i resultater.json.",
         "- Appens lagrede resultater er autoritative. Endringer i denne eksporten føres ikke tilbake.", "",
     ]
     (mappe / "LESMEG.md").write_text("\n".join(lesmeg), encoding="utf-8")

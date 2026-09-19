@@ -35,7 +35,7 @@ def register(server, get_store):
     def create_project(name: str) -> str:
         return call(tjeneste.opprett_prosjekt, name)
 
-    @server.tool(description='Import local PDFs or folders containing PDFs. Subfolders are not imported automatically. Report missing text layers.')
+    @server.tool(description='Import local PDF, DOCX, XLSX, CSV/TSV, TXT or Markdown files, or folders of supported files. Subfolders are not imported automatically. Report extraction scope and structural differences before agreeing a shared plan.')
     def import_documents(project_id: str, paths: list[str]) -> str:
         return call(tjeneste.importer_dokumenter, project_id, paths)
 
@@ -91,7 +91,7 @@ def register(server, get_store):
     def show_status(analysis_id: str) -> str:
         return call(tjeneste.vis_status, analysis_id)
 
-    @server.tool(description='Inspect a run: original answers, source quotes, physical pages, attempts, validation, usage and human reviews.')
+    @server.tool(description='Inspect a run: original answers, source quotes, source locations, attempts, validation, usage and human reviews.')
     def show_run(run_id: str) -> str:
         return call(tjeneste.vis_kjoring, run_id)
 
@@ -99,7 +99,7 @@ def register(server, get_store):
     def retry_run(run_id: str, reason: str) -> str:
         return call(tjeneste.nytt_forsok, run_id, reason)
 
-    @server.tool(description='Record an actual human review: approved, corrected or rejected. Never claim human review on the user’s behalf. Corrections require criterion_id, new_answer and evidence as [{page: n, quote: text}] where required.')
+    @server.tool(description='Record an actual human review: approved, corrected or rejected. Never claim human review on the user’s behalf. Corrections require criterion_id, new_answer and evidence as [{page: source_unit_id, quote: text}] where required.')
     def record_review(attempt_id: str, reviewer: str, action: str, reason: str,
                       criterion_id: str | None = None, new_answer: str | None = None,
                       new_evidence: list[dict] | None = None) -> str:

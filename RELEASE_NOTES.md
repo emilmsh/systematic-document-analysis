@@ -1,12 +1,12 @@
-# 0.6.0 — Systematic Document Analysis
+# 0.7.0 — One routine across comparable files
 
-The plugin is now named **Systematic Document Analysis**, with English primary documentation and workflows for English and Norwegian users. One Windows ZIP supports Codex and Claude Code.
+Systematic Document Analysis now applies a shared analysis plan to PDF, DOCX, XLSX, CSV/TSV, TXT and Markdown sources. The central workflow is a list of comparable files assessed with the same criteria, interpretation rules, model settings and review procedure.
 
-- Select English (`en`) or Norwegian (`nb`) commentary in each plan. Language, model and effort are preserved through inputs, plan history, attempt manifests and exports. Quotes and answer labels remain verbatim.
-- English MCP tools and criteria/settings fields accompany the existing Norwegian interface.
-- English CSV headers, README and plan summary accompany the preserved audit files. Some technical status codes and diagnostics remain Norwegian; the host explains them in the user's language.
-- Existing databases are reused without moving them. Legacy environment variables and tools remain compatible. New installations use the new product name and data directory.
+- Source profiles show structure and extraction scope before approval.
+- Evidence resolves to PDF pages, Word blocks/tables, text lines, CSV records or workbook sheets/cell ranges.
+- Workbook formulas and cached results are distinguished. Missing caches are reported; formulas are not recalculated.
+- Source copies, locators and extraction metadata are preserved in input, history and exports. Existing PDF records remain compatible through an additive database migration.
 
-Install with `installer.cmd`, then start a new conversation. When upgrading from OE Kildeanalyse, disable or uninstall the old plugin registration after installing the new one to avoid duplicate MCP servers. This does not delete the separate analysis database. See START_HERE.md or START_HER.md.
+Each whole file is still one run. Automatic splitting of large files and selecting individual worksheet rows/sheets as separate runs are not implemented. Word headers/footers, tracked-change wrappers, images and other embedded content are outside the current extractor; Excel images/charts are also excluded. Coverage refers to extracted units within the displayed scope. See docs/SOURCE_FORMATS.md.
 
-Verification: 87 local tests passed; clean MCP bootstrap with 34 English/Norwegian tools, plan language changes, export and restart passed. Fresh installation and repeated update in both CLIs passed using temporary app configurations. No model calls were made. Real provider behaviour and substantive analysis quality were not measured.
+Local verification uses synthetic files and mock readers, with no model calls. It covers format extraction, evidence, formulas, CSV multiline records, exports and old-database compatibility. Install with installer.cmd and start a new conversation in Codex or Claude Code.

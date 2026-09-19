@@ -19,7 +19,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="kommando", required=True)
     sub.add_parser("oppsett", help="vis oppsett og motorstatus")
     s = sub.add_parser("prosjekt", help="opprett prosjekt"); s.add_argument("navn")
-    s = sub.add_parser("importer", help="importer PDF-filer eller mapper"); s.add_argument("prosjekt_id"); s.add_argument("stier", nargs="+")
+    s = sub.add_parser("importer", help="importer støttede filer eller mapper"); s.add_argument("prosjekt_id"); s.add_argument("stier", nargs="+")
     s = sub.add_parser("analyse", help="opprett analyse med planversjon 1")
     for a in ("prosjekt_id", "navn", "oppgavetekst", "kriteriefil"):
         s.add_argument(a)

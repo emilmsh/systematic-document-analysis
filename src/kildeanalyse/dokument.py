@@ -18,6 +18,7 @@ import pypdf
 
 from .konfig import undermappe
 from .lager import Lager
+from .source_formats import SUPPORTED, extract
 
 LESBAR, DELVIS, ULESELIG = "lesbar", "delvis", "uleselig"
 MIN_TEGN_PER_SIDE = 25
@@ -73,17 +74,26 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path) -> tuple[
     kilde = Path(sti)
     if not kilde.is_file():
         raise DokumentFeil(f"Finner ikke filen «{kilde}».")
-    if kilde.suffix.lower() != ".pdf":
-        raise DokumentFeil(f"Bare PDF støttes i denne versjonen. Fikk «{kilde.suffix}» for {kilde.name}.")
+    if kilde.suffix.lower() not in SUPPORTED:
+        raise DokumentFeil(f"Unsupported format «{kilde.suffix}». Supported: {', '.join(sorted(SUPPORTED))}.")
     sha = sha256_fil(kilde)
-    eksisterende = lager.finn_dokument_sha(prosjekt_id, sha)
+    eksisterende = lager.finn_dokument_sha(prosjekt_id, sha, kilde.suffix)
     if eksisterende:
-        eksisterende["sider"] = __import__("json").loads(eksisterende.pop("sider_json"))
-        return eksisterende, False
-    kopi = undermappe("dokumenter", lager.mappe) / f"{sha}.pdf"
+        return lager.dokument(eksisterende['id']), False
+    kopi = undermappe("dokumenter", lager.mappe) / f"{sha}{kilde.suffix.lower()}"
     if not kopi.exists():
         shutil.copy2(kilde, kopi)
-    sider, lesbarhet, metode = trekk_ut_tekst(kopi)
+    source_metadata = {}
+    if kilde.suffix.lower() == '.pdf':
+        sider, lesbarhet, metode = trekk_ut_tekst(kopi)
+    else:
+        try:
+            sider, source_metadata, metode = extract(kopi)
+        except Exception as exc:
+            raise DokumentFeil(f'Could not extract {kilde.name}: {exc}') from exc
+        if not sider:
+            raise DokumentFeil(f'No readable source units in {kilde.name}. The file was not analysed.')
+        lesbarhet = LESBAR if all(s['readable'] for s in sider) else DELVIS
     dok = lager.legg_til_dokument(
         prosjekt_id,
         navn=kilde.name,
@@ -95,12 +105,13 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path) -> tuple[
         kilde_opphav=str(kilde.resolve()),
         uttrekk_metode=metode,
         lagret_kopi=str(kopi),
+        source_metadata=source_metadata,
     )
     return dok, True
 
 
 def sider_uten_tekst(dokument: dict[str, Any]) -> list[int]:
-    return [s["nr"] for s in dokument["sider"] if s["tegn"] < MIN_TEGN_PER_SIDE]
+    return [s["nr"] for s in dokument["sider"] if not s.get('readable', s["tegn"] >= MIN_TEGN_PER_SIDE)]
 
 
 # --- sitatkontroll -------------------------------------------------------------------
@@ -127,6 +138,21 @@ def sitat_finnes(sitat: str, sidetekst: str) -> bool:
     # Tillat at et linjeskift i PDF-en har delt et ord med bindestrek: «arbeids-\ntrening».
     uten_orddeling = re.sub(r"-\s+", "", normaliser(sidetekst))
     return s in uten_orddeling
+
+
+def belegg_finnes(sitat: str, enhet: dict) -> bool:
+    """Short non-PDF evidence must match a complete value, not a coordinate digit."""
+    if not enhet.get('source') or len(sitat.strip()) >= MIN_TEGN_PER_SIDE:
+        return sitat_finnes(sitat, enhet['tekst'])
+    values = []
+    for cell in enhet['source'].get('cells', []):
+        if isinstance(cell, dict):
+            values.extend(str(cell[k]) for k in ('value','cached_value','formula') if cell.get(k) is not None)
+        else:
+            values.append(str(cell))
+    if not values:
+        return sitat_finnes(sitat, enhet['tekst'])
+    return any(normaliser(sitat) == normaliser(value) for value in values) or sitat_finnes(sitat, enhet['tekst']) and len(sitat.strip()) >= 10
 
 
 def finn_sitat_side(sitat: str, sider: list[dict[str, Any]]) -> int | None:

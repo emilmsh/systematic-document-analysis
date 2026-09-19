@@ -149,7 +149,7 @@ def test_rettelse_bevarer_original_og_overlever_omstart(lager: Lager, tmp_path: 
     tjeneste.start(lager, aid)
     fj = _kjoring_for(lager, aid, "fjordblikk_2025.pdf")
     fid = fj["siste_forsok"]["id"]
-    with pytest.raises(TjenesteFeil, match="finnes ikke på fysisk side"):
+    with pytest.raises(TjenesteFeil, match="finnes ikke på kildeenhet"):
         tjeneste.registrer_kontroll(lager, fid, "Testperson", "rettet", "test", kriterium_id="K2", nytt_svar="4",
                                     nytt_belegg=[{"side": 2, "sitat": "Dette sitatet er oppdiktet av testen."}])
     with pytest.raises(TjenesteFeil, match="krever belegg"):

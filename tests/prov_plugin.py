@@ -72,6 +72,13 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
             english = json.loads(await call('show_plan', {'analysis_id':aid}))
             assert english['current']['plan']['language'] == 'en', english
             assert english['versions'][0]['plan']['language'] == 'nb', english
+            source_file = data/'source.txt'
+            source_file.write_text('A comparable source with a documented policy.', encoding='utf-8')
+            imported = json.loads(await call('import_documents', {'project_id':'pr2' if expected_project else 'pr1', 'paths':[str(source_file)]}))
+            assert imported['results'][0]['document']['source_metadata']['format'] == 'txt', imported
+            runs = json.loads(await call('add_runs', {'analysis_id':aid}))
+            preview = json.loads(await call('show_input_package', {'run_id':runs['new'][0]['id']}))
+            assert preview['package']['source_units'][0]['location'] == 'Line 1', preview
             exported = json.loads(await call('export_results', {'analysis_id':aid}))
             assert (Path(exported['directory'])/'plan-summary.md').is_file(), exported
 

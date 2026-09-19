@@ -64,7 +64,7 @@ def opprett_prosjekt(navn: str) -> str:
         return _feil(e)
 
 
-@server.tool(description="Importer PDF-filer (eller alle PDF-er i en mappe) til et prosjekt. Kopien bevares, teksten trekkes ut per fysisk side, og lesbarhet rapporteres.")
+@server.tool(description="Importer PDF, DOCX, XLSX, CSV/TSV, TXT eller Markdown (eller støttede filer i en mappe) til et prosjekt. Kopien bevares, innholdet trekkes ut med kildeplasseringer, og lesbarhet rapporteres.")
 def importer_dokumenter(prosjekt_id: str, stier: list[str]) -> str:
     try:
         return visning.md_import(tjeneste.importer_dokumenter(_lager(), prosjekt_id, stier))
@@ -105,7 +105,7 @@ def vis_plan(analyse_id: str) -> str:
         return _feil(e)
 
 
-@server.tool(description="Vis nøyaktig hva som sendes til motoren for én kjøring: fastlagt instruks, dokumenttekst per fysisk side og svarskjema.")
+@server.tool(description="Vis nøyaktig hva som sendes til motoren for én kjøring: fastlagt instruks, innhold per kildeenhet og svarskjema.")
 def vis_inputpakke(kjoring_id: str) -> str:
     try:
         return visning.md_inputpakke(tjeneste.vis_inputpakke(_lager(), kjoring_id))

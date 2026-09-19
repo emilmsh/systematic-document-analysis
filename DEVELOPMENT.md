@@ -34,4 +34,9 @@ Build with `python bin/lag_release.py`. The allowlist excludes credentials, anal
 
 ## Open limits
 
-CLI flags restrict model context and tools; they are not full OS isolation. The host can access the store as the same local user. Large documents lack chunking/context limits. OCR, DOCX, group input and synthesis remain future work. Mock transport tests do not verify account access, real provider parameter interpretation, billing or substantive analysis quality. Record these boundaries alongside verification results.
+CLI flags restrict model context and tools; they are not full OS isolation. The host can access the store as the same local user. Large documents lack chunking/context limits. OCR, group input and synthesis remain future work. Mock transport tests do not verify account access, real provider parameter interpretation, billing or substantive analysis quality. Record these boundaries alongside verification results.
+
+
+## Version 0.7.0: format-independent routine
+
+The product applies one shared procedure to comparable files, not only PDFs. source_formats.py adapts DOCX, XLSX, CSV/TSV and text into numbered source units and locators. PDF keeps its physical page references. Extraction scope/structure is stored with the source and shown before approval. Existing response fields carry source-unit IDs; resolved locations accompany evidence. An additive metadata column preserves compatibility. One whole file remains one run; large-file chunking and row/sheet selection remain separate future work. See [format scope](docs/SOURCE_FORMATS.md).

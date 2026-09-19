@@ -10,7 +10,7 @@ import json
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
-FILER=('pyproject.toml','.mcp.json','oppsett.cmd','installer.cmd','README.md','START_HER.md','START_HERE.md','README.no.md','DEVELOPMENT.md','UTVIKLINGSSTRATEGI.md','tests/TESTLOGG.md',
+FILER=('pyproject.toml','.mcp.json','oppsett.cmd','installer.cmd','README.md','START_HER.md','START_HERE.md','README.no.md','DEVELOPMENT.md','docs/SOURCE_FORMATS.md','UTVIKLINGSSTRATEGI.md','tests/TESTLOGG.md',
        'eksempler/arsrapporter-2024/kilder.json','eksempler/arsrapporter-2024/STARTPROMPT.md')
 MAPPER=('.codex-plugin','.claude-plugin','bin','skills','src/kildeanalyse','tests/fixtures/syntetisk')
 

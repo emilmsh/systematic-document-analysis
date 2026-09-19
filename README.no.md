@@ -10,8 +10,10 @@ Arbeidsagentene kan bruke Codex CLI, Claude Code CLI eller API fra OpenAI, Anthr
 
 Språkvalget `nb` gir norske kommentarer og merknader. `en` gir engelske. Sitater beholdes på originalspråket og svaralternativer gjengis ordrett. Endringer gir en ny planversjon; historiske svar bevares. Automatisk validering er ikke menneskelig kontroll.
 
-En vanlig mappe med PDF-er med tekstlag er tilstrekkelig. Assistenten hjelper deg å skrive kriteriefilen. Pluginen trenger ikke ligge i arbeidsmappen. Ingen simulering eller eksempelgjennomgang er påkrevd.
+En vanlig mappe eller liste med PDF, Word (DOCX), Excel (XLSX), CSV/TSV eller tekstfiler er tilstrekkelig. Filene skal kunne vurderes etter samme kriterier og tolkningsregler. Assistenten hjelper deg å skrive kriteriefilen. Pluginen trenger ikke ligge i arbeidsmappen. Ingen simulering eller eksempelgjennomgang er påkrevd.
 
 Windows er foreløpig støttet. OCR og automatisk oppdeling av store dokumenter er ikke implementert. API-adapterne er kontrollert lokalt uten betalte modellkall; faktisk modellstøtte og faglig kvalitet må vurderes ved bruk.
 
 Eksisterende analyser brukes fra sin opprinnelige datamappe. Nye installasjoner bruker `%LOCALAPPDATA%/systematic-document-analysis`; `SDA_DATA` kan overstyre. Gamle miljøvariabler og verktøynavn virker fortsatt. Eksporten har engelske og norske lesefiler samt uendrede rådata. Se README for detaljer.
+
+[Format support and extraction limits / formatstøtte og uttrekksomfang](docs/SOURCE_FORMATS.md).

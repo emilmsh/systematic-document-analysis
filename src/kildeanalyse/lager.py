@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS dokument (
   id TEXT PRIMARY KEY, prosjekt_id TEXT NOT NULL REFERENCES prosjekt(id),
   navn TEXT NOT NULL, sha256 TEXT NOT NULL, bytes INTEGER NOT NULL, antall_sider INTEGER NOT NULL,
   lesbarhet TEXT NOT NULL, sider_json TEXT NOT NULL, kilde_opphav TEXT NOT NULL,
-  importert TEXT NOT NULL, uttrekk_metode TEXT NOT NULL, lagret_kopi TEXT NOT NULL
+  importert TEXT NOT NULL, uttrekk_metode TEXT NOT NULL, lagret_kopi TEXT NOT NULL,
+  metadata_json TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS analyse (
   id TEXT PRIMARY KEY, prosjekt_id TEXT NOT NULL REFERENCES prosjekt(id),
@@ -93,6 +94,10 @@ class Lager:
         try:
             con.execute("PRAGMA journal_mode=WAL")
             con.executescript(SKJEMA)
+            con.execute('BEGIN IMMEDIATE')
+            if 'metadata_json' not in {row[1] for row in con.execute('PRAGMA table_info(dokument)')}:
+                con.execute("ALTER TABLE dokument ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}'")
+            con.commit()
         finally:
             con.close()
 
@@ -159,11 +164,10 @@ class Lager:
         with self.lesing() as con:
             return _rader(con.execute("SELECT * FROM prosjekt ORDER BY opprettet").fetchall())
 
-    def finn_dokument_sha(self, prosjekt_id: str, sha256: str) -> dict[str, Any] | None:
+    def finn_dokument_sha(self, prosjekt_id: str, sha256: str, suffix: str | None = None) -> dict[str, Any] | None:
         with self.lesing() as con:
-            return _rad(
-                con.execute("SELECT * FROM dokument WHERE prosjekt_id = ? AND sha256 = ?", (prosjekt_id, sha256)).fetchone()
-            )
+            rows = _rader(con.execute("SELECT * FROM dokument WHERE prosjekt_id = ? AND sha256 = ?", (prosjekt_id, sha256)).fetchall())
+            return next((row for row in rows if suffix is None or Path(row['lagret_kopi']).suffix.lower() == suffix.lower()), None)
 
     def legg_til_dokument(self, prosjekt_id: str, **felter: Any) -> dict[str, Any]:
         self.prosjekt(prosjekt_id)
@@ -171,11 +175,11 @@ class Lager:
             id = self.neste_id(con, "dok")
             con.execute(
                 "INSERT INTO dokument(id, prosjekt_id, navn, sha256, bytes, antall_sider, lesbarhet, sider_json,"
-                " kilde_opphav, importert, uttrekk_metode, lagret_kopi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                " kilde_opphav, importert, uttrekk_metode, lagret_kopi, metadata_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     id, prosjekt_id, felter["navn"], felter["sha256"], felter["bytes"], felter["antall_sider"],
                     felter["lesbarhet"], json.dumps(felter["sider"], ensure_ascii=False), felter["kilde_opphav"],
-                    naa(), felter["uttrekk_metode"], felter["lagret_kopi"],
+                    naa(), felter["uttrekk_metode"], felter["lagret_kopi"], json.dumps(felter.get('source_metadata', {}), ensure_ascii=False),
                 ),
             )
         return self.dokument(id)
@@ -183,6 +187,7 @@ class Lager:
     def dokument(self, id: str) -> dict[str, Any]:
         d = self._hent("dokument", id)
         d["sider"] = json.loads(d.pop("sider_json"))
+        d['source_metadata'] = json.loads(d.pop('metadata_json', '{}'))
         return d
 
     def dokumenter(self, prosjekt_id: str) -> list[dict[str, Any]]:
@@ -190,6 +195,7 @@ class Lager:
             rader = _rader(con.execute("SELECT * FROM dokument WHERE prosjekt_id = ? ORDER BY id", (prosjekt_id,)).fetchall())
         for d in rader:
             d["sider"] = json.loads(d.pop("sider_json"))
+            d['source_metadata'] = json.loads(d.pop('metadata_json', '{}'))
         return rader
 
     # --- analyse og plan -----------------------------------------------------------

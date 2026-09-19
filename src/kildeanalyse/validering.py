@@ -1,15 +1,16 @@
 """Validering av motorsvar mot plan og bevart dokumenttekst.
 
 Appen kontrollerer at svaret følger skjemaet, at svarene er tillatte, at belegg finnes der
-det kreves, og at hvert sitat faktisk står på oppgitt fysisk side. Mennesket vurderer om
+det kreves, og at hvert sitat faktisk står på oppgitt kildeenhet. Mennesket vurderer om
 sitatet støtter konklusjonen.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from .dokument import finn_sitat_side, sitat_finnes
+from .dokument import finn_sitat_side, sitat_finnes, belegg_finnes
 from .modell import Plan
+from .source_formats import metadata
 
 MIN_SITATLENGDE = 10
 
@@ -17,6 +18,8 @@ MIN_SITATLENGDE = 10
 def valider(plan: Plan, dokument: dict[str, Any], svar: Any, sider_sendt: list[int]) -> dict[str, Any]:
     feil: list[dict[str, Any]] = []
     advarsler: list[dict[str, Any]] = []
+    if metadata(dokument)['format'] != 'pdf':
+        advarsler.append({'type':'extraction_scope', 'melding':'Coverage refers to extracted source units only. Inspect source_metadata for omitted content and missing/stale formula values.'})
     per_kriterium: dict[str, dict[str, Any]] = {k.id: {"gyldig": True, "feil": []} for k in plan.kriterier}
 
     def legg_feil(kriterium_id: str | None, type: str, melding: str) -> None:
@@ -26,6 +29,7 @@ def valider(plan: Plan, dokument: dict[str, Any], svar: Any, sider_sendt: list[i
             per_kriterium[kriterium_id]["feil"].append(melding)
 
     sidetekst = {s["nr"]: s["tekst"] for s in dokument["sider"]}
+    enheter = {s['nr']:s for s in dokument['sider']}
     alle_sider = [s["nr"] for s in dokument["sider"]]
 
     if not isinstance(svar, dict):
@@ -72,15 +76,16 @@ def valider(plan: Plan, dokument: dict[str, Any], svar: Any, sider_sendt: list[i
             side = b.get("side")
             sitat = str(b.get("sitat", "")).strip()
             if not isinstance(side, int) or side not in sidetekst:
-                legg_feil(kid, "belegg", f"Ugyldig fysisk side «{side}»; dokumentet har sidene {alle_sider[0]}–{alle_sider[-1]}.")
+                legg_feil(kid, "belegg", f"Ugyldig kildeenhet «{side}»; dokumentet har sidene {alle_sider[0]}–{alle_sider[-1]}.")
                 continue
-            if len(sitat) < MIN_SITATLENGDE:
+            minimum = 1 if enheter[side].get('source') else MIN_SITATLENGDE
+            if len(sitat) < minimum:
                 legg_feil(kid, "belegg", f"Sitatet «{sitat}» er for kort til å kontrolleres (minst {MIN_SITATLENGDE} tegn).")
                 continue
-            if not sitat_finnes(sitat, sidetekst[side]):
+            if not belegg_finnes(sitat, enheter[side]):
                 annen = finn_sitat_side(sitat, dokument["sider"])
                 if annen is not None:
-                    legg_feil(kid, "belegg", f"Sitatet «{sitat[:60]}…» finnes ikke på fysisk side {side}, men på side {annen}.")
+                    legg_feil(kid, "belegg", f"Sitatet «{sitat[:60]}…» finnes ikke på kildeenhet {side}, men på side {annen}.")
                 else:
                     legg_feil(kid, "belegg", f"Sitatet «{sitat[:60]}…» finnes ikke i dokumentteksten.")
     for k in plan.kriterier:

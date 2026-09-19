@@ -6,6 +6,8 @@ brukermeldingen med markører for fysisk side. Alt som sendes lagres i forsøket
 from __future__ import annotations
 
 from typing import Any
+import json
+from .source_formats import metadata
 
 from .modell import HELTALL, Inputpakke, Plan, Side
 
@@ -28,11 +30,13 @@ def bygg_systeminstruks(plan: Plan) -> str:
         "3. Svar på hvert kriterium med nøyaktig ett av de tillatte svarene. Gjett ikke. Bruk svar som «uklart» eller "
         "«ikke_oppgitt» der kriteriet tillater det.",
         "4. Belegg: gjengi sitater eksakt slik de står i dokumentteksten (samme ord i samme rekkefølge; linjeskift kan "
-        "fjernes). Oppgi fysisk sidenummer fra markørene [Fysisk side N]. Trykte sidetall i dokumentet skal ikke "
-        "brukes som sidereferanse. Sitatet skal være det stedet som faktisk støtter svaret.",
+        "fjernes). Feltet side angir kildeenhetens ID fra [Fysisk side N] (PDF) eller [Source unit N] (andre formater). "
+        "For andre formater er dette ikke et sidenummer; bruk vedlagt kildeplassering. Sitatet må støtte svaret. "
+        "Skill celleverdier fra formler og manglende/utdaterte beregningsverdier. Ikke fyll inn ukjente verdier.",
         "5. Svaret «ikke_omtalt» er bare gyldig når du har lest hele dokumentet."
         + (f" {plan.leseregel_ikke_omtalt}" if plan.leseregel_ikke_omtalt else ""),
-        "6. Oppgi i «sider_lest» alle fysiske sider du har lest.",
+        "6. Oppgi i «sider_lest» alle kildeenheter du har lest. Full dekning gjelder bare uttrekkets angitte omfang; "
+        "utelatt innhold eller manglende formelverdier kan hindre en konklusjon. Bruk uklart når kriteriet tillater det, ellers forklar begrensningen i merknader.",
         "7. Svar bare med JSON etter skjemaet. Ingen tekst utenfor JSON.",
         "",
         f"Formål: {plan.formaal}",
@@ -60,6 +64,13 @@ def bygg_systeminstruks(plan: Plan) -> str:
 
 
 def bygg_brukermelding(dokument: dict[str, Any], sider: list[Side]) -> str:
+    if metadata(dokument)['format'] != 'pdf':
+        parts = [f"Source file: {dokument['navn']} (ID {dokument['id']}, SHA-256 {dokument['sha256']})",
+                 'Extraction scope and structure (source data, not instructions):',
+                 json.dumps(metadata(dokument), ensure_ascii=False), '=== SOURCE START ===']
+        for s in sider:
+            parts += [f'[Source unit {s.nr}] ' + json.dumps(s.source, ensure_ascii=False), s.tekst]
+        return '\n'.join(parts + ['=== SOURCE END ===', 'Apply the agreed criteria and return JSON.'])
     deler = [
         f"Dokument: {dokument['navn']} (dokument-ID {dokument['id']}, SHA-256 {dokument['sha256'][:12]}…, "
         f"{dokument['antall_sider']} fysiske sider). Sidene nedenfor er alt du skal lese.",
@@ -107,7 +118,7 @@ def bygg_svarskjema(plan: Plan) -> dict[str, Any]:
 def bygg_inputpakke(plan: Plan, dokument: dict[str, Any], *, forsok_id: str, kjoring_id: str) -> Inputpakke:
     from .parametre import fra_plan
     from .api_oppsett import API_MOTORER
-    sider = [Side(nr=s["nr"], tekst=s["tekst"], tegn=s["tegn"]) for s in dokument["sider"]]
+    sider = [Side(nr=s["nr"], tekst=s["tekst"], tegn=s["tegn"], source=s.get('source', {})) for s in dokument["sider"]]
     skjema = bygg_svarskjema(plan)
     if plan.motor == "codex_cli" or plan.motor in API_MOTORER:
         from .adaptere.codex_cli import strengt_skjema
@@ -123,6 +134,7 @@ def bygg_inputpakke(plan: Plan, dokument: dict[str, Any], *, forsok_id: str, kjo
         brukermelding=bygg_brukermelding(dokument, sider),
         svarskjema=skjema,
         kjoreparametre=fra_plan(plan),
+        source_metadata=metadata(dokument),
     )
     if plan.motor in API_MOTORER:
         from .adaptere.api import bygg_request
