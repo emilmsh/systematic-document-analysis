@@ -1,20 +1,79 @@
-"""Install the same Windows package in Claude Code, Codex or both."""
+"""Install, update or repair the Windows plugin, preserving the previous copy."""
 from __future__ import annotations
 import argparse
+import ast
+from contextlib import nullcontext
+import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
+import re
 import subprocess
 import sys
-from pakk_plugin import ROOT, pakk
+import tempfile
+import tomllib
+import uuid
+
+from pakk_plugin import ROOT, pakk, pakkefiler, configure_codex
 from setup_reader import install as ensure_reader
+from kildeanalyse.maintenance import maintenance_lock, read_json, write_json
 
 NAME = 'systematic-document-analysis'
 MARKET = 'systematic-document-analysis-local'
+SELECTOR = f'{NAME}@{MARKET}'
+MARKER = '.sda-install.json'
+
+
+def local_path(value):
+    value = str(value)
+    if value.startswith('\\\\?\\UNC\\'):
+        value = '\\\\' + value[8:]
+    elif value.startswith('\\\\?\\'):
+        value = value[4:]
+    return Path(value).resolve()
+
+
+def version(root):
+    return tomllib.loads((Path(root)/'pyproject.toml').read_text(encoding='utf-8'))['project']['version']
+
+
+def version_key(value):
+    match = re.fullmatch(r'(\d+)\.(\d+)\.(\d+)(?:\+[A-Za-z0-9.-]+)?', value)
+    if not match:
+        raise ValueError(f'Not a stable release version: {value}')
+    return tuple(map(int, match.groups()))
+
+
+def package_hash(root):
+    digest = hashlib.sha256()
+    for path in pakkefiler(root):
+        digest.update(path.relative_to(root).as_posix().encode('utf-8'))
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def validate_package(root):
+    expected = version(root)
+    version_key(expected)
+    for directory in ('.codex-plugin', '.claude-plugin'):
+        manifest = read_json(Path(root)/directory/'plugin.json')
+        if manifest.get('name') != NAME or version_key(manifest.get('version', '')) != version_key(expected):
+            raise ValueError('Package name/version differs between pyproject.toml and plugin manifests.')
+    marketplace = read_json(Path(root)/'.claude-plugin/marketplace.json')
+    if marketplace.get('name') != MARKET or [p['name'] for p in marketplace.get('plugins', [])] != [NAME]:
+        raise ValueError('Unexpected marketplace contents.')
+    if marketplace['plugins'][0].get('version') != expected:
+        raise ValueError('Marketplace version differs from pyproject.toml.')
+    module = ast.parse((Path(root)/'src/kildeanalyse/__init__.py').read_text(encoding='utf-8-sig'))
+    versions = [ast.literal_eval(node.value) for node in module.body if isinstance(node, ast.Assign)
+                and any(isinstance(target, ast.Name) and target.id == 'VERSJON' for target in node.targets)]
+    if versions != [expected]:
+        raise ValueError('Runtime version differs from pyproject.toml.')
+    return expected
 
 
 def prepare(host, base):
+    """Explicit prepare-only helper; registration is handled by install()."""
     target = Path(base).resolve()/host/NAME
     pakk(target, codex=host == 'codex')
     return target
@@ -22,57 +81,236 @@ def prepare(host, base):
 
 def run(command):
     print('Running: ' + subprocess.list2cmdline(command), flush=True)
-    subprocess.run(command, check=True)
+    subprocess.run(command, check=True, timeout=120, stdout=sys.stdout, stderr=sys.stderr)
 
 
-def install(host, base):
-    exe = ensure_reader(host)
-    target = prepare(host, base)
-    if host == 'claude':
-        items = json.loads(subprocess.check_output([exe,'plugin','marketplace','list','--json'], encoding='utf-8'))
-        existing = next((m for m in items if m['name'] == MARKET), None)
-        if existing:
-            if existing.get('source') != 'directory' or Path(existing.get('path','')).resolve() != target:
-                raise RuntimeError(f'{MARKET} is already registered from a different directory. Update that installation or remove its marketplace registration before reinstalling. The existing registration was not changed.')
-            run([exe,'plugin','marketplace','update',MARKET])
-        else:
-            run([exe,'plugin','marketplace','add',str(target)])
-        # install er idempotent; update plukker opp nyere versjoner etter install.
-        run([exe,'plugin','install',f'{NAME}@{MARKET}'])
-        run([exe,'plugin','update',f'{NAME}@{MARKET}'])
+def query(command):
+    return json.loads(subprocess.check_output(command, encoding='utf-8', timeout=60))
+
+
+def inspect(host, exe):
+    markets = query([exe, 'plugin', 'marketplace', 'list', '--json'])
+    plugins = query([exe, 'plugin', 'list', '--json'])
+    if host == 'codex':
+        market = next((m for m in markets['marketplaces'] if m['name'] == MARKET), None)
+        plugin = next((p for p in plugins['installed'] if p.get('name') == NAME and
+                       p.get('marketplaceName', p.get('marketplace')) == MARKET), None)
+        # Listing gives the resolved root, not Git/local origin. Read only this
+        # entry; all registration changes still go through the vendor CLI.
+        config_path = Path(os.environ.get('CODEX_HOME', Path.home()/'.codex'))/'config.toml'
+        config = tomllib.loads(config_path.read_text(encoding='utf-8')) if config_path.exists() else {}
+        entry = config.get('marketplaces', {}).get(MARKET, {})
+        source = entry.get('source') if entry.get('source_type') == 'local' else None
+        if market and not entry:
+            source = market.get('root')
     else:
-        run([exe,'plugin','marketplace','add',str(target)])
-        run([exe,'plugin','add',f'{NAME}@{MARKET}'])
-    print(f'{host}: installed. Start a new conversation to load the plugin.')
-    print(f'For subscription reading, sign in once with: reader_setup.cmd {host} --login')
+        market = next((m for m in markets if m['name'] == MARKET), None)
+        matches = [p for p in plugins if p.get('id') == SELECTOR]
+        if any(p.get('scope') != 'user' for p in matches):
+            raise RuntimeError('This plugin also has a project/local installation. Manage that scope in Claude first.')
+        plugin = next(iter(matches), None)
+        source = market.get('path') if market and market.get('source') == 'directory' else None
+    return market, local_path(source) if source else None, plugin
+
+
+def confirm(message, *, allowed=False, interactive=False):
+    if allowed:
+        return True
+    if not interactive:
+        raise RuntimeError(message + ' No files changed. Use the explicit option shown above or run installer.cmd interactively.')
+    return input(message + ' [y/N]: ').strip().lower() in ('y', 'yes', 'j', 'ja')
+
+
+def remove_plugin(host, exe):
+    if host == 'codex':
+        run([exe, 'plugin', 'remove', SELECTOR])
+    else:
+        run([exe, 'plugin', 'uninstall', SELECTOR, '--scope', 'user', '--keep-data'])
+
+
+def register_plugin(host, exe, *, reinstall=False):
+    if reinstall:
+        remove_plugin(host, exe)
+    if host == 'codex':
+        run([exe, 'plugin', 'add', SELECTOR])
+    else:
+        run([exe, 'plugin', 'install', SELECTOR, '--scope', 'user'])
+        run([exe, 'plugin', 'update', SELECTOR, '--scope', 'user'])
+
+
+def install(host, base, *, replace_source=False, repair=False, allow_downgrade=False,
+            interactive=False, locked=False):
+    with nullcontext() if locked else maintenance_lock():
+        return _install(host, base, replace_source=replace_source, repair=repair,
+                        allow_downgrade=allow_downgrade, interactive=interactive)
+
+
+def _install(host, base, *, replace_source, repair, allow_downgrade, interactive):
+    incoming = validate_package(ROOT)
+    target = Path(base).resolve()/host/NAME
+    if target == ROOT or ROOT.is_relative_to(target) or target.is_relative_to(ROOT):
+        raise RuntimeError('Use an installation folder separate from the source package.')
+    if target.is_symlink() or target.is_junction():
+        raise RuntimeError('The install target is a link/junction. Choose a regular installation directory.')
+    if target.resolve() != target:
+        raise RuntimeError('An installation parent is a link/junction. Choose a regular installation directory.')
+    transaction = target.parent/'pending-install.json'
+    if transaction.exists():
+        raise RuntimeError(f'An interrupted installation needs recovery; see {transaction}. No new changes made.')
+    exe = ensure_reader(host)
+    market, old_source, plugin = inspect(host, exe)
+    if market and old_source is None:
+        raise RuntimeError('This marketplace uses a remote or unknown source. Manage it in the host app; no files changed.')
+    switching = bool(market and old_source != target)
+    if switching:
+        print(f'{host}: existing source: {old_source}\nNew source: {target}\nOption: --replace-source')
+        old_market = read_json(old_source/'.claude-plugin/marketplace.json')
+        if old_market.get('name') != MARKET or [p['name'] for p in old_market.get('plugins', [])] != [NAME]:
+            raise RuntimeError('Cannot safely replace a marketplace containing other plugins or an unreadable source.')
+        if not confirm('Switch to this installation? The previous source folder is kept.',
+                       allowed=replace_source, interactive=interactive):
+            return 'kept existing source'
+    if plugin and plugin.get('enabled') is False:
+        print(f'{host}: plugin is disabled. Enable it in the host before updating; installation preserved.')
+        return 'kept disabled installation'
+    installed_version = (plugin or {}).get('version')
+    previous_root = old_source if old_source and old_source.exists() else target
+    if not installed_version and (previous_root/'pyproject.toml').exists():
+        installed_version = version(previous_root)
+    print(f'{host}: installed {installed_version or "none"}; package {incoming}')
+    if installed_version and version_key(installed_version) > version_key(incoming):
+        print('Option: --allow-downgrade')
+        if not confirm('A newer version is installed. Downgrade explicitly?',
+                       allowed=allow_downgrade, interactive=interactive):
+            return 'kept newer version'
+    wanted_hash = package_hash(ROOT)
+    if target.exists() and not switching:
+        try:
+            record = read_json(target/MARKER)
+            if not isinstance(record, dict):
+                raise ValueError('Invalid installation record')
+            identical = (record.get('package_sha256') == wanted_hash and
+                         record.get('installed_sha256') == package_hash(target))
+        except (OSError, ValueError):
+            record = {}
+            identical = False
+        if (identical and plugin and record.get('target') == str(target) and not repair
+                and installed_version and version_key(installed_version) == version_key(incoming)):
+            print(f'{host}: already up to date. Use --repair to reinstall.')
+            return 'already up to date'
+        if not identical and installed_version and version_key(installed_version) == version_key(incoming) and not repair:
+            print('Option: --repair')
+            if not confirm('Same version, different files. Repair with this package?', interactive=interactive):
+                return 'kept existing files'
+
+    # Complete preflight before copying; stage the full package before switching.
+    target.parent.mkdir(parents=True, exist_ok=True)
+    backup = target.parent/'backups'/uuid.uuid4().hex/NAME
+    if not backup.resolve().is_relative_to(target.parent):
+        raise RuntimeError('The backup directory points outside the installation folder.')
+    with tempfile.TemporaryDirectory(prefix='.sda-stage-', dir=target.parent) as temporary:
+        staged = Path(temporary)/NAME
+        pakk(staged, codex=False, root=ROOT)
+        if host == 'codex':
+            configure_codex(staged, launch_root=target)
+        write_json(staged/MARKER, {'host':host, 'base':str(Path(base).resolve()), 'target':str(target),
+                                 'version':incoming, 'package_sha256':wanted_hash,
+                                 'installed_sha256':package_hash(staged)})
+        validate_package(staged)
+        write_json(transaction, {'target':str(target), 'backup':str(backup), 'old_source':str(old_source) if old_source else None,
+                                 'host':host, 'previous_version':installed_version})
+        moved = False
+        placed = False
+        registered_new = False
+        removed_old = False
+        touched_plugin = False
+        try:
+            if target.exists():
+                backup.parent.mkdir(parents=True)
+                target.rename(backup)
+                moved = True
+            staged.rename(target)
+            placed = True
+            if plugin:
+                touched_plugin = True
+                remove_plugin(host, exe)
+            if switching:
+                run([exe, 'plugin', 'marketplace', 'remove', MARKET])
+                removed_old = True
+            if not market or switching:
+                run([exe, 'plugin', 'marketplace', 'add', str(target)])
+                registered_new = True
+            elif host == 'claude':
+                run([exe, 'plugin', 'marketplace', 'update', MARKET])
+            touched_plugin = True
+            register_plugin(host, exe)
+            _, actual_source, actual = inspect(host, exe)
+            if actual_source != target or not actual or actual.get('enabled') is False:
+                raise RuntimeError('The host did not report the expected enabled plugin after installation.')
+            if actual.get('version') and version_key(actual['version']) != version_key(incoming):
+                raise RuntimeError('The host still reports a different plugin version.')
+        except Exception as failure:
+            try:
+                # Preserve the failed copy for diagnosis; never recursively delete
+                # an existing installation or its settings/data during recovery.
+                if placed:
+                    target.rename(target.parent/f'failed-install-{uuid.uuid4().hex}')
+                if moved:
+                    backup.rename(target)
+                if touched_plugin and inspect(host, exe)[2]:
+                    remove_plugin(host, exe)
+                if registered_new:
+                    run([exe, 'plugin', 'marketplace', 'remove', MARKET])
+                if removed_old:
+                    run([exe, 'plugin', 'marketplace', 'add', str(old_source)])
+                if plugin:
+                    register_plugin(host, exe)
+                transaction.unlink()
+            except Exception as recovery:
+                raise RuntimeError(f'Installation failed: {failure}. Recovery also failed: {recovery}. Recovery record: {transaction}') from failure
+            raise RuntimeError(f'Installation failed; previous source/files restored: {failure}') from failure
+        transaction.unlink()
+    print(f'{host}: installed {incoming}. Start a new conversation to load the plugin.')
+    if moved:
+        print(f'Previous copy kept at: {backup}')
+    print(f'Updates: notify by default; run {target / "update.cmd"} to change this.')
+    return 'installed'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('app', nargs='?', choices=['claude','codex','both','begge'])
     parser.add_argument('--base-dir', type=Path, default=Path(os.environ.get('LOCALAPPDATA',Path.home()))/'systematic-document-analysis'/'plugins')
-    parser.add_argument('--prepare-only', action='store_true', help='Prepare copies without registering in either app')
+    parser.add_argument('--prepare-only', action='store_true')
+    parser.add_argument('--replace-source', action='store_true', help='Explicitly replace this plugin\'s local marketplace source')
+    parser.add_argument('--repair', action='store_true', help='Reinstall even when the version is unchanged')
+    parser.add_argument('--allow-downgrade', action='store_true')
+    parser.add_argument('--non-interactive', action='store_true', help='Never prompt; conflicts require explicit options')
     args = parser.parse_args()
-    if sys.version_info < (3,12):
-        parser.error('Python 3.12 or newer is required.')
-    if os.name != 'nt':
-        parser.error('This installation package currently supports Windows only.')
+    if sys.version_info < (3,12) or os.name != 'nt':
+        parser.error('This installation package requires Windows and Python 3.12 or newer.')
+    interactive = not args.non_interactive and sys.stdin.isatty()
     app = args.app
+    if args.non_interactive and not app:
+        parser.error('Choose claude, codex or both with --non-interactive.')
     if not app:
         print('Install Systematic Document Analysis: 1 = Claude Code, 2 = Codex, 3 = both')
         app = {'1':'claude','2':'codex','3':'begge'}.get(input('Choose 1, 2 or 3: ').strip())
         if not app:
             parser.error('Invalid choice; installation has not started.')
-    try:
-        for host in (['claude','codex'] if app in ('both','begge') else [app]):
+    failures = []
+    for host in (['claude','codex'] if app in ('both','begge') else [app]):
+        try:
             if args.prepare_only:
-                print(prepare(host,args.base_dir))
+                print(prepare(host, args.base_dir))
             else:
-                install(host,args.base_dir)
-    except (RuntimeError,OSError,ValueError,subprocess.SubprocessError) as exc:
-        print(f'Installation stopped: {exc}', file=sys.stderr)
-        return 1
-    return 0
+                result = install(host, args.base_dir, replace_source=args.replace_source, repair=args.repair,
+                                 allow_downgrade=args.allow_downgrade, interactive=interactive)
+                print(f'{host}: {result}')
+        except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
+            failures.append(host)
+            print(f'{host}: installation stopped: {exc}', file=sys.stderr)
+    return 1 if failures else 0
 
 
 if __name__ == '__main__':

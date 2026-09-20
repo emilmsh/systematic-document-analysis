@@ -33,6 +33,7 @@ class TjenesteFeil(Exception):
 # --- oppsett -------------------------------------------------------------------------
 
 def oppsett(lager: Lager) -> dict[str, Any]:
+    from .maintenance import update_status
     from .ocr import setup as ocr_setup
     from .credentials import settings_path
     motorer = {}
@@ -49,6 +50,7 @@ def oppsett(lager: Lager) -> dict[str, Any]:
         "plattform": platform.platform(), "motorer": motorer, "prosjekter": lager.prosjekter(),
         "plugin_root": os.environ.get("CLAUDE_PLUGIN_ROOT"), 'ocr': ocr_setup(),
         'api_settings_file':str(settings_path()), 'api_settings_help':'Open settings.cmd to paste keys locally. Never share the completed file.',
+        'updates': update_status(),
     }
 
 

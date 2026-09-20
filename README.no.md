@@ -8,6 +8,7 @@ Bruk egne rapporter, tilbud, dokumenter, regneark eller registre. Definer hva so
 
 - [Last ned siste Windows-pakke for begge apper](https://github.com/emilmsh/systematic-document-analysis/releases/latest)
 - [Start her](START_HER.md): automatisk Python, CLI-innlogging og valgfri lokal nøkkelfil.
+- [Installasjon og oppdateringer](docs/UPDATES.md): eksisterende installasjoner, kildebytte og valgfri automatisk oppdatering.
 - [Fem eksempelmapper](examples/README.md): PDF/skanning, Word, Excel, tekst og tabeller.
 - [Filformater](docs/SOURCE_FORMATS.md), [OCR og store dokumenter](docs/DOCUMENT_PROCESSING.md), [oppsett og deling](docs/SETUP_AND_SHARING.md).
 

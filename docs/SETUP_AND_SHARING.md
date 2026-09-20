@@ -8,6 +8,8 @@ The installer prepares separate Claude Code and Codex plugin copies and installs
 
 The host assistant can run these local setup helpers when it has terminal permissions. It cannot grant itself permissions, bypass workspace policy, authenticate as the user or turn an ordinary web chat into a local service. Claude's Code desktop interface and CLI share the underlying engine; the plugin uses a standalone CLI subprocess for worker calls. See [Claude Desktop Code](https://code.claude.com/docs/en/desktop), [Claude installation](https://code.claude.com/docs/en/setup) and [Codex CLI](https://learn.chatgpt.com/docs/codex/cli).
 
+For an existing installation, version checks and source selection happen before files are replaced. `update.cmd` in the installed folder controls update checks and optional automatic installation. See [installation and updates](UPDATES.md) for source conflicts, backups, private GitHub access and command-line options.
+
 ## Optional API keys without environment-variable setup
 
 Double-click `settings.cmd`. A prepared file opens in Notepad outside the project, at `%LOCALAPPDATA%/systematic-document-analysis/settings/providers.env`. Fill only the provider you want, save and close. An existing file is preserved. Blank providers stay disabled; CLI subscription reading requires no API key.

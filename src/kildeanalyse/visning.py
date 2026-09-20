@@ -35,6 +35,8 @@ def md_oppsett(d: dict[str, Any]) -> str:
             ut.append(f"- CLI-versjon: {m['egenskaper']['cli_versjon']}")
         ut.append("")
     ut += ["## Prosjekter", ""]
+    if d.get('updates'):
+        ut += ['Oppdateringer: ' + json.dumps(d['updates'], ensure_ascii=False), '']
     ut += ['OCR: ' + json.dumps(d.get('ocr', {}), ensure_ascii=False), '']
     ut += [f"- {p['id']}: {p['navn']} (opprettet {p['opprettet']})" for p in d["prosjekter"]] or ["(ingen)"]
     return "\n".join(ut)

@@ -10,8 +10,8 @@ import json
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
-FILER=('pyproject.toml','.mcp.json','oppsett.cmd','installer.cmd','settings.cmd','ocr_setup.cmd','reader_setup.cmd','README.md','START_HER.md','START_HERE.md','README.no.md','DEVELOPMENT.md','UTVIKLINGSSTRATEGI.md','tests/TESTLOGG.md',
-       'eksempler/arsrapporter-2024/kilder.json','eksempler/arsrapporter-2024/STARTPROMPT.md')
+FILER=('pyproject.toml','.mcp.json','oppsett.cmd','installer.cmd','update.cmd','settings.cmd','ocr_setup.cmd','reader_setup.cmd','README.md','START_HER.md','START_HERE.md','README.no.md','DEVELOPMENT.md','UTVIKLINGSSTRATEGI.md','tests/TESTLOGG.md',
+       'RELEASE_NOTES.md','eksempler/arsrapporter-2024/kilder.json','eksempler/arsrapporter-2024/STARTPROMPT.md')
 MAPPER=('.codex-plugin','.claude-plugin','bin','skills','src/kildeanalyse','tests/fixtures/syntetisk','docs','examples')
 
 def pakkefiler(root=ROOT):
@@ -22,30 +22,36 @@ def pakkefiler(root=ROOT):
                      and '__pycache__' not in p.parts and p.suffix != '.pyc')
     return sorted(files)
 
-def pakk(maal, codex=False):
+def pakk(maal, codex=False, root=ROOT):
     maal=Path(maal).resolve()
-    if maal==ROOT or maal.name!='systematic-document-analysis':
+    if maal==root or maal.name!='systematic-document-analysis':
         raise ValueError('Bruk en separat målmappe med navnet systematic-document-analysis.')
     maal.mkdir(parents=True,exist_ok=True)
     for name in FILER:
         target=maal/name
         target.parent.mkdir(parents=True,exist_ok=True)
-        shutil.copy2(ROOT/name,target)
+        shutil.copy2(root/name,target)
     for name in MAPPER:
-        shutil.copytree(ROOT/name,maal/name,dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+        shutil.copytree(root/name,maal/name,dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
     if codex:
-        # Lokal Codex-installasjon med eksplisitt Python og plugin-kopi.
-        # Den personlige kildekopien må beholdes etter installasjon.
-        config = {'mcpServers': {'document_analysis': {
-            'command': sys._base_executable,
-            'args': ['-X', 'utf8', str(maal/'bin'/'start_server.py')],
-            'env': {'PYTHONUTF8': '1'},
-            'env_vars': ['SDA_DATA', 'CODEX_HOME', 'SDA_CODEX_BIN', 'SDA_CLAUDE_BIN', 'SDA_TESSERACT_BIN', 'SDA_SETTINGS_DIR',
-                         'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'SDA_CUSTOM_API_KEY'],
-            'startup_timeout_sec': 300,
-        }}}
-        (maal/'.mcp.json').write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')
+        configure_codex(maal)
     print(f'Plugin copy: {maal}')
+
+
+def configure_codex(maal, launch_root=None):
+    maal = Path(maal)
+    launch_root = Path(launch_root or maal)
+    # Lokal Codex-installasjon med eksplisitt Python og plugin-kopi.
+    # Den personlige kildekopien må beholdes etter installasjon.
+    config = {'mcpServers': {'document_analysis': {
+        'command': sys._base_executable,
+        'args': ['-X', 'utf8', str(launch_root/'bin'/'start_server.py')],
+        'env': {'PYTHONUTF8': '1'},
+        'env_vars': ['SDA_DATA', 'CODEX_HOME', 'SDA_CODEX_BIN', 'SDA_CLAUDE_BIN', 'SDA_TESSERACT_BIN', 'SDA_SETTINGS_DIR', 'SDA_MAINTENANCE_DIR',
+                     'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'SDA_CUSTOM_API_KEY'],
+        'startup_timeout_sec': 300,
+    }}}
+    (maal/'.mcp.json').write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)

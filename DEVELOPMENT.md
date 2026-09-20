@@ -2,6 +2,8 @@
 
 This is the current development guide for **Systematic Document Analysis**. Earlier decisions and verification reports are archived in [UTVIKLINGSSTRATEGI.md](UTVIKLINGSSTRATEGI.md); its superseded restrictions describe history; current product naming is used throughout.
 
+Development continues in Claude Code after 0.8.2. Start with the [handover](docs/CLAUDE_HANDOFF.md) and [Norwegian start prompt](docs/CLAUDE_STARTPROMPT.md). Both Claude Code and Codex remain supported hosts.
+
 ## Product and architecture
 
 The product is a working plugin for users' own documents. Simulation, synthetic fixtures and example reports are optional. The conversation stays in Codex or Claude Code. Both hosts use the same local MCP service; readers are independent CLI or API adapters. Do not introduce a second chat UI.

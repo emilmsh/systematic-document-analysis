@@ -72,12 +72,29 @@ def main() -> int:
         print("[Systematic Document Analysis] Python 3.12 or newer is required.", file=sys.stderr)
         return 1
     root = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root/'src'))
+    from kildeanalyse.maintenance import maintenance_lock
+    from update_plugin import managed_install, startup, package_hash
     data = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or
                 str(Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "systematic-document-analysis" / "plugin-data"))
     try:
-        python = prepare(root, data)
-        return subprocess.call([str(python), "-I", "-X", "utf8", "-m", "kildeanalyse.mcp_server"])
-    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+        if startup(root):
+            return 1  # New skills/tools must be loaded in a new conversation.
+        with maintenance_lock(shared=True):
+            marker = managed_install(root)
+            if marker:
+                root = Path(marker['target'])
+                if (root.parent/'pending-install.json').exists():
+                    raise RuntimeError('An interrupted installation needs recovery. Run installer.cmd from the release package.')
+                installed_hash = package_hash(root)
+                os.environ['SDA_INSTALLED_SHA256'] = installed_hash
+                if installed_hash == marker.get('installed_sha256'):
+                    os.environ['SDA_PACKAGE_SHA256'] = marker['package_sha256']
+                else:
+                    os.environ.pop('SDA_PACKAGE_SHA256', None)
+            python = prepare(root, data)
+            return subprocess.call([str(python), "-I", "-X", "utf8", "-m", "kildeanalyse.mcp_server"])
+    except (OSError, RuntimeError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         print(f"[Systematic Document Analysis] Startup failed: {exc}. Resolve the error and restart the plugin.", file=sys.stderr)
         return 1
 

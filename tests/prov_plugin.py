@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 async def probe(root: Path, data: Path, *, expected_project: bool = False) -> None:
     env = dict(os.environ, CLAUDE_PLUGIN_DATA=str(data / "runtime"),
                SDA_DATA=str(data / "analyse"),
-               SDA_PYTHON=sys.executable, PYTHONUTF8="1")
+               SDA_PYTHON=sys.executable, PYTHONUTF8="1", SDA_MAINTENANCE_DIR=str(data/'maintenance'))
     params = StdioServerParameters(command="cmd.exe", args=["/d", "/c", str(root / "bin" / "start_server.cmd")], env=env)
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:

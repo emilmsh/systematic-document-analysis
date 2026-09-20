@@ -24,6 +24,7 @@ from .lager import (
 from .modell import Motorsvar
 from .prompt import bygg_inputpakke
 from .validering import valider
+from .maintenance import maintenance_lock
 
 
 class KoFeil(Exception):
@@ -135,7 +136,7 @@ class Koer:
 
     def start(self, analyse_id: str, kjoring_ider: list[str] | None = None, maks: int | None = None,
               inkluder_stoppede: bool = True) -> dict[str, Any]:
-        with arbeiderlaas(self.lager.mappe):
+        with maintenance_lock(shared=True), arbeiderlaas(self.lager.mappe):
             return self._start_laaset(analyse_id, kjoring_ider, maks, inkluder_stoppede)
 
     def _start_laaset(self, analyse_id: str, kjoring_ider: list[str] | None, maks: int | None,
@@ -210,7 +211,9 @@ class Koer:
             return KJ_FEILET
         mappe = undermappe(f"forsok/{forsok_id}", self.lager.mappe)
         manifest: dict[str, Any] = {
-            "app_versjon": VERSJON, "analyse_id": analyse_id, "planversjon_id": planrad["id"], "planversjon": planrad["versjon"],
+            "app_versjon": VERSJON, "plugin_package_sha256": os.environ.get('SDA_PACKAGE_SHA256'),
+            "plugin_installed_sha256": os.environ.get('SDA_INSTALLED_SHA256'),
+            "analyse_id": analyse_id, "planversjon_id": planrad["id"], "planversjon": planrad["versjon"],
             "kjoring_id": kj["id"], "forsok_id": forsok_id,
             "dokument": {k: dok[k] for k in ("id", "navn", "sha256", "antall_sider", "lesbarhet", "uttrekk_metode", "lagret_kopi")},
             "sider_sendt": [s.nr for s in pakke.sider], "sider_uten_tekst": uten, "input_hash": input_data['input_hash'],
