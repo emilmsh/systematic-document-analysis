@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 FIX=ROOT/'tests'/'fixtures'/'syntetisk'
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='oe-codex-e2e-') as temp:
+    with tempfile.TemporaryDirectory(prefix='sda-codex-e2e-') as temp:
         lager=Lager(Path(temp))
         pr=tjeneste.opprett_prosjekt(lager,'Codex syntetisk prøve')
         files=['fjordblikk','nordlys','steinbukk','granitt']

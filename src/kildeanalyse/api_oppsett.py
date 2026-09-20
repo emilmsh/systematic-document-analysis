@@ -8,15 +8,14 @@ API_MOTORER = {
     'openrouter_api': ('https://openrouter.ai/api/v1', 'OPENROUTER_API_KEY', 'chat/completions'),
     'kompatibel_api': ('', 'SDA_CUSTOM_API_KEY', 'chat/completions'),
 }
-API_ENV = tuple(item[1] for item in API_MOTORER.values()) + ('OE_KILDEANALYSE_CUSTOM_API_KEY',)
-API_FELT = {'tenkenivaa', 'tidsavbrudd_sek', 'maks_output_tokens', 'base_url', 'provider'}
+API_ENV = tuple(item[1] for item in API_MOTORER.values())
+API_FELT = {'tenkenivaa', 'tidsavbrudd_sek', 'maks_output_tokens', 'base_url', 'provider',
+            'document_processing', 'input_budget_bytes', 'max_chunks', 'priority_terms', 'priority_locations'}
 
 
 def local_key(motor):
-    key = os.environ.get(API_MOTORER[motor][1], '').strip()
-    if not key and motor == 'kompatibel_api':
-        key = os.environ.get('OE_KILDEANALYSE_CUSTOM_API_KEY', '').strip()
-    return key
+    from .credentials import get_key
+    return get_key(API_MOTORER[motor][1])
 
 
 def api_valg(motor, valg):
@@ -51,4 +50,4 @@ def api_metadata(motor, valg):
     return {'endpoint': valg.get('base_url', base).rstrip('/') + '/' + path,
             'nokkelvariabel': key_env, 'maks_output_tokens': valg.get('maks_output_tokens', 16384),
             'provider': valg.get('provider') or ('automatisk valg hos OpenRouter' if motor == 'openrouter_api' else motor),
-            'betaling': 'separat API-forbruk', 'harness': 'direkte API, ett kall, ingen verktøy eller automatisk nytt forsøk'}
+            'betaling': 'separat API-forbruk', 'harness': 'direct API per stage; shared chunking when enabled, no model tools or automatic retries'}

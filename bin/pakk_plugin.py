@@ -10,9 +10,9 @@ import json
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
-FILER=('pyproject.toml','.mcp.json','oppsett.cmd','installer.cmd','README.md','START_HER.md','START_HERE.md','README.no.md','DEVELOPMENT.md','docs/SOURCE_FORMATS.md','UTVIKLINGSSTRATEGI.md','tests/TESTLOGG.md',
+FILER=('pyproject.toml','.mcp.json','oppsett.cmd','installer.cmd','settings.cmd','ocr_setup.cmd','reader_setup.cmd','README.md','START_HER.md','START_HERE.md','README.no.md','DEVELOPMENT.md','UTVIKLINGSSTRATEGI.md','tests/TESTLOGG.md',
        'eksempler/arsrapporter-2024/kilder.json','eksempler/arsrapporter-2024/STARTPROMPT.md')
-MAPPER=('.codex-plugin','.claude-plugin','bin','skills','src/kildeanalyse','tests/fixtures/syntetisk')
+MAPPER=('.codex-plugin','.claude-plugin','bin','skills','src/kildeanalyse','tests/fixtures/syntetisk','docs','examples')
 
 def pakkefiler(root=ROOT):
     """Eksplisitt filliste, også etter at pip har lagt byggemetadata i mappen."""
@@ -40,9 +40,9 @@ def pakk(maal, codex=False):
             'command': sys._base_executable,
             'args': ['-X', 'utf8', str(maal/'bin'/'start_server.py')],
             'env': {'PYTHONUTF8': '1'},
-            'env_vars': ['SDA_DATA', 'OE_KILDEANALYSE_DATA', 'CODEX_HOME', 'OE_KILDEANALYSE_CODEX_BIN',
-                         'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'SDA_CUSTOM_API_KEY', 'OE_KILDEANALYSE_CUSTOM_API_KEY'],
-            'startup_timeout_sec': 120,
+            'env_vars': ['SDA_DATA', 'CODEX_HOME', 'SDA_CODEX_BIN', 'SDA_CLAUDE_BIN', 'SDA_TESSERACT_BIN', 'SDA_SETTINGS_DIR',
+                         'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'SDA_CUSTOM_API_KEY'],
+            'startup_timeout_sec': 300,
         }}}
         (maal/'.mcp.json').write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')
     print(f'Plugin copy: {maal}')

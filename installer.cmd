@@ -1,12 +1,6 @@
 @echo off
 setlocal
-where py >nul 2>nul
-if errorlevel 1 goto python_path
-py -3 "%~dp0bin\installer.py" %*
-goto done
-:python_path
-python "%~dp0bin\installer.py" %*
-:done
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0bin\launch.ps1" -Script installer.py %*
 set "RESULT=%ERRORLEVEL%"
 if "%~1"=="" pause
 exit /b %RESULT%

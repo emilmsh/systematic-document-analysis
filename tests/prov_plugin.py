@@ -25,15 +25,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 async def probe(root: Path, data: Path, *, expected_project: bool = False) -> None:
     env = dict(os.environ, CLAUDE_PLUGIN_DATA=str(data / "runtime"),
-               SDA_DATA=str(data / "analyse"), OE_KILDEANALYSE_DATA=str(data / "analyse"),
-               OE_KILDEANALYSE_PYTHON=sys.executable, PYTHONUTF8="1")
+               SDA_DATA=str(data / "analyse"),
+               SDA_PYTHON=sys.executable, PYTHONUTF8="1")
     params = StdioServerParameters(command="cmd.exe", args=["/d", "/c", str(root / "bin" / "start_server.cmd")], env=env)
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             initialized = await session.initialize()
             assert initialized.server_info.version == VERSJON
             names = {tool.name for tool in (await session.list_tools()).tools}
-            assert len(names) == 34 and 'create_analysis' in names and 'opprett_analyse' in names, names
+            assert len(names) == 36 and 'create_analysis' in names and 'opprett_analyse' in names, names
             # Ingen vis_oppsett her: testen trenger verken innlogging eller leverandørkontakt.
             result = await session.call_tool("opprett_prosjekt", {"navn": "Røykprøve æøå"})
             text = "\n".join(c.text for c in result.content if hasattr(c, "text"))
@@ -84,7 +84,7 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
 
 
 async def main(plugin_root: Path | None = None) -> None:
-    with tempfile.TemporaryDirectory(prefix="oe-plugin-") as temp:
+    with tempfile.TemporaryDirectory(prefix="sda-plugin-") as temp:
         base = Path(temp)
         clean = plugin_root or base / "ren plugin æøå"
         if plugin_root is None:
@@ -101,7 +101,7 @@ async def main(plugin_root: Path | None = None) -> None:
         python = data / "runtime" / "venv" / "Scripts" / "python.exe"
         origin = subprocess.check_output([str(python), "-I", "-X", "utf8", "-c", "import kildeanalyse; print(kildeanalyse.__file__)"], encoding="utf-8")
         assert str(ROOT) not in origin and "site-packages" in origin, origin
-        print(f"PASS: {'installed copy' if plugin_root else 'clean copy without .venv'}, MCP initialize, 34 tools, English/Norwegian plans, exports, restart and independent runtime.")
+        print(f"PASS: {'installed copy' if plugin_root else 'clean copy without .venv'}, MCP initialize, 36 tools, English/Norwegian plans, exports, restart and independent runtime.")
 
 
 if __name__ == "__main__":

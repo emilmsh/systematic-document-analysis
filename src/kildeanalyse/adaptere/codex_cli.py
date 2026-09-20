@@ -107,7 +107,8 @@ class CodexCliAdapter(Adapter):
         self._versjon = 'ukjent'
 
     def _bin(self):
-        return self.innstillinger.get('codex_bin') or os.environ.get('OE_KILDEANALYSE_CODEX_BIN') or shutil.which('codex')
+        from ..cli_paths import find_cli
+        return self.innstillinger.get('codex_bin') or find_cli('codex')
 
     def _env(self):
         return {k: v for k, v in os.environ.items() if k not in FORBUDTE_ENV and not k.upper().endswith('_API_KEY')}

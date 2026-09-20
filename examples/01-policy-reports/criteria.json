@@ -1,0 +1,22 @@
+{
+  "name": "Policy commitments across reports",
+  "version": "1",
+  "criteria": [
+    {
+      "id": "explicit_commitment",
+      "name": "Explicit commitment",
+      "question": "Does the organisation explicitly commit to an annual external review of its information security policy?",
+      "allowed_answers": [
+        "yes",
+        "no",
+        "not_mentioned",
+        "uncertain"
+      ],
+      "evidence_required_for": [
+        "yes",
+        "no"
+      ],
+      "rule": "Use no only for an explicit negative statement. Discuss contradictions, extraction limitations and conditions; do not infer adoption from a proposal."
+    }
+  ]
+}

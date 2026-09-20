@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='oe-installasjon-') as temp:
+    with tempfile.TemporaryDirectory(prefix='sda-installasjon-') as temp:
         base=Path(temp)
         env=dict(os.environ,CODEX_HOME=str(base/'codex-home'),CLAUDE_CONFIG_DIR=str(base/'claude-home'))
         (base/'codex-home').mkdir()

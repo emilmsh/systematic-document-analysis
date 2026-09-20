@@ -4,8 +4,8 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 FIX=ROOT/'tests'/'fixtures'/'syntetisk'
-with tempfile.TemporaryDirectory(prefix='oe-codex-vert-') as temp:
-    env=dict(os.environ,SDA_DATA=temp,OE_KILDEANALYSE_DATA=temp)
+with tempfile.TemporaryDirectory(prefix='sda-codex-vert-') as temp:
+    env=dict(os.environ,SDA_DATA=temp)
     args=['codex','exec','--ephemeral','--skip-git-repo-check','--json',
           '-c','plugins."systematic-document-analysis@systematic-document-analysis-local".enabled=true','-c','model_reasoning_effort="low"',
           '-c','forced_login_method="chatgpt"','-c','skills.bundled.enabled=false',

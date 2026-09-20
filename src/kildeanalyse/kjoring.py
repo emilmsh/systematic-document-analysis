@@ -201,21 +201,29 @@ class Koer:
         nr = len(self.lager.forsok_for_kjoring(kj["id"])) + 1
         forsok_id = f"{kj['id']}.f{nr}"
         pakke = bygg_inputpakke(plan, dok, forsok_id=forsok_id, kjoring_id=kj["id"])
+        from .chunking import preview, execute
+        try:
+            input_data = preview(plan, dok, pakke)
+        except ValueError as exc:
+            self.lager.oppdater_kjoring(kj['id'], status=KJ_FEILET, merknad=str(exc))
+            self.be_om_stopp(analyse_id)
+            return KJ_FEILET
         mappe = undermappe(f"forsok/{forsok_id}", self.lager.mappe)
         manifest: dict[str, Any] = {
             "app_versjon": VERSJON, "analyse_id": analyse_id, "planversjon_id": planrad["id"], "planversjon": planrad["versjon"],
             "kjoring_id": kj["id"], "forsok_id": forsok_id,
             "dokument": {k: dok[k] for k in ("id", "navn", "sha256", "antall_sider", "lesbarhet", "uttrekk_metode", "lagret_kopi")},
-            "sider_sendt": [s.nr for s in pakke.sider], "sider_uten_tekst": uten, "input_hash": pakke.hash(),
+            "sider_sendt": [s.nr for s in pakke.sider], "sider_uten_tekst": uten, "input_hash": input_data['input_hash'],
+            'processing':input_data['processing'],
             "motor": adapter.navn, "simulert": adapter.simulert, "modell_onsket": plan.modell, "motoregenskaper": motoregenskaper,
             "kjoreparametre": pakke.kjoreparametre,
             "source_metadata": pakke.source_metadata,
             "startet": naa(), "arbeider_pid": os.getpid(),
         }
-        (mappe / "input.json").write_text(json.dumps(pakke.til_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+        (mappe / "input.json").write_text(json.dumps(input_data, ensure_ascii=False, indent=2), encoding="utf-8")
         (mappe / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         forsok = self.lager.opprett_forsok(
-            kj["id"], motor=adapter.navn, simulert=adapter.simulert, modell_onsket=plan.modell, input_hash=pakke.hash(),
+            kj["id"], motor=adapter.navn, simulert=adapter.simulert, modell_onsket=plan.modell, input_hash=input_data['input_hash'],
             input_sti=str(mappe), arbeider_pid=os.getpid(), manifest=manifest,
         )
         if forsok["id"] != forsok_id:  # skal ikke skje med én arbeider; bevar sporbarhet hvis det gjør det
@@ -224,7 +232,7 @@ class Koer:
         self.lager.logg("forsok_startet", analyse_id=analyse_id, kjoring_id=kj["id"], forsok_id=forsok_id, motor=adapter.navn)
 
         try:
-            svar = adapter.kjor(pakke, plan.modell, lambda: self.stopp_forespurt(analyse_id), str(mappe))
+            svar = execute(plan, dok, pakke, adapter, lambda: self.stopp_forespurt(analyse_id), mappe)
         except Exception as e:  # noqa: BLE001
             svar = Motorsvar(raasvar="", svar=None, feil=f"Motorfeil: {type(e).__name__}: {e}")
         (mappe / "raasvar.txt").write_text(svar.raasvar or "", encoding="utf-8")
@@ -240,6 +248,11 @@ class Koer:
             status, kj_status = FS_FEILET, KJ_FEILET
         else:
             validering = valider(plan, dok, svar.svar, [s.nr for s in pakke.sider])
+            if input_data['processing']['mode'] == 'chunked':
+                validering['lesedekning']['basis'] = 'Aggregate of all extraction calls; synthesis read findings, not the full source.'
+                validering['advarsler'].append({'type':'chunked_reading', 'melding':'The final answer synthesizes extracted findings. Inspect calls/ for omissions, conflicts and evidence.'})
+            if dok.get('source_metadata', {}).get('ocr', {}).get('pages'):
+                validering['advarsler'].append({'type':'ocr', 'melding':'Quotes were checked against OCR text. Verify important evidence against original page images.'})
             if uten:
                 validering["advarsler"].append({"type": "sider_uten_tekst",
                                                 "melding": f"Fysisk side {', '.join(map(str, uten))} har ikke tekstlag og kunne ikke leses."})

@@ -77,8 +77,12 @@ def bygg_brukermelding(dokument: dict[str, Any], sider: list[Side]) -> str:
         "",
         "=== DOKUMENT START ===",
     ]
+    if dokument.get('source_metadata'):
+        deler.insert(0, 'Extraction profile: ' + json.dumps(metadata(dokument), ensure_ascii=False))
     for s in sider:
         deler.append(f"[Fysisk side {s.nr}]")
+        if 'character_range' in s.source:
+            deler.append('Fragment character range (zero-based, end-exclusive): ' + str(s.source['character_range']))
         deler.append(s.tekst.strip() if s.tekst.strip() else "(ingen tekst kunne trekkes ut fra denne siden)")
     deler += ["=== DOKUMENT SLUTT ===", "", "Vurder dokumentet etter kriteriene i instruksen og svar med JSON."]
     return "\n".join(deler)

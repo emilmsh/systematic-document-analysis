@@ -1,8 +1,8 @@
 {
   "name": "systematic-document-analysis",
   "description": "Systematic Document Analysis: auditable document reading in English and Norwegian.",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "author": {
-    "name": "Oslo Economics"
+    "name": "Systematic Document Analysis contributors"
   }
 }

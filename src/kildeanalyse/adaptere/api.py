@@ -104,7 +104,7 @@ class ApiAdapter(Adapter):
         ready = bool(local_key(self.navn))
         messages = ['Separat API-forbruk. Nøkkelen er bare kontrollert lokalt; konto, modell og saldo er ikke verifisert.']
         if not ready:
-            messages.append(f"Sett {metadata['nokkelvariabel']} lokalt og start vertsappen på nytt. Ikke lim nøkkelen inn i samtalen.")
+            messages.append('Open settings.cmd and fill the selected provider key locally. Do not paste keys into the conversation.')
         if self.navn == 'kompatibel_api' and not self.innstillinger.get('base_url'):
             ready = False
             messages.append('Velg base_url og modell eksplisitt i planen.')
@@ -144,7 +144,7 @@ class ApiAdapter(Adapter):
         if pakke.api_foresporsel != request:
             raise AdapterFeil('API-forespørselen avviker fra inputpakken. Lag en ny plan og inputpakke.')
         # Ingen headers eller nøkkelverdier lagres. Masker eventuelt ekko fra leverandøren.
-        secrets = [os.environ[n].strip() for n in API_ENV if os.environ.get(n, '').strip()]
+        secrets = [local_key(m) for m in API_MOTORER if local_key(m)]
         def redact(text):
             for secret in secrets:
                 text = text.replace(secret, '[API-NØKKEL SKJULT]')

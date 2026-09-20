@@ -52,7 +52,8 @@ class ClaudeCliAdapter(Adapter):
     # --- hjelpere -------------------------------------------------------------------
 
     def _bin(self) -> str | None:
-        return self.innstillinger.get("claude_bin") or os.environ.get("OE_KILDEANALYSE_CLAUDE_BIN") or shutil.which("claude")
+        from ..cli_paths import find_cli
+        return self.innstillinger.get("claude_bin") or find_cli('claude')
 
     def _env(self) -> dict[str, str]:
         ut = {k: v for k, v in os.environ.items() if k not in FORBUDTE_ENV and not k.upper().endswith('_API_KEY')}
@@ -65,7 +66,7 @@ class ClaudeCliAdapter(Adapter):
     def _kommando(self, args: list[str], tidsavbrudd: float = 30) -> tuple[int, str, str]:
         bin = self._bin()
         if not bin:
-            raise AdapterFeil("Fant ikke `claude` på PATH. Installer Claude Code eller sett OE_KILDEANALYSE_CLAUDE_BIN.")
+            raise AdapterFeil("Fant ikke `claude` på PATH. Installer Claude Code eller sett SDA_CLAUDE_BIN.")
         p = subprocess.run([bin, *args], capture_output=True, timeout=tidsavbrudd, env=self._env(), stdin=subprocess.DEVNULL)
         return p.returncode, p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
 
@@ -76,7 +77,7 @@ class ClaudeCliAdapter(Adapter):
         ok = True
         bin = self._bin()
         if not bin:
-            return Stotte(False, ["Fant ikke `claude` på PATH. Installer Claude Code eller sett OE_KILDEANALYSE_CLAUDE_BIN."])
+            return Stotte(False, ["Fant ikke `claude` på PATH. Installer Claude Code eller sett SDA_CLAUDE_BIN."])
         try:
             _, ut, _ = self._kommando(["--version"])
             self._cli_versjon = ut.strip() or "ukjent"

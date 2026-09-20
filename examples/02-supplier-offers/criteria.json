@@ -1,0 +1,22 @@
+{
+  "name": "Comparable supplier offers",
+  "version": "1",
+  "criteria": [
+    {
+      "id": "explicit_commitment",
+      "name": "Explicit commitment",
+      "question": "Does the supplier explicitly guarantee a response within four hours for critical incidents?",
+      "allowed_answers": [
+        "yes",
+        "no",
+        "not_mentioned",
+        "uncertain"
+      ],
+      "evidence_required_for": [
+        "yes",
+        "no"
+      ],
+      "rule": "Use no only for an explicit negative statement. Discuss contradictions, extraction limitations and conditions; do not infer adoption from a proposal."
+    }
+  ]
+}

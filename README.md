@@ -2,6 +2,10 @@
 
 **Analyse documents against agreed criteria, with source quotations, human review and an audit trail. Work in English or Norwegian, in Codex or Claude Code.**
 
+Codex and Claude Code are useful across a wide range of tasks: exploring questions, inspecting files, writing code and making reasoned decisions. Some work needs more control and traceability than an ordinary conversation conveniently provides. When the same criteria must be applied to dozens of reports, offers, workbooks or records, you need to know exactly what each reader received, which settings it used, what it answered and how a person reviewed it.
+
+**Systematic Document Analysis adds that structure to the tools you already use.** Keep the host's conversational workflow, tools and judgment; add versioned criteria, explicit model choices, consistent document processing and a source-to-result audit trail. The assistant can suggest how to handle an unforeseen file problem within your instructions. Explicit choices about models, priorities, scope and reporting stay visible and take precedence. Reader calls are deliberately bounded, so host flexibility does not mean unrestricted tools in every worker call.
+
 Apply one agreed analysis routine to a list of files with a shared structure: reports, documents, workbooks or tabular records. Define the common fields, criteria and interpretation rules before execution. File format determines extraction and source references, not the analysis method. Discuss the question in your app, agree on a plan, choose a reader and inspect its answers. Each document gets a separate recorded attempt. Export the results for Excel or further reporting. Examples and simulation are optional.
 
 [Norsk veiledning](README.no.md) · [Start here](START_HERE.md) · [Start her på norsk](START_HER.md)
@@ -11,15 +15,15 @@ Apply one agreed analysis routine to a list of files with a shared structure: re
 - **[Latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest)**
 - **[Windows ZIP for both apps](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)**
 
-This repository is private. Colleagues need repository access to download from GitHub; you can also share the ZIP directly. It contains no credentials, source documents or analysis data.
+This repository is private. Colleagues need repository access to download from GitHub; you can also share the ZIP directly. It contains fictional example files, but no credentials, private source documents or analysis data.
 
-1. Install Python 3.12+ and the CLI for your host app: Codex and/or Claude Code. The CLI must be on PATH. Sign in with your own account.
-2. Extract the ZIP and run `installer.cmd`. Choose Claude Code, Codex or both. PowerShell alternatives: `./installer.cmd claude`, `./installer.cmd codex`, `./installer.cmd both`.
-3. Start a new local conversation with **Systematic Document Analysis** enabled. The first server start installs Python dependencies from PyPI.
+1. Extract the ZIP and run `installer.cmd`. Choose Claude Code, Codex or both. No manual Python installation is required: an existing suitable Python is reused, or a private runtime is downloaded without changing system Python or PATH.
+2. The installer prepares the plugin and installs a missing host CLI. For a subscription reader, double-click `reader_setup.cmd`, choose Codex or Claude Code and complete the vendor's sign-in yourself. API readers are optional; use `settings.cmd` to open a prepared local key file.
+3. Start a new local conversation with **Systematic Document Analysis** enabled. First use downloads Python dependencies. For scanned PDFs, run `ocr_setup.cmd` once.
 
-The installer keeps separate copies in `%LOCALAPPDATA%/systematic-document-analysis/plugins/<app>/systematic-document-analysis`, registered under `systematic-document-analysis-local`. Keep these installed copies; you can delete the extracted download after installation. To update, run the new installer and start a new conversation. A conflicting marketplace registered from another directory is reported without replacing it.
+The installer keeps separate copies in `%LOCALAPPDATA%/systematic-document-analysis/plugins/<app>/systematic-document-analysis`, registered under `systematic-document-analysis-local`. Keep these installed copies; the extracted download can be removed. Run a new release's installer to update. Conflicting registrations are reported without replacement.
 
-**Upgrading from OE Kildeanalyse:** install the new package, then disable the old plugin in each app to avoid loading two servers. Existing analysis databases are reused in their original location; they are not moved or rewritten. Old tool names, criteria fields and environment variables remain supported. See [compatibility](#data-and-compatibility).
+Plugins can also be installed and shared through the vendors' app interfaces and marketplaces. This project's verified route is the Windows local installer for Codex and Claude Code. It is not yet published to a workspace or public app catalog. App-native distribution can remove manual ZIP handling, but a local service still needs a local runtime and reader credentials. See [simple setup and app sharing](docs/SETUP_AND_SHARING.md).
 
 ## Two independent choices
 
@@ -28,13 +32,13 @@ The installer keeps separate copies in `%LOCALAPPDATA%/systematic-document-analy
 | Host / orchestrator | Codex desktop local plugin, or Claude Code | Conversation, criteria, planning, approval and review |
 | Reader | Codex CLI, Claude Code CLI, OpenAI API, Anthropic API, OpenRouter, compatible API | One document and one recorded attempt at a time |
 
-Both hosts use the same MCP tools and workflow. This is a local Codex plugin, not an integration into ordinary ChatGPT web chat or Claude Desktop. Reader model settings do not inherit the host conversation's settings.
+Both hosts use the same MCP tools and workflow. This package runs a local MCP service. Codex desktop and Claude Code are the verified hosts; a ChatGPT web conversation alone cannot launch this Windows service. Claude Desktop Code and ChatGPT/Codex plugin interfaces offer app installation routes, subject to their catalog, workspace and local-runtime support. Reader model settings do not inherit the host conversation's settings.
 
-CLI readers include the vendor's agent harness, with context and tools restricted by the adapter. API readers make a direct call without a tool loop. The same model name and effort do not guarantee equivalent behaviour across these paths.
+CLI readers include the vendor's agent harness, with context and tools restricted by the adapter. API readers make direct calls without a model tool loop. Shared local extraction, OCR and bounded reading prepare inputs for both. The same model name and effort do not guarantee equivalent behaviour across these paths.
 
 ## Start with your documents
 
-Supply a list of local files or a normal folder. PDF, DOCX, XLSX, CSV/TSV, TXT and Markdown are supported. No Git repository or special filenames are required. Folder import includes supported files directly inside the folder; supply subfolders separately. Each whole file is one analysis unit. Inspect the source profiles and agree how structural differences will be handled. See [supported formats and extraction scope](docs/SOURCE_FORMATS.md).
+Supply a list of local files or a normal folder. PDF, DOCX, XLSX, CSV/TSV, TXT and Markdown are supported. No Git repository or special filenames are required. Folder import includes supported files directly inside the folder; supply subfolders separately. Each whole file is one analysis unit. Inspect source profiles and extracted units (`inspect_source` can also save a complete Markdown inspection copy). Discuss likely challenges: scans, tables, formula caches, cross-references, long appendices and important sections. Agree how structural differences and uncertainty will be handled. See [supported formats and extraction scope](docs/SOURCE_FORMATS.md).
 
 ```text
 My analysis/
@@ -46,7 +50,7 @@ My analysis/
 
 Open this working folder in the host app and grant it access to your documents and permission to write the criteria file. The plugin itself is installed elsewhere.
 
-> Use Systematic Document Analysis on the files in [absolute folder path]. Investigate [question]. Help me define criteria and answer options. Use codex_cli with gpt-5.6-terra and high reasoning effort. Write commentary in English. Show the plan, text coverage and exact input package before I approve execution. Then run the documents, show answers with quotations and source locations, and export the results. Do not register human review on my behalf.
+> Use Systematic Document Analysis on the files in [absolute folder path]. Investigate [question]. Help me define criteria and answer options. Use codex_cli with gpt-5.6-terra and high reasoning effort. Write commentary in English. Discuss expected file challenges and sections worth prioritising. Show the plan, text coverage and exact input package before I approve execution. Then run the documents, show answers with quotations and source locations, and export the results. Do not register human review on my behalf.
 
 For Claude, you can choose `claude_cli`, model `sonnet`, effort `high`. Either reader works from either host.
 
@@ -98,7 +102,9 @@ Exports include English `results.csv`, `evidence.csv`, `attempts.csv`, `reviews.
 | `openrouter_api` | `OPENROUTER_API_KEY` | OpenRouter Chat Completions |
 | `kompatibel_api` | `SDA_CUSTOM_API_KEY` | OpenAI-compatible Chat Completions |
 
-Set keys using Windows **user environment variables**, then fully restart the host app. Do not paste keys into conversations, criteria or plans. `show_setup` checks local availability without API calls. Environment variables are local configuration, not an encrypted vault. API use is billed separately by the chosen provider.
+Run **`settings.cmd`**. It opens a prepared file in Notepad; paste a key after the appropriate `=`, save and close. Leave unused providers empty. The file lives outside the project and plugin at `%LOCALAPPDATA%/systematic-document-analysis/settings/providers.env`. It is read when needed, so no host restart is required for file edits. Existing files are never overwritten. The [blank template](docs/providers.env.example) contains no secrets.
+
+Windows environment variables remain an advanced alternative and override file values. Do not paste keys into chat, criteria or plans, and do not ask an assistant to read the completed file. A local plaintext file is **not an encrypted vault**: other processes running as your user can read it. Keep it outside shared/cloud-synced folders; never include it in a ZIP or commit. `show_setup` reports availability, never the key. API use is billed separately by the chosen provider.
 
 Keys authenticate requests and are excluded from stored inputs and exports; known key echoes are masked. CLI subprocesses strip API keys and require subscription sign-in. Configuring a key does not switch the selected reader.
 
@@ -110,15 +116,23 @@ For `kompatibel_api`, set an explicit HTTPS `base_url`, e.g. `https://provider.e
 
 Errors, quota stops, timeouts and cancellation stop the queue without automatic retry or engine switching. A cancelled connection does not guarantee the provider stopped processing or billing. API adapters are locally checked with fake HTTP transport; no paid calls were made for these checks.
 
-## Data and compatibility
+## Local data and upgrades
 
-Fresh installations use `%LOCALAPPDATA%/systematic-document-analysis` for analysis data. Both hosts share this store. `SDA_DATA` selects a different directory. If the legacy `%LOCALAPPDATA%/oe-kildeanalyse/kildeanalyse.sqlite` exists, it is reused. If both default stores contain databases, choose explicitly with `SDA_DATA`; neither is merged or deleted.
+The default analysis store is `%LOCALAPPDATA%/systematic-document-analysis`. Both hosts share it. `SDA_DATA` explicitly selects another directory. Version 0.8 removes former brand aliases and automatic discovery of earlier data locations. To use an earlier store, point `SDA_DATA` at it before starting the host; no existing store is moved, merged or deleted. `show_setup` displays the actual directory.
 
-Legacy `OE_KILDEANALYSE_DATA` and `OE_KILDEANALYSE_CUSTOM_API_KEY` remain fallback aliases. Advanced runtime overrides `OE_KILDEANALYSE_PYTHON`, `OE_KILDEANALYSE_CODEX_BIN` and `OE_KILDEANALYSE_CLAUDE_BIN` retain their names. The internal module `kildeanalyse`, SQLite filename, technical engine IDs and recorded schemas remain stable. Imported source copies and historical raw attempts are not rewritten. Use `show_setup` to see the actual data directory; export returns its exact output path.
+Advanced overrides are `SDA_PYTHON`, `SDA_CODEX_BIN`, `SDA_CLAUDE_BIN`, `SDA_TESSERACT_BIN` and `SDA_SETTINGS_DIR`. Internal module `kildeanalyse`, SQLite filename, technical engine IDs and recorded schemas remain stable. Historical source copies and raw attempts are not rewritten.
 
 ## Limits and optional examples
 
-Windows is supported. Extraction limits differ by format: Word uses body paragraphs/tables, Excel uses cell contents and stored formula caches, and PDF requires a text layer. Images and embedded objects are not analysed. OCR, automatic chunking of large files, row/sheet selection as separate runs and cross-document synthesis are not implemented. Entire extracted documents are sent to the reader and may exceed its context window; long previews can be truncated. CLI restrictions do not provide full operating-system isolation. The host runs as the same local user and can access the data directory outside MCP.
+Windows is supported. PDF supports local OCR; run `ocr_setup.cmd` once to install Tesseract with English/Norwegian language data. MCP import defaults to `ocr_mode=auto`; `force` reads every page image, and `off` uses only existing text. Word uses body paragraphs/tables; Excel uses cell contents and stored formula caches. Charts, photographs and other embedded objects are not semantically analysed.
+
+New plans automatically split oversized input into bounded reading calls followed by a synthesis of checked findings. The plan records `document_processing=auto`, `input_budget_bytes=60000` and `max_chunks=100`; call counts and fragment ranges are visible before approval. The byte budget is not an exact model context limit. Excessive instructions or synthesis input cause an explicit stop. Old plans retain their original single-call behaviour. See [OCR, limits and audit trail](docs/DOCUMENT_PROCESSING.md).
+
+Optional `priority_terms` and `priority_locations` reorder chunk reading by matching text and source locators. All source fragments remain required for full coverage. Express substantive interpretation priorities in `additional_instructions`; agree any narrower source scope separately. The host can propose preparation or conversion using its own tools, but should preserve originals and record the transformation. It must not silently change the reader, model, effort or analysis scope.
+
+Row/sheet selection as separate runs and cross-document synthesis are not implemented. CLI restrictions do not provide full operating-system isolation. The host runs as the same local user and can access the data directory outside MCP.
+
+**[Explore five use cases](examples/README.md):** policy reports (including scanned PDF), supplier offers (DOCX), project portfolios (XLSX), bilingual consultations (Markdown/TXT) and incident registers (CSV/TSV). Each includes files, draft criteria and start prompts.
 
 Five optional Norwegian annual reports are listed in [the source manifest](eksempler/arsrapporter-2024/kilder.json), with a [Norwegian starting task](eksempler/arsrapporter-2024/STARTPROMPT.md). Download using `python bin/hent_arsrapporter.py`; PDFs stay outside Git and releases. The selection is illustrative, not representative. Synthetic fixtures are developer aids, never mandatory for normal work.
 
@@ -138,4 +152,4 @@ Five optional Norwegian annual reports are listed in [the source manifest](eksem
 .venv/Scripts/python.exe tests/prov_installasjon.py
 ```
 
-Primary documentation and new public interfaces are English. Norwegian user instructions remain available. Legacy internal names are migrated only when there is a concrete benefit and a compatibility path.
+Primary documentation and new public interfaces are English. Norwegian user instructions remain available. Persisted audit fields stay stable; obsolete product-brand aliases are not supported.

@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 from pakk_plugin import ROOT, pakk
+from setup_reader import install as ensure_reader
 
 NAME = 'systematic-document-analysis'
 MARKET = 'systematic-document-analysis-local'
@@ -25,9 +26,7 @@ def run(command):
 
 
 def install(host, base):
-    exe = shutil.which(host)
-    if not exe:
-        raise RuntimeError(f'{host} is not on PATH. Install its CLI and reopen the terminal.')
+    exe = ensure_reader(host)
     target = prepare(host, base)
     if host == 'claude':
         items = json.loads(subprocess.check_output([exe,'plugin','marketplace','list','--json'], encoding='utf-8'))
@@ -45,6 +44,7 @@ def install(host, base):
         run([exe,'plugin','marketplace','add',str(target)])
         run([exe,'plugin','add',f'{NAME}@{MARKET}'])
     print(f'{host}: installed. Start a new conversation to load the plugin.')
+    print(f'For subscription reading, sign in once with: reader_setup.cmd {host} --login')
 
 
 def main():

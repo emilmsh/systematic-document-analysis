@@ -15,7 +15,7 @@ def hent(source):
     if target.exists():
         data = target.read_bytes()
     else:
-        with urlopen(Request(source['url'], headers={'User-Agent':'OE-Kildeanalyse document download'}), timeout=90) as response:
+        with urlopen(Request(source['url'], headers={'User-Agent':'Systematic-Document-Analysis document download'}), timeout=90) as response:
             data = response.read()
         if not data.startswith(b'%PDF-'):
             raise ValueError(f"Ikke en PDF: {source['url']}")

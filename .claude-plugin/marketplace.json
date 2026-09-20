@@ -2,14 +2,14 @@
   "name": "systematic-document-analysis-local",
   "description": "Systematic Document Analysis: auditable document reading in English and Norwegian.",
   "owner": {
-    "name": "Oslo Economics"
+    "name": "Systematic Document Analysis contributors"
   },
   "plugins": [
     {
       "name": "systematic-document-analysis",
       "description": "Systematic Document Analysis: auditable document reading in English and Norwegian.",
       "source": "./",
-      "version": "0.7.0"
+      "version": "0.8.0"
     }
   ]
 }

@@ -21,6 +21,8 @@ def normaliser(motor, modell, innstillinger=None, tenkenivaa=None):
     if innstillinger is not None and not isinstance(innstillinger, dict):
         raise ValueError("Motorinnstillinger må være et JSON-objekt.")
     valg = dict(innstillinger or {})
+    from .chunking import settings
+    valg = settings(valg)
     if any(k.lower() in ('api_key', 'apikey', 'nokkel', 'nøkkel', 'token', 'authorization', 'headers')
            or k.upper().endswith('_API_KEY') for k in valg):
         raise ValueError("API-nøkler og headers skal ikke lagres i planen. Bruk lokale miljøvariabler.")
@@ -61,6 +63,8 @@ def fra_plan(plan):
         "tenkenivaa": plan.motorinnstillinger.get("tenkenivaa") or
             ("low" if plan.motor == "codex_cli" else "ikke fastsatt (eldre plan)" if plan.motor == "claude_cli" else "ikke relevant"),
         "tidsavbrudd_sek": plan.motorinnstillinger.get("tidsavbrudd_sek", 600),
+        'document_processing': {k:plan.motorinnstillinger[k] for k in
+            ('document_processing','input_budget_bytes','max_chunks','priority_terms','priority_locations') if k in plan.motorinnstillinger},
     }
     if plan.motor in API_MOTORER:
         result['api'] = api_metadata(plan.motor, plan.motorinnstillinger)

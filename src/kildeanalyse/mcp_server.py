@@ -65,9 +65,9 @@ def opprett_prosjekt(navn: str) -> str:
 
 
 @server.tool(description="Importer PDF, DOCX, XLSX, CSV/TSV, TXT eller Markdown (eller støttede filer i en mappe) til et prosjekt. Kopien bevares, innholdet trekkes ut med kildeplasseringer, og lesbarhet rapporteres.")
-def importer_dokumenter(prosjekt_id: str, stier: list[str]) -> str:
+def importer_dokumenter(prosjekt_id: str, stier: list[str], ocr_mode: str = 'auto', ocr_languages: str = 'eng+nor') -> str:
     try:
-        return visning.md_import(tjeneste.importer_dokumenter(_lager(), prosjekt_id, stier))
+        return visning.md_import(tjeneste.importer_dokumenter(_lager(), prosjekt_id, stier, ocr_mode=ocr_mode, ocr_languages=ocr_languages))
     except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 
@@ -242,6 +242,14 @@ def eksporter(analyse_id: str, med_kilder: bool = False) -> str:
 
 
 from .english_tools import register
+
+@server.tool(description='Undersøk uttrekk og kildeenheter før planlegging. Lag eventuelt en komplett Markdown-lesekopi. Diskuter filutfordringer, prioriteringer og avgrensning med brukeren.')
+def inspiser_kilde(dokument_id: str, enheter: list[int] | None = None, maks_enheter: int = 10, lag_markdown: bool = False) -> str:
+    try:
+        return json.dumps(tjeneste.inspect_source(_lager(), dokument_id, enheter, maks_enheter, lag_markdown), ensure_ascii=False, indent=2)
+    except Exception as exc:
+        return _feil(exc)
+
 register(server, _lager)
 
 

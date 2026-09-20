@@ -34,7 +34,9 @@ def test_planvalg_lagres_og_endring_bevarer_historikk(tmp_path):
     assert a.hash() != b.hash()
     assert 'high' in visning.md_plan(tjeneste.vis_plan(lager, aid))
     tjeneste.ny_planversjon(lager, aid, 'Mer tid', motorinnstillinger={'tidsavbrudd_sek':1200})
-    assert lager.gjeldende_planversjon(aid)['plan'].motorinnstillinger == {'tenkenivaa':'high','tidsavbrudd_sek':1200}
+    assert lager.gjeldende_planversjon(aid)['plan'].motorinnstillinger == {
+        'tenkenivaa':'high','tidsavbrudd_sek':1200,
+        'document_processing':'auto','input_budget_bytes':60000,'max_chunks':100}
     tjeneste.ny_planversjon(lager, aid, 'Claude', motor='claude_cli')
     assert lager.gjeldende_planversjon(aid)['plan'].modell == 'sonnet'
 
@@ -63,7 +65,7 @@ def test_parametre_sendes_til_prosess(adapter, tmp_path, monkeypatch):
     monkeypatch.setattr('subprocess.Popen', Process)
     monkeypatch.setenv('CLAUDE_CODE_EFFORT_LEVEL', 'low')
     monkeypatch.setenv('MAX_THINKING_TOKENS', '0')
-    for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'OE_KILDEANALYSE_CUSTOM_API_KEY'):
+    for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'SDA_CUSTOM_API_KEY'):
         monkeypatch.setenv(key, 'local-fake-key')
     motor = adapter({'tenkenivaa':'high'})
     monkeypatch.setattr(motor, '_bin', lambda:'cli')

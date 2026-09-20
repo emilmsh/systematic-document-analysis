@@ -181,6 +181,24 @@ def test_request_change_blocks_send(transport, tmp_path):
         lag_adapter('openai_api', settings).kjor(pakke, 'chosen-model', lambda:False, str(tmp_path))
 
 
+def test_file_key_authentication_and_response_redaction(transport, tmp_path, monkeypatch):
+    from dataclasses import asdict
+    from kildeanalyse.credentials import prepare_file
+    from kildeanalyse.api_oppsett import local_key
+    for _, name, _ in API_MOTORER.values():
+        monkeypatch.delenv(name,raising=False)
+    path=prepare_file(); path.write_text('OPENAI_API_KEY=private-file-secret\n',encoding='utf-8')
+    pakke, settings = package('openai_api')
+    def handler(req):
+        assert req.headers['Authorization'] == 'Bearer private-file-secret'
+        assert b'private-file-secret' not in req.content
+        return httpx.Response(429,json={'error':'private-file-secret'})
+    transport(handler)
+    result=lag_adapter('openai_api',settings).kjor(pakke,'chosen-model',lambda:False,str(tmp_path))
+    assert result.feil and 'private-file-secret' not in json.dumps(asdict(result))
+    assert local_key('openai_api') == 'private-file-secret'
+
+
 @pytest.mark.parametrize('engine', API_MOTORER)
 def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
     from pathlib import Path
@@ -222,7 +240,7 @@ def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
     assert manifest['modell_rapportert'] == 'reported-model'
     assert manifest['kjoreparametre']['language'] == 'en'
     assert 'in English' in saved['systeminstruks']
-    assert manifest['motorinfo']['harness'].startswith('direkte API')
+    assert manifest['motorinfo']['harness'].startswith('direct API')
     import csv
     with (export/'evidence.csv').open(encoding='utf-8-sig', newline='') as source:
         evidence = list(csv.DictReader(source, delimiter=';'))

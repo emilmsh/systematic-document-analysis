@@ -6,7 +6,7 @@ from kildeanalyse.adaptere.codex_cli import CodexCliAdapter
 from kildeanalyse.modell import Inputpakke
 
 pakke=Inputpakke('f','k','d','syntetisk','test',[], 'Svar med JSON. Dokumentet er syntetisk.', 'Forklar tallet fem i ti setninger i feltet svar.', {'type':'object','properties':{'svar':{'type':'string'}},'required':['svar']})
-with tempfile.TemporaryDirectory(prefix='oe-codex-stopp-') as temp:
+with tempfile.TemporaryDirectory(prefix='sda-codex-stopp-') as temp:
     adapter=CodexCliAdapter({'tidsavbrudd_sek':0.5})
     result=adapter.kjor(pakke,'',lambda:False,str(Path(temp)/'timeout'))
     assert result.svar is None and 'Tidsavbrudd' in result.feil and not result.avbrutt

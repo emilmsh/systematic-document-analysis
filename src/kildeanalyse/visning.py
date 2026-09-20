@@ -35,6 +35,7 @@ def md_oppsett(d: dict[str, Any]) -> str:
             ut.append(f"- CLI-versjon: {m['egenskaper']['cli_versjon']}")
         ut.append("")
     ut += ["## Prosjekter", ""]
+    ut += ['OCR: ' + json.dumps(d.get('ocr', {}), ensure_ascii=False), '']
     ut += [f"- {p['id']}: {p['navn']} (opprettet {p['opprettet']})" for p in d["prosjekter"]] or ["(ingen)"]
     return "\n".join(ut)
 
@@ -65,6 +66,7 @@ def md_plan(d: dict[str, Any]) -> str:
                f"- Motor: **{p.motor}** ({_merk(p.motor == 'simulert')})" + (f", modell {p.modell}" if p.modell else ""),
                f"- Språk / Language: {'English' if p.sprak == 'en' else 'Norsk bokmål'}. Sitater beholdes på originalspråket.",
                f"- Tenkenivå: **{fra_plan(p)['tenkenivaa']}**. Tidsgrense per dokument: {fra_plan(p)['tidsavbrudd_sek']:g} sekunder.",
+               '- Dokumentbehandling: ' + json.dumps(fra_plan(p)['document_processing'], ensure_ascii=False),
                f"- Analyseenhet: {p.analyseenhet}. Sider uten tekst: {'tillatt (lesedekning merkes)' if p.tillat_sider_uten_tekst else 'stopper kjøringen'}.",
                f"- Kriteriesett: {p.kriteriesett_navn} {p.kriteriesett_versjon}. {p.kriteriesett_merknad}", "",
                "**Bestilling (oppgavetekst):**", "", v["oppgavetekst"], "", f"**Formål:** {p.formaal}", "",
@@ -78,12 +80,14 @@ def md_plan(d: dict[str, Any]) -> str:
                    f"- Mottaker: `{api['endpoint']}`. Leverandørvalg: {api['provider']}.",
                    f"- Maks output-tokenbudsjett: {api['maks_output_tokens']}. Nøkkel hentes lokalt fra `{api['nokkelvariabel']}`.",
                    '- standard betyr at tenkeparameter utelates. Støtte og tolkning av nivå avhenger av modellen.',
-                   '- Ett API-kall per forsøk, ingen modellverktøy. Ingen automatisk bytting eller nytt forsøk.']
+                   '- Ett kall per lesedel og en sammenstilling for store dokumenter. Ingen automatisk bytting eller nytt forsøk.']
         ut.append("")
     ut += ['', '## Kilder og felles struktur', '',
            'Kontroller at filene kan vurderes med samme kriterier. Ulik struktur eller utelatt innhold kan begrense sammenlignbarheten.',
            '```json', json.dumps(d.get('source_profiles', []), ensure_ascii=False, indent=2), '```']
     kj = d["kjoringer"]
+    ut += ['', '## Dokumentbehandling og antall kall', '', '```json',
+           json.dumps(d.get('document_processing', []), ensure_ascii=False, indent=2), '```']
     ut += [f"## Kjøringer: {len(kj)}", ""]
     teller: dict[str, int] = {}
     for k in kj:
@@ -95,6 +99,10 @@ def md_plan(d: dict[str, Any]) -> str:
 
 def md_inputpakke(d: dict[str, Any]) -> str:
     p = d["pakke"]
+    if p.get('calls'):
+        return '\n'.join([f"# Inputpakker for {d['kjoring']['id']}",
+            'Kilden deles. calls inneholder de faktiske lesepakkene; sammenstillingens input avhenger av svarene.',
+            '```json', json.dumps(p, ensure_ascii=False, indent=2), '```'])
     return "\n".join([
         f"# Inputpakke for kjøring {d['kjoring']['id']} ({d['kilde']})", "",
         f"- Dokument: {p['dokument_navn']} ({p['dokument_id']}, SHA-256 {p['dokument_sha256'][:12]}…), kildeenheter sendt: {p['sider_sendt']}",

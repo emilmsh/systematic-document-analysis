@@ -36,8 +36,12 @@ def register(server, get_store):
         return call(tjeneste.opprett_prosjekt, name)
 
     @server.tool(description='Import local PDF, DOCX, XLSX, CSV/TSV, TXT or Markdown files, or folders of supported files. Subfolders are not imported automatically. Report extraction scope and structural differences before agreeing a shared plan.')
-    def import_documents(project_id: str, paths: list[str]) -> str:
-        return call(tjeneste.importer_dokumenter, project_id, paths)
+    def import_documents(project_id: str, paths: list[str], ocr_mode: str = 'auto', ocr_languages: str = 'eng+nor') -> str:
+        return call(tjeneste.importer_dokumenter, project_id, paths, ocr_mode=ocr_mode, ocr_languages=ocr_languages)
+
+    @server.tool(description='Inspect extracted source units and format/OCR limitations before agreeing the plan. Optionally save a complete Markdown inspection copy with stable source locators. Discuss expected file challenges, relevant sections, priorities and uncertain answers with the user. The preview is limited; no original is changed.')
+    def inspect_source(document_id: str, unit_ids: list[int] | None = None, maximum_units: int = 10, export_markdown: bool = False) -> str:
+        return call(tjeneste.inspect_source, document_id, unit_ids, maximum_units, export_markdown)
 
     @server.tool(description='Create a draft analysis. language=en or nb controls reader commentary; quotes and answer labels remain verbatim. criteria_file accepts English or Norwegian fields. Explicit engine: codex_cli, claude_cli, openai_api, anthropic_api, openrouter_api, kompatibel_api; simulert only on request. API requires model ID and local key, with separate billing. Never pass keys in settings. API settings: max_output_tokens, timeout_seconds, base_url for compatible API, provider for OpenRouter. Reasoning effort standard omits API effort; other levels depend on model.')
     def create_analysis(project_id: str, name: str, request: str, criteria_file: str,

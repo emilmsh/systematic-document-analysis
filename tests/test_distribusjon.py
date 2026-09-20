@@ -29,5 +29,5 @@ def test_installer_forbereder_begge_verter_separat(tmp_path):
     assert a['command']=='cmd' and '${CLAUDE_PLUGIN_ROOT}' in a['args'][-1]
     assert b['args'][-1]==str(codex/'bin/start_server.py')
     assert Path(b['command']).is_absolute()
-    assert 'OE_KILDEANALYSE_DATA' in b['env_vars']
+    assert 'SDA_DATA' in b['env_vars']
     assert (claude/'src/kildeanalyse/parametre.py').read_bytes()==(codex/'src/kildeanalyse/parametre.py').read_bytes()

@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import shutil
+import tempfile
 
 
 def fingerprint(root: Path) -> str:
@@ -21,7 +23,7 @@ def fingerprint(root: Path) -> str:
 
 
 def usable(python: Path, source: Path | None = None) -> bool:
-    code = "import kildeanalyse, pypdf, docx, openpyxl; import kildeanalyse.mcp_server"
+    code = "import kildeanalyse, pypdf, pypdfium2, PIL, docx, openpyxl; import kildeanalyse.mcp_server"
     if source is not None:
         code += "; import pathlib, sys; assert pathlib.Path(kildeanalyse.__file__).resolve().is_relative_to(pathlib.Path(sys.argv[1]).resolve())"
     try:
@@ -48,10 +50,17 @@ def prepare(root: Path, data: Path) -> Path:
     print(f"[Systematic Document Analysis] Preparing Python environment in {runtime}", file=sys.stderr, flush=True)
     if not python.is_file():
         subprocess.run([sys.executable, "-X", "utf8", "-m", "venv", str(runtime)], check=True, stdout=sys.stderr)
-    subprocess.run(
-        [str(python), "-X", "utf8", "-m", "pip", "install", "--disable-pip-version-check", "--quiet", str(root)],
-        check=True, stdout=sys.stderr,
-    )
+    # Windows app installations can have very long source paths. Build a fresh,
+    # short snapshot; never reuse build/ or egg-info left in a plugin source copy.
+    with tempfile.TemporaryDirectory(prefix='sda-build-') as temporary:
+        source = Path(temporary)
+        shutil.copy2(root/'pyproject.toml', source/'pyproject.toml')
+        shutil.copytree(root/'src/kildeanalyse', source/'src/kildeanalyse',
+                        ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+        subprocess.run(
+            [str(python), "-X", "utf8", "-m", "pip", "install", "--disable-pip-version-check", "--quiet", str(source)],
+            check=True, stdout=sys.stderr,
+        )
     if not usable(python):
         raise RuntimeError("The Python environment could not import the MCP server after installation.")
     marker.write_text(wanted, encoding="ascii")

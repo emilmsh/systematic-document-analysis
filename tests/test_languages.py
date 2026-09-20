@@ -26,7 +26,7 @@ def test_english_workflow_and_export_boundary(tmp_path):
                 return fn
             return decorator
     register(Server(), lambda:store)
-    assert len(functions) == 17
+    assert len(functions) == 18
     def call(tool_name, **kwargs):
         result = json.loads(functions[tool_name](**kwargs))
         assert 'error' not in result, result
@@ -73,7 +73,8 @@ def test_translation_preserves_identifiers_wire_payloads_and_quotes():
 @pytest.mark.parametrize('label', ['not_mentioned','not_reported'])
 def test_english_absence_requires_full_coverage(label):
     plan = Plan('Read', [Kriterium('k','k','question',[label])], sprak='en')
-    document = {'sider':[{'nr':1,'tekst':'Page one'}, {'nr':2,'tekst':'Page two'}]}
+    document = {'sider':[{'nr':1,'tekst':'Readable first page with sufficient text.', 'tegn':35},
+                         {'nr':2,'tekst':'Readable second page with sufficient text.', 'tegn':35}]}
     answer = {'vurderinger':[{'kriterium_id':'k','svar':label,'belegg':[]}], 'sider_lest':[1], 'merknader':[]}
     assert not valider(plan, document, answer, [1,2])['gyldig']
     answer['sider_lest'] = [1,2]
@@ -86,30 +87,25 @@ def test_old_plan_language_default_without_rewriting():
     assert 'sprak' not in old
 
 
-def test_data_directory_migration_is_non_destructive(tmp_path, monkeypatch):
+def test_data_directory_is_explicit_and_non_destructive(tmp_path, monkeypatch):
     monkeypatch.setenv('LOCALAPPDATA', str(tmp_path))
-    for key in ('SDA_DATA','OE_KILDEANALYSE_DATA'):
-        monkeypatch.delenv(key, raising=False)
+    monkeypatch.delenv('SDA_DATA', raising=False)
     current = tmp_path/'systematic-document-analysis'
-    legacy = tmp_path/'oe-kildeanalyse'
+    other = tmp_path/'another-store'
     assert datamappe() == current
-    legacy.mkdir()
-    (legacy/'kildeanalyse.sqlite').write_bytes(b'old database')
-    assert datamappe() == legacy
+    other.mkdir()
+    (other/'kildeanalyse.sqlite').write_bytes(b'old database')
+    assert datamappe() == current
     (current/'kildeanalyse.sqlite').write_bytes(b'new database')
-    with pytest.raises(RuntimeError, match='Two data stores'):
-        datamappe()
-    monkeypatch.setenv('OE_KILDEANALYSE_DATA', str(legacy))
-    assert datamappe() == legacy
+    monkeypatch.setenv('SDA_DATA', str(other))
+    assert datamappe() == other
     monkeypatch.setenv('SDA_DATA', str(current))
     assert datamappe() == current
-    assert (legacy/'kildeanalyse.sqlite').read_bytes() == b'old database'
+    assert (other/'kildeanalyse.sqlite').read_bytes() == b'old database'
 
 
-def test_legacy_api_key_alias(monkeypatch):
+def test_explicit_api_key(monkeypatch):
     from kildeanalyse.api_oppsett import local_key
     monkeypatch.delenv('SDA_CUSTOM_API_KEY', raising=False)
-    monkeypatch.setenv('OE_KILDEANALYSE_CUSTOM_API_KEY','legacy-fake-key')
-    assert local_key('kompatibel_api') == 'legacy-fake-key'
     monkeypatch.setenv('SDA_CUSTOM_API_KEY','new-fake-key')
     assert local_key('kompatibel_api') == 'new-fake-key'

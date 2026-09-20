@@ -1,0 +1,5 @@
+type;id;note
+Policy;P1;"We commit to notifying every affected customer after a confirmed data loss."
+Incident;I1;"Notification completed.
+Follow-up call pending."
+Incident;I2;

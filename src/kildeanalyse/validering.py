@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .dokument import finn_sitat_side, sitat_finnes, belegg_finnes
+from .dokument import finn_sitat_side, sitat_finnes, belegg_finnes, sider_uten_tekst
 from .modell import Plan
 from .source_formats import metadata
 
@@ -45,7 +45,7 @@ def valider(plan: Plan, dokument: dict[str, Any], svar: Any, sider_sendt: list[i
     if not isinstance(sider_lest, list) or not all(isinstance(n, int) for n in sider_lest):
         legg_feil(None, "skjema", "Feltet «sider_lest» mangler eller inneholder ikke bare heltall.")
         sider_lest = []
-    lesedekning_fullstendig = set(sider_lest) >= set(sider_sendt) and set(sider_sendt) >= set(alle_sider)
+    lesedekning_fullstendig = set(sider_lest) == set(sider_sendt) == set(alle_sider) and not sider_uten_tekst(dokument)
 
     sett: dict[str, int] = {}
     for v in vurderinger:
@@ -99,7 +99,9 @@ def valider(plan: Plan, dokument: dict[str, Any], svar: Any, sider_sendt: list[i
     if isinstance(merknader, list) and merknader:
         advarsler.append({"type": "merknader", "melding": "Motoren la ved merknader: " + " | ".join(str(m) for m in merknader)})
 
-    return _resultat(not feil, feil, advarsler, per_kriterium, sider_sendt, sider_lest, alle_sider)
+    result = _resultat(not feil, feil, advarsler, per_kriterium, sider_sendt, sider_lest, alle_sider)
+    result['lesedekning']['fullstendig'] = lesedekning_fullstendig
+    return result
 
 
 def _resultat(gyldig: bool, feil: list, advarsler: list, per_kriterium: dict, sider_sendt: list[int],

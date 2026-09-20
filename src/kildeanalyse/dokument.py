@@ -66,7 +66,7 @@ def trekk_ut_tekst(sti: Path) -> tuple[list[dict[str, Any]], str, str]:
     return sider, lesbarhet, f"pypdf {pypdf.__version__}"
 
 
-def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path) -> tuple[dict[str, Any], bool]:
+def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path, *, ocr_mode: str = 'off', ocr_languages: str = 'eng+nor') -> tuple[dict[str, Any], bool]:
     """Kopierer filen inn i datamappen, trekker ut tekst og registrerer dokumentet.
 
     Returnerer (dokument, nytt). Samme innhold (SHA-256) i samme prosjekt gjenbrukes.
@@ -77,7 +77,13 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path) -> tuple[
     if kilde.suffix.lower() not in SUPPORTED:
         raise DokumentFeil(f"Unsupported format «{kilde.suffix}». Supported: {', '.join(sorted(SUPPORTED))}.")
     sha = sha256_fil(kilde)
-    eksisterende = lager.finn_dokument_sha(prosjekt_id, sha, kilde.suffix)
+    if ocr_mode not in ('off', 'auto', 'force'):
+        raise DokumentFeil('ocr_mode must be off, auto or force.')
+    eksisterende = next((d for d in lager.dokumenter(prosjekt_id)
+        if d['sha256'] == sha and Path(d['lagret_kopi']).suffix.lower() == kilde.suffix.lower()
+        and (kilde.suffix.lower() != '.pdf' or
+             (d.get('source_metadata', {}).get('ocr', {}).get('mode', 'off') == ocr_mode and
+              (ocr_mode == 'off' or d.get('source_metadata', {}).get('ocr', {}).get('languages') == ocr_languages)))), None)
     if eksisterende:
         return lager.dokument(eksisterende['id']), False
     kopi = undermappe("dokumenter", lager.mappe) / f"{sha}{kilde.suffix.lower()}"
@@ -86,6 +92,18 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path) -> tuple[
     source_metadata = {}
     if kilde.suffix.lower() == '.pdf':
         sider, lesbarhet, metode = trekk_ut_tekst(kopi)
+        if ocr_mode != 'off':
+            from .ocr import apply_pdf
+            try:
+                sider, ocr = apply_pdf(kopi, sider, mode=ocr_mode, languages=ocr_languages)
+            except Exception as exc:
+                raise DokumentFeil(f'Local OCR failed: {exc}') from exc
+            empty = sum(s['tegn'] < MIN_TEGN_PER_SIDE for s in sider)
+            lesbarhet = ULESELIG if empty == len(sider) else DELVIS if empty else LESBAR
+            source_metadata = {'format':'pdf', 'scope':'PDF text with local OCR transcription; physical page references. Images are not semantically analysed.',
+                               'ocr':ocr, 'structure':{}}
+            if ocr['pages']:
+                metode += ' + ' + ocr['engine']
     else:
         try:
             sider, source_metadata, metode = extract(kopi)

@@ -117,6 +117,8 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
                 for navn in ("input.json", "manifest.json", "raasvar.txt", "systeminstruks.txt"):
                     if (kilde / navn).is_file():
                         shutil.copy2(kilde / navn, maal / navn)
+                if (kilde/'calls').is_dir():
+                    shutil.copytree(kilde/'calls', maal/'calls', dirs_exist_ok=True)
         json_kjoringer.append({"kjoring": kj, "dokument": {k: dok[k] for k in ("id", "navn", "sha256", "antall_sider", "lesbarhet")},
                                'source_metadata':metadata(dok), 'source_units':dok['sider'],
                                "gjeldende_forsok": gjeld, "vurderinger": vurd, "kontroller": [lager.kontroller(f["id"]) for f in forsok]})

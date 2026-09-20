@@ -4,14 +4,14 @@ setlocal
 set "PYTHONUTF8=1"
 cd /d "%~dp0"
 if exist ".venv\Scripts\python.exe" goto :installer
-if defined OE_KILDEANALYSE_PYTHON goto :valgt_python
+if defined SDA_PYTHON goto :valgt_python
 set "PYCMD=python"
 where py >nul 2>nul && set "PYCMD=py -3"
 echo Lager virtuelt Python-miljo i .venv ...
 %PYCMD% -m venv .venv || goto :feil
 goto :installer
 :valgt_python
-"%OE_KILDEANALYSE_PYTHON%" -m venv .venv || goto :feil
+"%SDA_PYTHON%" -m venv .venv || goto :feil
 :installer
 ".venv\Scripts\python.exe" -m pip install -e ".[dev]" || goto :feil
 echo.

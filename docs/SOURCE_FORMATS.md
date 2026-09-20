@@ -6,7 +6,7 @@ Before approval, inspect `show_plan` source profiles. Agree what one file repres
 
 | Format | Included | Source reference |
 |---|---|---|
-| PDF | Extracted text, with missing-text checks; no OCR | Physical page |
+| PDF | Extracted text and optional local Tesseract OCR; missing-text and OCR provenance checks | Physical page |
 | DOCX | Main-body paragraphs and tables, including nested tables | Body block and table row/cell path |
 | XLSX | Non-empty cells on all worksheets, including hidden sheets and rows; formulas and available cached results | Worksheet and cell range; individual cell addresses preserved |
 | CSV / TSV | Non-empty records including the first record; values stay text | Record number and column positions |
@@ -24,6 +24,6 @@ Each extracted unit has a stable ID and a locator within the preserved source. T
 
 Existing database fields `sider`, `antall_sider`, `side` and `sider_lest` retain their technical names but represent source units for non-PDF files. Older PDF records and attempt files remain readable. A small additive database migration stores extraction metadata; it does not rewrite existing attempts.
 
-This version normalizes source content and locations; it does **not** split large files into multiple model calls. Entire extracted files still need to fit the reader's context. Format adapters and later chunking are separate layers, so controlled chunking can be shared by CLI and API readers.
+Use `inspect_source` to preview units and optionally save a complete Markdown inspection copy with original locators. New plans split oversized extracted input into bounded reading calls and a synthesis of checked findings. This processing is shared by CLI and API readers. Discuss source challenges and important sections before approval; priority terms and locations alter chunk order while retaining full coverage. See [document processing](DOCUMENT_PROCESSING.md).
 
 Parser behaviour follows [python-docx document iteration](https://python-docx.readthedocs.io/en/latest/api/document.html) and [openpyxl workbook loading](https://openpyxl.readthedocs.io/en/3.1/tutorial.html#loading-from-a-file).

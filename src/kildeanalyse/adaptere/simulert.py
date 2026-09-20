@@ -119,6 +119,22 @@ class SimulertAdapter(Adapter):
         )
 
     def _lag_svar(self, pakke: Inputpakke, scenario: str | None) -> dict[str, Any]:
+        if 'findings' in pakke.svarskjema['properties']:
+            findings = []
+            for criterion in self.innstillinger.get('kriterier', []):
+                match = _finn_setning(pakke.sider, criterion.get('sokeord', []))
+                findings.append({'kriterium_id':criterion['id'], 'kommentar':'SIMULATED extraction.',
+                    'belegg':[{'side':match[0],'sitat':match[1]}] if match else []})
+            return {'findings':findings,'sider_lest':[s.nr for s in pakke.sider],'merknader':[]}
+        if 'STAGE: SYNTHESIS.' in pakke.systeminstruks:
+            findings = json.loads(pakke.brukermelding)['chunks']
+            answers = []
+            for criterion in self.innstillinger.get('kriterier', []):
+                evidence = [b for c in findings for f in c['findings'] if f['kriterium_id'] == criterion['id'] for b in f['belegg']]
+                labels = criterion['tillatte_svar']
+                label = next((s for s in labels if s in criterion.get('krever_belegg_ved', [])),labels[0]) if evidence else next((s for s in labels if s not in criterion.get('krever_belegg_ved', [])),labels[0])
+                answers.append({'kriterium_id':criterion['id'],'svar':label,'belegg':evidence,'kommentar':'SIMULATED synthesis; no model used.'})
+            return {'vurderinger':answers,'sider_lest':[],'merknader':['SIMULATED: no model used.']}
         # Kriteriene ligger ikke i pakken som objekter; vi tolker systeminstruksens kriterielinjer via skjemaets enum
         # og sokeord i innstillingene. For enkelhet leser vi kriteriene fra innstillingene («kriterier») når de er gitt,
         # ellers fra svarskjemaets enum uten sokeord.
