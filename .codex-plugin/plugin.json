@@ -1,16 +1,16 @@
 {
   "name": "systematic-document-analysis",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Auditable document analysis in English and Norwegian, with source evidence and human review.",
   "author": {
-    "name": "Systematic Document Analysis contributors"
+    "name": "Emil Mathias Strøm Halseth"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "Systematic Document Analysis",
     "shortDescription": "Analyse documents with evidence and an audit trail.",
     "longDescription": "Work in English or Norwegian in Codex or Claude Code. Choose CLI or API readers, inspect source quotations, record human reviews and export results.",
-    "developerName": "Systematic Document Analysis contributors",
+    "developerName": "Emil Mathias Strøm Halseth",
     "category": "Productivity",
     "capabilities": [],
     "defaultPrompt": "Help me analyse my documents with Systematic Document Analysis."

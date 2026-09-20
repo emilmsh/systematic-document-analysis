@@ -2,6 +2,8 @@
 
 Systematic Document Analysis bruker avtalte kriterier likt på egne dokumenter, og bevarer sitater, modellvalg, råsvar og menneskelig kontroll.
 
+Skapt og utviklet av **Emil Mathias Strøm Halseth**, med utviklingshjelp fra **OpenAI Codex** og **Anthropic Claude Code**.
+
 1. Pakk ut Windows-pakken. Dobbeltklikk **installer.cmd** og velg Claude Code, Codex eller begge. Mangler egnet Python, lastes det automatisk ned et eget lokalt miljø. Førstegangsoppsett krever internett.
 2. Velg lesemotor. Med abonnement: dobbeltklikk **reader_setup.cmd**, velg Codex eller Claude Code og følg innloggingsvinduet. Terminalalternativ: `./reader_setup.cmd codex --login` eller `./reader_setup.cmd claude --login`. Hjelperen installerer CLI ved behov; du fullfører leverandørens innlogging. Valgfri API: dobbeltklikk **settings.cmd**, lim inn nøkkelen på riktig leverandørlinje i Notisblokk, lagre og lukk. Ikke lim nøkkelen inn i chatten.
 3. For skannede PDF-er: dobbeltklikk **ocr_setup.cmd**. Det installerer lokal Tesseract OCR med norsk og engelsk språkstøtte ved behov.

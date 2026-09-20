@@ -10,6 +10,8 @@ Apply one agreed analysis routine to a list of files with a shared structure: re
 
 [Norsk veiledning](README.no.md) · [Start here](START_HERE.md) · [Start her på norsk](START_HER.md)
 
+Created and developed by **Emil Mathias Strøm Halseth**, with development assistance from **OpenAI Codex** and **Anthropic Claude Code**.
+
 ## Download and install
 
 - **[Latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest)**

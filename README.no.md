@@ -1,5 +1,7 @@
 # Systematic Document Analysis
 
+Skapt og utviklet av **Emil Mathias Strøm Halseth**, med utviklingshjelp fra **OpenAI Codex** og **Anthropic Claude Code**.
+
 Codex og Claude Code er anvendelige til et stort spenn av oppgaver. Ved systematiske, repetitive analyser trenger vi ofte mer kontroll og etterprøvbarhet enn en vanlig samtale enkelt gir. Denne pluginen beholder appenes dialog, verktøy og vurderingsevne, og legger til felles kriterier, eksplisitte modellvalg, dokumenterte lesekjøringer, sitater og menneskelig kontroll.
 
 Bruk egne rapporter, tilbud, dokumenter, regneark eller registre. Definer hva som skal vurderes likt på tvers av filene, diskuter forventede filproblemer og prioriteringer, og godkjenn planen før lesing. Modellen skal følge direkte valg om modell, tenkenivå, omfang og rapportering; skjønn brukes innenfor disse rammene. Automatisk validering er ikke menneskelig kontroll.
