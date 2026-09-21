@@ -1,3 +1,16 @@
+# 0.8.4 — Plain README, assisted setup and Codex desktop guard
+
+- The README now states plainly what the plugin does, why it is useful, what it does not do and how to install it, in English and Norwegian. It includes two paste-in setup prompts: one for Claude Code, which lets the assistant download, verify and install, and one for the ChatGPT/Codex app, which stops before the installer and asks the user to double-click it.
+- The installer, `--recover` and automatic updates refuse to run inside the packaged Codex desktop app. Such processes have virtualized writes below `%LOCALAPPDATA%`, which is how a stale shadow copy masked the real installation earlier. A session started by the Codex desktop app therefore only reports a newer version; run `update.cmd` from Explorer or a normal terminal.
+- `update.cmd --check` and `--mode` work while plugin sessions are open; only `--install` needs the other sessions closed.
+- Start guides, setup and update documentation and the host skill carry the same instruction: never run `installer.cmd` from a terminal inside the Codex app.
+
+Upgrading from 0.8.2 or 0.8.3 uses the updater (`update.cmd --install`, or the notify/auto policy). Versions through 0.8.1 still need one ZIP installation. Close plugin sessions in both apps before installing, then start a new conversation.
+
+Verification and limits are recorded in `tests/TESTLOGG.md`. No provider/model calls are required for the local regression and packaging checks.
+
+---
+
 # 0.8.3 — Interrupted installation recovery
 
 A forced interruption of `installer.cmd` (a killed process, a closed window, a power loss) leaves a `pending-install.json` journal that blocks further installation and managed startup. This release adds the command that resolves it.
