@@ -6,11 +6,12 @@ A plugin for Claude Code and Codex that reads a set of documents against criteri
 
 ## Quick install — Windows
 
-1. Download the **[Windows ZIP from the latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest)** and extract it under Downloads. Private repository: sign in with access, or use a ZIP shared by a colleague.
+1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. The current release is **[0.8.5](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.5)**. Private repository: sign in with access, or use a ZIP shared by a colleague.
 2. Open the extracted folder in File Explorer, double-click **installer.cmd**, and choose **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Codex terminal.
-3. Start a **new conversation** and write: **“Use Systematic Document Analysis on the documents in [folder]. Help me choose criteria and show the plan before running.”**
+3. For subscription-based reading, double-click **reader_setup.cmd**, choose Claude Code or Codex, and complete sign-in.
+4. Start a **new local conversation** in Claude Code's **Code tab** or in Codex and write: **“Use Systematic Document Analysis on the documents in [folder]. Help me choose criteria and show the plan before running.”**
 
-If the reader CLI or login is missing, double-click **reader_setup.cmd** and follow its instructions. For your first upgrade from **0.8.4 or earlier**, finish active analyses and fully close Claude Code and Codex before installing. Subsequent manual updates close this plugin's connections automatically after current work is saved; reopen a conversation afterwards.
+First-time setup requires internet access. The installer provides Python and installs the selected app's command-line tool if it is missing; you do not need to use the terminal yourself.
 
 ## Project folder and results
 
@@ -30,7 +31,7 @@ A chat assistant can read one report and answer questions about it. It is less u
 - **Runs one document per attempt with fixed settings.** The plan records reader, model, reasoning effort, language and instructions. A named person approves it before anything is read. Changing it creates a new version; earlier attempts are untouched.
 - **Stores the evidence.** For every attempt: the exact input, the raw answer, verbatim quotations with their location (PDF page, Word block, sheet and cell range, text line or CSV record), and automatic checks of answer labels, quotations and coverage.
 - **Records human review.** A person approves, corrects or rejects each assessment with a reason. Automatic checks are never recorded as human review.
-- **Exports to Excel.** One workbook for results, evidence, attempts and reviews, with a separate full audit trail. CSV and the previous export layout are optional.
+- **Exports to Excel.** One workbook for results, evidence, attempts and reviews, with a separate full audit trail. CSV is optional.
 
 The conversation stays in Claude Code or Codex. The plugin adds the record keeping and the repeatable reading; the assistant still helps you think about the question, the criteria and problem files.
 
@@ -55,21 +56,21 @@ Claude Code:
 
 ChatGPT desktop / Codex:
 
-> Install Systematic Document Analysis for Codex. Release page: https://github.com/emilmsh/systematic-document-analysis/releases/latest (private repository; use the existing gh login, or ask me to download the ZIP if you cannot). Download systematic-document-analysis-windows.zip and SHA256SUMS.txt, verify the checksum and extract the ZIP to a folder under my Downloads. Do not run installer.cmd yourself: inside the Codex app, files written under AppData\Local are redirected and the plugin would end up in the wrong place. Instead, show me the folder path and ask me to double-click installer.cmd there and choose Codex. When I confirm, run `codex plugin list` and check that systematic-document-analysis is enabled. Do not change other plugins, settings or files.
+> Install Systematic Document Analysis for Codex. Release page: https://github.com/emilmsh/systematic-document-analysis/releases/latest (private repository; use the existing gh login, or ask me to download the ZIP if you cannot). Download systematic-document-analysis-windows.zip and SHA256SUMS.txt, verify the checksum and extract the ZIP to a folder under my Downloads. Show me the folder path so I can double-click installer.cmd in File Explorer and choose Codex. Leave that installation step to me. When I confirm, run `codex plugin list` and check that systematic-document-analysis is enabled. Do not change other plugins, settings or files.
 
 After installation, start a new conversation so the app loads the plugin.
 
 ### By hand
 
 1. Download the [Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) from the [latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest) and extract it.
-2. Double-click `installer.cmd` and choose Claude Code, Codex or both. It reuses an existing Python 3.12 or downloads a private one, copies the plugin to `%LOCALAPPDATA%\systematic-document-analysis\plugins\<app>\` and registers it in the app. Do not run it from a terminal inside the Codex app.
-3. Start a new conversation. The first start installs the Python dependencies.
+2. Double-click `installer.cmd` in File Explorer and choose Claude Code, Codex or both. It prepares Python 3.12 or newer, installs a missing host CLI, registers the plugin and reports the installation folder.
+3. Double-click `reader_setup.cmd` to sign in for subscription-based reading, then start a new local conversation. The first start installs the Python dependencies.
 
 Reading with your subscription uses the app's own CLI. If the CLI is missing, `reader_setup.cmd` installs it; you complete the vendor's sign-in yourself. `ocr_setup.cmd` installs local OCR for scanned PDFs. `settings.cmd` opens a local file for optional API keys.
 
 ### Updates
 
-`update.cmd` in the installed folder checks GitHub for a newer release, installs it, or sets the policy to notify only (default), automatic or off. Checks run at most once a day when a plugin session starts. Existing files are backed up before replacement, and an interrupted installation can be resolved with `installer.cmd <app> --recover`. Details in [installation and updates](docs/UPDATES.md).
+Run `update.cmd` from the installed folder to check for a newer release, install it, or choose notify only (default), automatic or off. Start a new conversation after updating. See [installation and updates](docs/UPDATES.md) for settings and troubleshooting.
 
 ## Using it
 

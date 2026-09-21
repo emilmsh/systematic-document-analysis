@@ -6,11 +6,12 @@ En plugin for Claude Code og Codex som leser en samling dokumenter mot kriterier
 
 ## Hurtiginstallasjon — Windows
 
-1. Last ned **[Windows-ZIP-en fra siste utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest)** og pakk den ut under Nedlastinger. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
+1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Gjeldende utgave er **[0.8.5](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.5)**. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
 2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, og velg **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor terminalen i Codex.
-3. Start en **ny samtale** og skriv: **«Bruk Systematic Document Analysis på dokumentene i [mappe]. Hjelp meg med kriterier og vis planen før kjøring.»**
+3. For lesing med abonnementet ditt: dobbeltklikk **reader_setup.cmd**, velg Claude Code eller Codex og fullfør innloggingen.
+4. Start en **ny lokal samtale** i **Code-fanen** i Claude eller i Codex og skriv: **«Bruk Systematic Document Analysis på dokumentene i [mappe]. Hjelp meg med kriterier og vis planen før kjøring.»**
 
-Mangler lesemotoren eller innloggingen, dobbeltklikk **reader_setup.cmd** og følg instruksjonene. Ved første oppgradering fra **0.8.4 eller eldre** må du la aktive analyser bli ferdige og lukke Claude Code og Codex helt før installasjon. Senere manuelle oppdateringer lukker pluginens forbindelser automatisk etter at pågående arbeid er lagret; åpne en ny samtale etterpå.
+Førstegangsoppsett krever internett. Installasjonsprogrammet ordner Python og installerer den valgte appens kommandolinjeverktøy hvis det mangler; du trenger ikke bruke terminalen selv.
 
 ## Prosjektmappe og resultater
 
@@ -31,7 +32,7 @@ En samtaleassistent kan lese én rapport og svare på spørsmål om den. Det hol
 - **Kjører ett dokument per forsøk med faste innstillinger.** Planen lagrer lesemotor, modell, tenkenivå, språk og instruks. En navngitt person godkjenner den før noe leses. Endringer gir en ny versjon; tidligere forsøk står urørt.
 - **Lagrer beleggene.** For hvert forsøk: nøyaktig input, råsvar, ordrette sitater med plassering (PDF-side, Word-blokk, ark og celleområde, tekstlinje eller CSV-rad) og automatiske kontroller av svaretiketter, sitater og dekning.
 - **Registrerer menneskelig kontroll.** En person godkjenner, korrigerer eller avviser hver vurdering med begrunnelse. Automatiske kontroller registreres aldri som menneskelig kontroll.
-- **Eksporterer til Excel.** Resultater, belegg, forsøk og kontroller samles i én arbeidsbok, med kontrollsporet i en egen mappe. CSV og tidligere eksportformat kan velges ved behov.
+- **Eksporterer til Excel.** Resultater, belegg, forsøk og kontroller samles i én arbeidsbok, med kontrollsporet i en egen mappe. CSV kan velges ved behov.
 
 Samtalen foregår i Claude Code eller Codex. Pluginen legger til bokføringen og den repeterbare lesingen; assistenten hjelper fortsatt med spørsmålet, kriteriene og vanskelige filer.
 
@@ -56,21 +57,21 @@ Claude Code:
 
 ChatGPT-appen / Codex:
 
-> Installer Systematic Document Analysis for Codex. Utgivelsesside: https://github.com/emilmsh/systematic-document-analysis/releases/latest (privat repo; bruk eksisterende gh-innlogging, eller be meg laste ned ZIP-en hvis du ikke får tilgang). Last ned systematic-document-analysis-windows.zip og SHA256SUMS.txt, verifiser sjekksummen og pakk ut ZIP-en i en mappe under Nedlastinger. Ikke kjør installer.cmd selv: inne i Codex-appen omdirigeres filer som skrives under AppData\Local, og pluginen havner på feil sted. Vis meg mappestien og be meg dobbeltklikke installer.cmd der og velge Codex. Når jeg bekrefter, kjør `codex plugin list` og sjekk at systematic-document-analysis er aktivert. Ikke endre andre plugins, innstillinger eller filer.
+> Installer Systematic Document Analysis for Codex. Utgivelsesside: https://github.com/emilmsh/systematic-document-analysis/releases/latest (privat repo; bruk eksisterende gh-innlogging, eller be meg laste ned ZIP-en hvis du ikke får tilgang). Last ned systematic-document-analysis-windows.zip og SHA256SUMS.txt, verifiser sjekksummen og pakk ut ZIP-en i en mappe under Nedlastinger. Vis meg mappestien, slik at jeg kan dobbeltklikke installer.cmd i Filutforsker og velge Codex. Overlat selve installasjonssteget til meg. Når jeg bekrefter, kjør `codex plugin list` og sjekk at systematic-document-analysis er aktivert. Ikke endre andre plugins, innstillinger eller filer.
 
 Start en ny samtale etterpå, slik at appen laster pluginen.
 
 ### Manuelt
 
 1. Last ned [Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) fra [siste utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest) og pakk den ut.
-2. Dobbeltklikk `installer.cmd` og velg Claude Code, Codex eller begge. Programmet gjenbruker en eksisterende Python 3.12 eller laster ned en privat, kopierer pluginen til `%LOCALAPPDATA%\systematic-document-analysis\plugins\<app>\` og registrerer den i appen. Ikke kjør det fra en terminal inne i Codex-appen.
-3. Start en ny samtale. Første oppstart installerer Python-avhengighetene.
+2. Dobbeltklikk `installer.cmd` i Filutforsker og velg Claude Code, Codex eller begge. Programmet klargjør Python 3.12 eller nyere, installerer et manglende kommandolinjeverktøy for appen, registrerer pluginen og viser installasjonsmappen.
+3. Dobbeltklikk `reader_setup.cmd` for å logge inn til lesing med abonnementet ditt, og start deretter en ny lokal samtale. Første oppstart installerer Python-avhengighetene.
 
 Lesing med abonnementet ditt bruker appens egen CLI. Mangler den, installerer `reader_setup.cmd` den; innloggingen fullfører du selv. `ocr_setup.cmd` installerer lokal OCR for skannede PDF-er. `settings.cmd` åpner en lokal fil for valgfrie API-nøkler.
 
 ### Oppdateringer
 
-`update.cmd` i den installerte mappen sjekker GitHub for en nyere utgave, installerer den, eller setter policyen til bare varsle (standard), automatisk eller av. Sjekker skjer høyst én gang per dag når en plugin-sesjon starter. Eksisterende filer sikkerhetskopieres før de byttes, og en avbrutt installasjon løses med `installer.cmd <app> --recover`. Detaljer i [installasjon og oppdateringer](docs/UPDATES.md).
+Kjør `update.cmd` fra den installerte mappen for å se etter en nyere utgave, installere den eller velge bare varsle (standard), automatisk eller av. Start en ny samtale etter oppdatering. Se [installasjon og oppdateringer](docs/UPDATES.md) for innstillinger og feilsøking.
 
 ## Bruk
 
