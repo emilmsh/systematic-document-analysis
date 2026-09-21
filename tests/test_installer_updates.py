@@ -366,3 +366,32 @@ def test_update_command_checks_and_sets_policy_beside_open_sessions(source, tmp_
         monkeypatch.setattr(sys, 'argv', ['update_plugin.py', '--install'])
         assert updater.main() == 1
         assert 'Close other plugin sessions' in capsys.readouterr().err
+
+
+def test_packaged_desktop_process_never_installs_recovers_or_updates(source, tmp_path, monkeypatch, capsys):
+    host = Host(monkeypatch)
+    base = tmp_path/'installed'
+    installer.install('codex', base)
+    target = base/'codex'/installer.NAME
+    before = installer.package_hash(target)
+    monkeypatch.setattr(installer, 'packaged_process', lambda: True)
+    monkeypatch.setattr(updater, 'packaged_process', lambda: True)
+    set_version(source, '99.0.0')
+    with pytest.raises(RuntimeError, match='inside the Codex desktop app'):
+        installer.install('codex', base)
+    write_json(target.parent/'pending-install.json', {'target':str(target), 'host':'codex'})
+    with pytest.raises(RuntimeError, match='inside the Codex desktop app'):
+        installer.recover('codex', base)
+    (target.parent/'pending-install.json').unlink()
+    monkeypatch.setattr(updater, 'download', lambda *args: pytest.fail('No download expected'))
+    with maintenance_lock():
+        with pytest.raises(RuntimeError, match='inside the Codex desktop app'):
+            updater.apply_release(updater.managed_install(target), release_info('99.0.0'))
+    import time
+    write_json(state_dir()/'last-check.json', {**release_info('99.0.0'), 'checked_at':time.time(), 'message':'Available'})
+    write_json(state_dir()/'updates.json', {'mode':'auto'})
+    capsys.readouterr()
+    assert updater.startup(target) is False
+    err = capsys.readouterr().err
+    assert '99.0.0' in err and 'Update deferred' in err
+    assert installer.package_hash(target) == before and host.plugin['version'] != '99.0.0'

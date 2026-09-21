@@ -17,7 +17,7 @@ import uuid
 
 from pakk_plugin import ROOT, pakk, pakkefiler, configure_codex
 from setup_reader import install as ensure_reader
-from kildeanalyse.maintenance import maintenance_lock, read_json, write_json
+from kildeanalyse.maintenance import PACKAGED_MESSAGE, maintenance_lock, packaged_process, read_json, write_json
 
 NAME = 'systematic-document-analysis'
 MARKET = 'systematic-document-analysis-local'
@@ -169,6 +169,8 @@ def move_codex_shadows(shadows, version_hint):
 
 def install(host, base, *, replace_source=False, repair=False, allow_downgrade=False,
             move_shadow=False, interactive=False, locked=False):
+    if packaged_process():
+        raise RuntimeError(PACKAGED_MESSAGE)
     with nullcontext() if locked else maintenance_lock():
         return _install(host, base, replace_source=replace_source, repair=repair,
                         allow_downgrade=allow_downgrade, move_shadow=move_shadow, interactive=interactive)
@@ -340,6 +342,8 @@ def recover(host, base, *, locked=False):
     the interrupted installation had in fact completed. Nothing is deleted:
     incomplete copies become failed-install-<id> folders and backups are kept.
     """
+    if packaged_process():
+        raise RuntimeError(PACKAGED_MESSAGE)
     with nullcontext() if locked else maintenance_lock():
         return _recover(host, base)
 

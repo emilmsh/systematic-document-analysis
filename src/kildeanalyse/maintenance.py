@@ -83,6 +83,27 @@ def maintenance_lock(*, shared=False):
                 fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
+def packaged_process() -> bool:
+    """True inside a packaged (MSIX/Store) app such as the Codex desktop app.
+
+    Such processes have file-system virtualization: writes below LOCALAPPDATA
+    land in the package's LocalCache and later mask the real files. Installers
+    and updaters must not run there.
+    """
+    if os.name != 'nt':
+        return False
+    import ctypes
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    length = ctypes.c_uint32(0)
+    result = kernel.GetCurrentPackageFullName(ctypes.byref(length), None)
+    return result != 15700  # APPMODEL_ERROR_NO_PACKAGE
+
+
+PACKAGED_MESSAGE = ('This command runs inside the Codex desktop app, where files written below %LOCALAPPDATA% are '
+                    'redirected into the app\'s LocalCache and would mask the real installation. Run installer.cmd or '
+                    'update.cmd by double-clicking it in Explorer or from a normal terminal. No files changed.')
+
+
 def update_status() -> dict:
     """Cached diagnostics only; no network or credentials."""
     try:

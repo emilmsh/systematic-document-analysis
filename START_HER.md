@@ -4,7 +4,7 @@ Systematic Document Analysis bruker avtalte kriterier likt på egne dokumenter, 
 
 Skapt og utviklet av **Emil Mathias Strøm Halseth**, med utviklingshjelp fra **OpenAI Codex** og **Anthropic Claude Code**.
 
-1. Pakk ut Windows-pakken. Dobbeltklikk **installer.cmd** og velg Claude Code, Codex eller begge. Mangler egnet Python, lastes det automatisk ned et eget lokalt miljø. Førstegangsoppsett krever internett.
+1. Pakk ut Windows-pakken. Dobbeltklikk **installer.cmd** og velg Claude Code, Codex eller begge. Mangler egnet Python, lastes det automatisk ned et eget lokalt miljø. Førstegangsoppsett krever internett. Du kan også lime inn en av oppsettspromptene i [README](README.no.md#la-assistenten-gjøre-det) i Claude Code eller ChatGPT-appen og la assistenten laste ned og verifisere utgaven. Ikke kjør installer.cmd fra en terminal inne i Codex-appen; filene ville blitt omdirigert til feil sted, og installasjonsprogrammet nekter.
 2. Velg lesemotor. Med abonnement: dobbeltklikk **reader_setup.cmd**, velg Codex eller Claude Code og følg innloggingsvinduet. Terminalalternativ: `./reader_setup.cmd codex --login` eller `./reader_setup.cmd claude --login`. Hjelperen installerer CLI ved behov; du fullfører leverandørens innlogging. Valgfri API: dobbeltklikk **settings.cmd**, lim inn nøkkelen på riktig leverandørlinje i Notisblokk, lagre og lukk. Ikke lim nøkkelen inn i chatten.
 3. For skannede PDF-er: dobbeltklikk **ocr_setup.cmd**. Det installerer lokal Tesseract OCR med norsk og engelsk språkstøtte ved behov.
 4. Start en ny lokal samtale med pluginen aktivert. Åpne en vanlig arbeidsmappe, for eksempel `Dokumenter/Min analyse`, med kildefilene i undermappen `dokumenter`. Du trenger ikke Git eller en teknisk prosjektstruktur.

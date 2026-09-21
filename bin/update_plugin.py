@@ -18,7 +18,8 @@ import urllib.request
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'src'))
-from kildeanalyse.maintenance import MaintenanceBusy, maintenance_lock, read_json, state_dir, write_json
+from kildeanalyse.maintenance import (MaintenanceBusy, PACKAGED_MESSAGE, maintenance_lock, packaged_process,
+                                      read_json, state_dir, write_json)
 from kildeanalyse.cli_paths import find_cli
 from installer import MARKER, NAME, local_path, version, version_key, validate_package, package_hash
 
@@ -152,6 +153,10 @@ def apply_release(marker, release):
     target = local_path(marker['target'])
     if version_key(release['version']) <= version_key(version(target)):
         return False
+    if packaged_process():
+        # The Codex desktop app starts this plugin inside its package; an update
+        # from there would be virtualized. Notify only and leave files unchanged.
+        raise RuntimeError(PACKAGED_MESSAGE)
     # Never overwrite a development copy or local edits during automatic updates.
     if package_hash(target) != marker.get('installed_sha256'):
         raise RuntimeError('Installed files have local changes. Use installer.cmd to repair or keep them.')
