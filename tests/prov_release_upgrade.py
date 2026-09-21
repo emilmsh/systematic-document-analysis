@@ -12,7 +12,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'bin'))
-from installer import NAME, SELECTOR, validate_package, version
+from installer import NAME, SELECTOR, validate_package, version, version_key
 from update_plugin import REPOSITORY, ARCHIVE, fetch, download, extract_release
 from setup_reader import install as reader
 
@@ -38,8 +38,12 @@ def main():
         (base/'analysis/keep.txt').write_text('analysis sentinel',encoding='utf-8')
         (base/'settings/keep.txt').write_text('settings sentinel',encoding='utf-8')
         for source in (old,candidate,candidate):
+            # This probe tests registration/upgrade; onboarding is tested separately.
+            flags = ['--non-interactive']
+            if version_key(version(source)) >= (0, 8, 7):
+                flags += ['--reader', 'none', '--skip-ocr']
             subprocess.run([sys.executable,'-X','utf8',str(source/'bin/installer.py'),'both',
-                            '--base-dir',str(base/'plugins')],env=env,check=True,timeout=180)
+                            '--base-dir',str(base/'plugins'),*flags],env=env,check=True,timeout=180)
         codex = json.loads(subprocess.check_output([reader('codex'),'plugin','list','--json'],env=env,encoding='utf-8'))
         claude = json.loads(subprocess.check_output([reader('claude'),'plugin','list','--json'],env=env,encoding='utf-8'))
         assert any(p.get('pluginId')==SELECTOR and p['enabled'] and p['version']==expected for p in codex['installed'])

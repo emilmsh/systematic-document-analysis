@@ -44,7 +44,8 @@ def test_complete_format_workflow_without_models(tmp_path, monkeypatch, extensio
     assert new and not sider_uten_tekst(document)
     assert importer_dokument(store, project['id'], file)[1] is False
     assert Path(document['lagret_kopi']).suffix == '.'+extension
-    criterion = {'criteria':[{'id':'policy', 'allowed_answers':['yes','not_mentioned'], 'evidence_required_for':['yes']}]}
+    criterion = {'criteria':[{'id':'policy', 'question':'Does the source describe a policy?',
+                              'allowed_answers':['yes','not_mentioned'], 'evidence_required_for':['yes']}]}
     analysis = tjeneste.opprett_analyse(store, project['id'], 'Policy', 'Compare each file', criterion, motor='claude_cli', sprak='en')
     aid = analysis['analyse']['id']; plan = analysis['planversjon']['plan']
     assert tjeneste.vis_plan(store,aid)['source_profiles'][0]['format'] == extension

@@ -9,7 +9,7 @@
       "name": "systematic-document-analysis",
       "description": "Systematic Document Analysis: auditable document reading in English and Norwegian.",
       "source": "./",
-      "version": "0.8.6"
+      "version": "0.8.7"
     }
   ]
 }

@@ -254,7 +254,7 @@ def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
             assert b'fake-secret-for-offline-tests' not in file.read_bytes()
 
 
-def test_api_quota_stops_actual_queue_and_redacts_export(transport, tmp_path):
+def test_api_quota_is_reported_per_run_and_redacted_from_export(transport, tmp_path):
     from pathlib import Path
     from kildeanalyse import tjeneste
     from kildeanalyse.lager import Lager
@@ -272,8 +272,9 @@ def test_api_quota_stops_actual_queue_and_redacts_export(transport, tmp_path):
         return httpx.Response(429, json={'error':{'message':'fake-secret-for-offline-tests'}})
     transport(handler)
     report = tjeneste.start(lager, aid)
-    assert len(calls) == 1 and report['startet'] == [jobs[0]['id']]
-    assert lager.kjoring(jobs[1]['id'])['status'] == 'planlagt'
+    assert len(calls) == 2 and report['startet'] == [job['id'] for job in jobs]
+    assert all(lager.kjoring(job['id'])['status'] == 'feilet' for job in jobs)
+    assert report['workflow_block'] is None and len(report['run_issues']) == 2
     export = Path(tjeneste.eksporter(lager, aid, legacy_format=True)['mappe'])
     for file in export.rglob('*'):
         if file.is_file():

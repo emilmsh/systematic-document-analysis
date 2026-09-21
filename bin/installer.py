@@ -17,6 +17,8 @@ import uuid
 
 from pakk_plugin import ROOT, pakk, pakkefiler, configure_codex
 from setup_reader import install as ensure_reader
+from setup_reader import setup as setup_subscription_reader
+from setup_ocr import install as setup_local_ocr
 from kildeanalyse.maintenance import PACKAGED_MESSAGE, maintenance_lock, installation_lock, packaged_process, read_json, write_json
 
 NAME = 'systematic-document-analysis'
@@ -476,6 +478,23 @@ def _finish(host, transaction, journal, actions, result):
     return result
 
 
+def finish_reader_setup(reader, *, interactive):
+    """Run after the installation transaction, so login cannot roll it back or hold its lock."""
+    if reader is None and interactive:
+        print('\nSet up subscription reading (independent of the app hosting the plugin):')
+        print('1 = Codex / ChatGPT, 2 = Claude Code, 3 = Skip (API or set up later)')
+        while reader is None:
+            reader = {'1': 'codex', '2': 'claude', '3': 'none'}.get(input('Choose 1, 2 or 3: ').strip())
+            if reader is None:
+                print('Choose 1, 2 or 3.')
+    if reader in (None, 'none'):
+        print('Subscription reader setup skipped. '
+              'For subscription reading, run reader_setup.cmd later; for API reading, use settings.cmd.')
+        return
+    setup_subscription_reader(reader, allow_login=interactive)
+    print('Subscription sign-in complete. Start a new local conversation after setup finishes.')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('app', nargs='?', choices=['claude','codex','both','begge'])
@@ -487,21 +506,28 @@ def main():
     parser.add_argument('--move-shadow', action='store_true',
                         help='Move aside a stale copy that the packaged Codex desktop app reads instead of the installation')
     parser.add_argument('--non-interactive', action='store_true', help='Never prompt; conflicts require explicit options')
+    parser.add_argument('--reader', choices=['claude', 'codex', 'none'],
+                        help='Subscription reader to set up after installation; none skips it. '
+                             'Non-interactive mode only checks sign-in, never opens login.')
+    parser.add_argument('--skip-ocr', action='store_true', help='Explicitly skip installation/check of local OCR.')
     parser.add_argument('--recover', action='store_true',
                         help='Resolve an interrupted installation (pending-install.json) by restoring the previous state')
     args = parser.parse_args()
+    if args.reader is not None and (args.prepare_only or args.recover):
+        parser.error('--reader cannot be combined with --prepare-only or --recover.')
     if sys.version_info < (3,12) or os.name != 'nt':
         parser.error('This installation package requires Windows and Python 3.12 or newer.')
     interactive = not args.non_interactive and sys.stdin.isatty()
     app = args.app
-    if args.non_interactive and not app:
-        parser.error('Choose claude, codex or both with --non-interactive.')
+    if not interactive and not app:
+        parser.error('Choose claude, codex or both when running without an interactive terminal.')
     if not app:
         print('Install Systematic Document Analysis: 1 = Claude Code, 2 = Codex, 3 = both')
         app = {'1':'claude','2':'codex','3':'begge'}.get(input('Choose 1, 2 or 3: ').strip())
         if not app:
             parser.error('Invalid choice; installation has not started.')
     failures = []
+    installed = False
     try:
         if not args.prepare_only and packaged_process():
             raise RuntimeError(PACKAGED_MESSAGE)
@@ -518,12 +544,27 @@ def main():
                                          allow_downgrade=args.allow_downgrade, move_shadow=args.move_shadow,
                                          interactive=interactive, locked=True)
                         print(f'{host}: {result}')
+                        installed = installed or result in ('installed', 'already up to date')
                 except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
                     failures.append(host)
                     print(f'{host}: installation stopped: {exc}', file=sys.stderr)
     except (RuntimeError, OSError, ValueError) as exc:
         print(f'Installation stopped: {exc}', file=sys.stderr)
         return 1
+    if installed and not failures:
+        if not args.skip_ocr:
+            try:
+                setup_local_ocr()
+            except (RuntimeError, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt, EOFError) as exc:
+                print(f'Plugin files are installed, but OCR setup is incomplete: {exc or "cancelled"}. '
+                      'Run ocr_setup.cmd to finish OCR; reinstalling the plugin is not necessary.', file=sys.stderr)
+                failures.append('ocr')
+        try:
+            finish_reader_setup(args.reader, interactive=interactive)
+        except (RuntimeError, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt, EOFError) as exc:
+            print(f'Plugin installation is complete, but reader setup is incomplete: {exc or "cancelled"}. '
+                  'Run reader_setup.cmd to finish; reinstalling the plugin is not necessary.', file=sys.stderr)
+            return 1
     return 1 if failures else 0
 
 

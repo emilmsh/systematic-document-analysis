@@ -138,6 +138,37 @@ def test_legacy_plan_single_and_explicit_limits():
     with pytest.raises(ValueError,match='Instructions'): prepare(plan,doc,p)
 
 
+def test_failed_chunk_stops_only_its_document(tmp_path, monkeypatch):
+    plan, document, _ = context()
+    store = Lager(tmp_path / 'data')
+    project = tjeneste.opprett_prosjekt(store, 'Independent documents')
+    for name in ['broken.txt', 'good.txt']:
+        source = tmp_path / name
+        source.write_text(name + document['sider'][0]['tekst'], encoding='utf-8')
+        importer_dokument(store, project['id'], source)
+    created = tjeneste.opprett_analyse(store, project['id'], 'Policy', 'Find policy',
+        {'kriterier': [k.til_dict() for k in plan.kriterier]}, motor=plan.motor,
+        modell=plan.modell, motorinnstillinger=plan.motorinnstillinger)
+    aid = created['analyse']['id']
+    runs = tjeneste.legg_til_kjoringer(store, aid)['nye']
+    calls = []
+
+    def read(self, package, *args):
+        calls.append(package)
+        result = fake_reader(package)
+        if package.dokument_navn == 'broken.txt': result.svar['sider_lest'] = []
+        return result
+
+    adapter = ADAPTERE[plan.motor]
+    monkeypatch.setattr(adapter, 'sjekk_stotte', lambda self: Stotte(True))
+    monkeypatch.setattr(adapter, 'kjor', read)
+    tjeneste.godkjenn_plan(store, aid, 'Test user')
+    report = tjeneste.start(store, aid)
+    assert [store.kjoring(run['id'])['status'] for run in runs] == [KJ_FEILET, KJ_FULLFORT]
+    assert len([call for call in calls if call.dokument_navn == 'broken.txt']) == 1
+    assert report['workflow_block'] is None and len(report['run_issues']) == 1
+
+
 def test_ocr_missing_dependency_and_languages(monkeypatch, tmp_path):
     pages = [{'nr':1,'tekst':'','tegn':0}]
     monkeypatch.setattr(ocr,'setup',lambda:{'available':False,'installation':'Install Tesseract.'})

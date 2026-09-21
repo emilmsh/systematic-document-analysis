@@ -54,7 +54,7 @@ def test_codex_input_schema_is_the_sent_schema():
     assert pakke.svarskjema==strengt_skjema(pakke.svarskjema)
     assert pakke.til_dict()['svarskjema']==pakke.svarskjema
 
-def test_quota_stops_queue_without_retry(tmp_path, monkeypatch):
+def test_quota_reports_each_run_without_retry(tmp_path, monkeypatch):
     from pathlib import Path
     from kildeanalyse import tjeneste
     from kildeanalyse.lager import Lager
@@ -70,6 +70,7 @@ def test_quota_stops_queue_without_retry(tmp_path, monkeypatch):
     kj=tjeneste.legg_til_kjoringer(lager,aid)['nye']
     monkeypatch.setattr(SimulertAdapter,'kjor',lambda *a: Motorsvar(raasvar='usage limit reached',svar=None,feil='usage limit reached',motorinfo={'stopp_ko':True}))
     report=tjeneste.start(lager,aid)
-    assert report['startet']==[kj[0]['id']]
-    assert lager.kjoring(kj[1]['id'])['status']=='planlagt'
+    assert report['startet']==[run['id'] for run in kj]
+    assert all(lager.kjoring(run['id'])['status']=='feilet' for run in kj)
+    assert report['workflow_block'] is None and len(report['run_issues']) == 2
     assert len(lager.forsok_for_kjoring(kj[0]['id']))==1

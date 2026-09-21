@@ -32,7 +32,13 @@ def normaliser(motor, modell, innstillinger=None, tenkenivaa=None):
         return modell or "simulert", valg
     if motor not in TENKENIVAA:
         raise ValueError("Velg en kjent CLI- eller API-motor. Simulert brukes bare ved uttrykkelig ønske.")
+    if motor in ('claude_cli', 'codex_cli'):
+        valg.setdefault('file_tools', True)
+        if type(valg['file_tools']) is not bool:
+            raise ValueError('file_tools must be true or false.')
     if motor in API_MOTORER:
+        if valg.get('file_tools'):
+            raise ValueError('file_tools is supported by the local CLI readers only.')
         valg = api_valg(motor, valg)
         if not modell:
             raise ValueError("API krever eksplisitt modell-ID fra den valgte leverandøren.")
@@ -69,4 +75,6 @@ def fra_plan(plan):
     if plan.motor in API_MOTORER:
         result['api'] = api_metadata(plan.motor, plan.motorinnstillinger)
         result['tenkenivaa'] = plan.motorinnstillinger.get('tenkenivaa', 'standard')
+    if 'file_tools' in plan.motorinnstillinger:
+        result['file_tools'] = plan.motorinnstillinger['file_tools']
     return result

@@ -102,7 +102,7 @@ async def main(plugin_root: Path | None = None) -> None:
         python = data / "runtime" / "venv" / "Scripts" / "python.exe"
         origin = subprocess.check_output([str(python), "-I", "-X", "utf8", "-c", "import kildeanalyse; print(kildeanalyse.__file__)"], encoding="utf-8")
         assert str(ROOT) not in origin and "site-packages" in origin, origin
-        print(f"PASS: {'installed copy' if plugin_root else 'clean copy without .venv'}, MCP initialize, 36 tools, English/Norwegian plans, exports, restart and independent runtime.")
+        print(f"PASS: {'installed copy' if plugin_root else 'clean copy without .venv'}, MCP initialize, 38 tools, English/Norwegian plans, exports, restart and independent runtime.")
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ from .dokument import DokumentFeil, importer_dokument, sider_uten_tekst, sitat_f
 from .kjoring import KoFeil, Koer
 from .lager import (
     FS_FULLFORT, FS_UAVKLART, FS_VALIDERINGSFEIL, KJ_AKTIV, KJ_PLANLAGT, KONTROLL_AVVIST, KONTROLL_GODKJENT, KONTROLL_RETTET,
-    PLAN_GODKJENT, Lager, LagerFeil,
+    PLAN_GODKJENT, Lager, LagerFeil, KJ_FEILET, KJ_VALIDERINGSFEIL, KJ_ULESELIG, KJ_UAVKLART,
 )
 from .modell import Plan
 from .prompt import bygg_inputpakke
@@ -222,6 +222,14 @@ def godkjenn_plan(lager: Lager, analyse_id: str, ansvarlig: str, planversjon_id:
         if not utkast:
             raise TjenesteFeil("Analysen har ingen planversjon med status «utkast» å godkjenne.")
         planversjon_id = utkast[-1]["id"]
+    selected = lager.planversjon(planversjon_id)
+    if selected['analyse_id'] != analyse_id:
+        raise TjenesteFeil('Plan version belongs to another analysis.')
+    from .workflow_guard import plan_problem
+    problem = plan_problem(selected['plan'])
+    if problem:
+        koer.blokker(analyse_id, 'INVALID_CRITERIA', problem)
+        raise TjenesteFeil(problem)
     versjon = lager.godkjenn_planversjon(planversjon_id, ansvarlig.strip())
     lager.logg("plan_godkjent", analyse_id=analyse_id, planversjon_id=planversjon_id, ansvarlig=ansvarlig)
     from .project_files import save_plan
@@ -342,13 +350,11 @@ def start_i_bakgrunnen(lager: Lager, analyse_id: str, kjoring_ider: list[str] | 
     koer.rydd_opp(analyse_id)
     if koer.aktiv_arbeider(analyse_id):
         raise TjenesteFeil("Analysen har en aktiv arbeider i en annen prosess.")
-    planrad = lager.gjeldende_planversjon(analyse_id)
-    if planrad is None or planrad["status"] != PLAN_GODKJENT:
-        raise TjenesteFeil("Analysen har ingen godkjent planversjon. Godkjenn planen før start.")
-    plan = planrad["plan"]
-    stotte = lag_adapter(plan.motor, {**plan.motorinnstillinger, "kriterier": [k.til_dict() for k in plan.kriterier]}).sjekk_stotte()
-    if not stotte.ok:
-        raise TjenesteFeil(f"Motoren «{plan.motor}» kan ikke brukes nå:\n- " + "\n- ".join(stotte.meldinger))
+    try:
+        planrad, _, stotte = koer.sjekk_forutsetninger(analyse_id, kjoring_ider, maks)
+    except KoFeil as exc:
+        raise TjenesteFeil(str(exc)) from exc
+    plan = planrad['plan']
 
     def arbeid() -> None:
         try:
@@ -371,7 +377,6 @@ def stopp(lager: Lager, analyse_id: str) -> dict[str, Any]:
 def gjenoppta(lager: Lager, analyse_id: str, i_bakgrunnen: bool = False) -> dict[str, Any]:
     koer = Koer(lager)
     ryddet = koer.rydd_opp(analyse_id)
-    lager.slett_tilstand(Koer._stopp(analyse_id))
     rapport = start_i_bakgrunnen(lager, analyse_id) if i_bakgrunnen else start(lager, analyse_id)
     rapport["ryddet_uavklart"] = ryddet
     return rapport
@@ -393,9 +398,15 @@ def vis_status(lager: Lager, analyse_id: str) -> dict[str, Any]:
     teller: dict[str, int] = {}
     for k in kjoringer:
         teller[k["status"]] = teller.get(k["status"], 0) + 1
+    issues = [{'run_id': row['kjoring']['id'], 'status': row['kjoring']['status'],
+               'reason': (row['siste_forsok'] or {}).get('feil') or row['kjoring'].get('merknad')
+                         or 'Inspect show_run for validation details.'}
+              for row in rader if row['kjoring']['status'] in {KJ_FEILET, KJ_VALIDERINGSFEIL, KJ_ULESELIG, KJ_UAVKLART}]
     t = _traader.get(analyse_id)
     return {"analyse": analyse, "gjeldende_plan": lager.gjeldende_planversjon(analyse_id), "rader": rader, "teller": teller,
             "aktiv_arbeider": koer.aktiv_arbeider(analyse_id), "stopp_forespurt": koer.stopp_forespurt(analyse_id),
+            'workflow_block': koer.blokkering(analyse_id),
+            'run_issues': issues,
             "bakgrunnstraad_aktiv": bool(t and t.is_alive()), "bakgrunnsresultat": _traadresultat.get(analyse_id),
             "hendelser": lager.hendelser(analyse_id=analyse_id, antall=15)}
 

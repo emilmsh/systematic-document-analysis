@@ -127,6 +127,11 @@ def md_status(d: dict[str, Any]) -> str:
     a = d["analyse"]
     gp = d["gjeldende_plan"]
     ut = [f"# Status for analyse {a['id']}: {a['navn']}", ""]
+    if d.get('workflow_block'):
+        block = d['workflow_block']
+        ut += ['**Rutinen er satt på pause.**', block['reason'],
+               'Rett eller avklar årsaken, kontroller forutsetningene på nytt og be uttrykkelig om å fortsette. '
+               'Endringer i planen krever ny godkjenning. Ingen automatisk alternativ analyse.', '']
     if gp:
         ut.append(f"Gjeldende planversjon {gp['versjon']} ({gp['status']}), motor **{gp['plan'].motor}** ({_merk(gp['plan'].motor == 'simulert')}).")
     aa = d["aktiv_arbeider"]
@@ -134,6 +139,9 @@ def md_status(d: dict[str, Any]) -> str:
               + (" Stopp er forespurt." if d["stopp_forespurt"] else "")
               + (" Bakgrunnstråd i denne prosessen er aktiv." if d["bakgrunnstraad_aktiv"] else ""))
     ut.append("Sammendrag: " + (", ".join(f"{s}: {n}" for s, n in sorted(d["teller"].items())) or "ingen kjøringer") + ".")
+    if d.get('run_issues'):
+        ut += ['', f"**{len(d['run_issues'])} kjøringer trenger oppfølging.** "
+               'Se feil og kontrollmerknader nedenfor. Individuelle feil stopper ikke de øvrige kjøringene.']
     ut += ["", "| Kjøring | Dokument | Status | Forsøk | Motor | Kontroll | Merknad/feil |", "|---|---|---|---|---|---|---|"]
     for r in d["rader"]:
         k, dok, f, ks = r["kjoring"], r["dokument"], r["siste_forsok"], r["kontrollstatus"]

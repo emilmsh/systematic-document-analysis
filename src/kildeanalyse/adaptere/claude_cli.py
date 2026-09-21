@@ -3,7 +3,7 @@
 Hvert forsøk er en ny, isolert sesjon:
   --safe-mode              ingen CLAUDE.md, skills, plugins, hooks, MCP-servere (innlogging beholdes)
   --setting-sources ""     ingen bruker-/prosjekt-/lokale innstillinger
-  --tools ""               ingen innebygde verktøy (ingen fil-, nett- eller kommandotilgang)
+  Nye planer har filverktøy i egen arbeidsmappe. Eldre planer beholder tekst-only-modus.
   --strict-mcp-config      ingen MCP-servere utenom eksplisitt oppgitte (ingen oppgis)
   --disable-slash-commands ingen skills
   --no-session-persistence sesjonen lagres ikke
@@ -24,6 +24,8 @@ from typing import Any, Callable
 
 from ..modell import Inputpakke, Motorsvar, Stotte
 from .base import Adapter, AdapterFeil
+from ..reader_files import prepare as prepare_files, check_source
+from ..cli_auth import subscription_confirmed, auth_gate, blocked_support, blocked_reply
 
 FORBUDTE_ENV = (
     "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_PROFILE",
@@ -35,6 +37,40 @@ ISOLASJONSFLAGG = [
 ]
 STANDARD_MODELL = "sonnet"
 STANDARD_TIDSAVBRUDD_SEK = 600
+
+
+def file_flags(workspace):
+    """Native file tools, with unattended shell grants only for the fixed parser helper.
+
+    --restricted confines native file tools, not arbitrary shell processes. Never
+    grant Bash/PowerShell wholesale or claim an OS sandbox on native Windows.
+    """
+    return [
+        '--safe-mode', '--restricted', '--setting-sources', '',
+        '--tools', 'Read,Write,Edit,Glob,Grep,Bash,PowerShell',
+        '--strict-mcp-config', '--disable-slash-commands', '--no-session-persistence',
+        '--permission-mode', 'dontAsk', '--allowedTools', 'Read', 'Write', 'Edit', 'Glob', 'Grep',
+        f"Bash({workspace['bash_prefix']} *)", f"PowerShell({workspace['powershell_prefix']} *)",
+        '--disallowedTools', 'WebSearch', 'WebFetch',
+        '--output-format', 'stream-json', '--verbose', '--max-turns', '20',
+    ]
+
+
+def result_events(stdout):
+    """Accept the legacy JSON result or preserve a complete tool-enabled JSONL stream."""
+    try:
+        value = json.loads(stdout)
+        if isinstance(value, dict):
+            return value, []
+    except ValueError:
+        pass
+    events = [json.loads(line) for line in stdout.splitlines() if line.strip()]
+    if any(not isinstance(event, dict) for event in events):
+        raise ValueError('Invalid CLI event.')
+    results = [event for event in events if event.get('type') == 'result']
+    if len(results) != 1:
+        raise ValueError('Expected exactly one CLI result event.')
+    return results[0], events
 
 
 class ClaudeCliAdapter(Adapter):
@@ -61,7 +97,8 @@ class ClaudeCliAdapter(Adapter):
             for k in ("CLAUDE_CODE_EFFORT_LEVEL", "MAX_THINKING_TOKENS", "CLAUDE_CODE_DISABLE_THINKING",
                       "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING", "CLAUDE_EFFORT"):
                 ut.pop(k, None)
-        return ut
+        from ..cli_paths import execution_env
+        return execution_env(ut)
 
     def _kommando(self, args: list[str], tidsavbrudd: float = 30) -> tuple[int, str, str]:
         bin = self._bin()
@@ -75,42 +112,47 @@ class ClaudeCliAdapter(Adapter):
     def sjekk_stotte(self) -> Stotte:
         meldinger: list[str] = []
         ok = True
-        bin = self._bin()
+        self._auth = {}
+        try:
+            bin = self._bin()
+        except OSError:
+            return blocked_support('claude')
         if not bin:
-            return Stotte(False, ["Fant ikke `claude` på PATH. Installer Claude Code eller sett SDA_CLAUDE_BIN."])
+            return blocked_support('claude')
         try:
-            _, ut, _ = self._kommando(["--version"])
+            code, ut, _ = self._kommando(["--version"])
+            if code != 0:
+                return blocked_support('claude')
             self._cli_versjon = ut.strip() or "ukjent"
-        except Exception as e:  # noqa: BLE001
-            return Stotte(False, [f"Kunne ikke kjøre `claude --version`: {e}"])
+            if self.innstillinger.get('file_tools'):
+                _, help_text, _ = self._kommando(['--help'])
+                if '--restricted' not in help_text:
+                    return Stotte(False, ['This Claude Code version lacks scoped file tools (--restricted). Update Claude Code before using a file-enabled plan.'])
+        except Exception:  # noqa: BLE001
+            return blocked_support('claude')
         try:
-            _, ut, feil = self._kommando(["auth", "status"])
-            self._auth = json.loads(ut) if ut.strip().startswith("{") else {"raatekst": ut.strip(), "stderr": feil.strip()}
-        except Exception as e:  # noqa: BLE001
-            self._auth = {"feil": str(e)}
-        if not self._auth.get("loggedIn"):
-            ok = False
-            meldinger.append("Claude Code er ikke innlogget i dette miljøet. Kjør `claude` i en terminal og logg inn med Teams-brukeren.")
-        else:
-            if self._auth.get("authMethod") != "claude.ai":
-                ok = False
-                meldinger.append(f"Innloggingsmåten er «{self._auth.get('authMethod')}», ikke claude.ai-abonnement. Start blokkeres.")
-            if self._auth.get("apiProvider") != "firstParty":
-                ok = False
-                meldinger.append(f"API-leverandøren er «{self._auth.get('apiProvider')}», ikke firstParty. Start blokkeres.")
+            code, ut, feil = self._kommando(["auth", "status"])
+            if not subscription_confirmed('claude', code, ut, feil):
+                return blocked_support('claude')
+            self._auth = json.loads(ut)
+        except Exception:  # noqa: BLE001
+            return blocked_support('claude')
         meldinger.append(
             "Kvote og eventuell ekstraforbruksordning kan ikke leses fra CLI-en; kostnadstall i svarene er listepris-estimater, "
             "ikke faktisk belastning."
         )
         egenskaper = {
+            'auth_gate': auth_gate('claude', True),
             "claude_bin": bin,
             "cli_versjon": self._cli_versjon,
             "innlogging": {k: self._auth.get(k) for k in ("loggedIn", "authMethod", "apiProvider", "subscriptionType", "email", "orgName")},
-            "isolasjonsflagg": ISOLASJONSFLAGG,
-            "filtyper": ["pdf (tekst sendes som ren tekst)"],
+            "isolasjonsflagg": ['--safe-mode', '--restricted', '--strict-mcp-config', '--no-session-persistence'] if self.innstillinger.get('file_tools') else ISOLASJONSFLAGG,
+            "filtyper": ['pdf', 'docx', 'xlsx', 'csv', 'tsv', 'txt', 'md'],
+            'file_tools_enabled': bool(self.innstillinger.get('file_tools')),
             "strukturert_svar": True,
             "nettilgang": False,
-            "verktoy": [],
+            "verktoy": ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'PowerShell'] if self.innstillinger.get('file_tools') else [],
+            'file_tools_policy': 'Native file tools scoped to working directory; fixed parsing helper allowed. Other shell commands use CLI permissions; not an OS sandbox.',
             "ny_sesjon_per_forsok": True,
         }
         return Stotte(ok, meldinger, egenskaper)
@@ -126,18 +168,24 @@ class ClaudeCliAdapter(Adapter):
 
     def kjor(self, pakke: Inputpakke, modell: str, stopp: Callable[[], bool], arbeidsmappe: str) -> Motorsvar:
         self._avbryt = False
+        stotte = self.sjekk_stotte()
+        if not stotte.ok:
+            return blocked_reply(stotte)
         bin = self._bin()
         if not bin:
             raise AdapterFeil("Fant ikke `claude` på PATH.")
         mappe = Path(arbeidsmappe)
+        workspace = prepare_files(pakke, mappe)
         cwd = mappe / "tom_arbeidsmappe"  # tom mappe som cwd: ingen CLAUDE.md, ingen prosjektfiler
+        if workspace:
+            cwd = Path(workspace['cwd'])
         cwd.mkdir(parents=True, exist_ok=True)
         sysfil = mappe / "systeminstruks.txt"
         sysfil.write_text(pakke.systeminstruks, encoding="utf-8")
         modell = modell or STANDARD_MODELL
         tidsavbrudd = float(self.innstillinger.get("tidsavbrudd_sek") or STANDARD_TIDSAVBRUDD_SEK)
         kommando = [
-            bin, "-p", *ISOLASJONSFLAGG, "--model", modell,
+            bin, "-p", *(file_flags(workspace) if workspace else ISOLASJONSFLAGG), "--model", modell,
             "--system-prompt-file", str(sysfil),
             "--json-schema", json.dumps(pakke.svarskjema, ensure_ascii=True),
         ]
@@ -145,10 +193,12 @@ class ClaudeCliAdapter(Adapter):
         if nivaa:
             kommando.extend(["--effort", nivaa])
         motorinfo: dict[str, Any] = {
+            'auth_gate': auth_gate('claude', True), 'stopp_ko': True,
             "kommando": kommando, "cwd": str(cwd), "cli_versjon": self._cli_versjon, "modell_onsket": modell,
             "innlogging": {k: self._auth.get(k) for k in ("authMethod", "apiProvider", "subscriptionType")},
             "stdin_bytes": len(pakke.brukermelding.encode("utf-8")), "tidsavbrudd_sek": tidsavbrudd,
             "tenkenivaa_onsket": nivaa or "ikke fastsatt (eldre plan)", "tenkenivaa_rapportert": "ukjent",
+            'file_workspace': workspace,
         }
         start = time.monotonic()
         proc = subprocess.Popen(
@@ -200,9 +250,12 @@ class ClaudeCliAdapter(Adapter):
                              " leverandørens behandling kan ha fortsatt.", motorinfo=motorinfo)
         if feil:
             return Motorsvar(raasvar=stdout, svar=None, feil=feil, motorinfo=motorinfo)
+        source_error = check_source(workspace, pakke.dokument_sha256)
+        if source_error:
+            return Motorsvar(raasvar=stdout, svar=None, feil=source_error, motorinfo=motorinfo)
         try:
-            d = json.loads(stdout)
-        except json.JSONDecodeError:
+            d, tool_events = result_events(stdout)
+        except ValueError:
             return Motorsvar(raasvar=stdout + ("\n--- stderr ---\n" + stderr if stderr.strip() else ""), svar=None,
                              feil=f"CLI-en ga ikke gyldig JSON (returkode {proc.returncode}).", motorinfo=motorinfo)
         modell_rapportert = next(iter((d.get("modelUsage") or {}).keys()), None)
@@ -210,13 +263,13 @@ class ClaudeCliAdapter(Adapter):
             "usage": d.get("usage"), "modelUsage": d.get("modelUsage"), "total_cost_usd_listepris": d.get("total_cost_usd"),
             "merknad": "Listepris beregnet av CLI. Faktisk belastning mot abonnementskvoten er ukjent.",
         }
-        hendelser = [{
+        hendelser = [*tool_events, {
             "type": "cli_resultat", "subtype": d.get("subtype"), "is_error": d.get("is_error"), "num_turns": d.get("num_turns"),
             "duration_ms": d.get("duration_ms"), "permission_denials": d.get("permission_denials"), "stop_reason": d.get("stop_reason"),
         }]
-        if d.get("is_error"):
+        if d.get("is_error") or proc.returncode != 0 or d.get('permission_denials'):
             return Motorsvar(raasvar=stdout, svar=None, sesjon_id=d.get("session_id"), modell_rapportert=modell_rapportert,
-                             forbruk=forbruk, hendelser=hendelser, feil=f"CLI-en rapporterte feil: {str(d.get('result'))[:500]}",
+                             forbruk=forbruk, hendelser=hendelser, feil=f"CLI error or required file operation denied: {str(d.get('result'))[:500]}",
                              motorinfo=motorinfo)
         svar = d.get("structured_output")
         if svar is None and isinstance(d.get("result"), str):
@@ -224,6 +277,7 @@ class ClaudeCliAdapter(Adapter):
                 svar = json.loads(d["result"])
             except json.JSONDecodeError:
                 svar = None
+        motorinfo['stopp_ko'] = not isinstance(svar, dict)
         return Motorsvar(
             raasvar=stdout, svar=svar if isinstance(svar, dict) else None, sesjon_id=d.get("session_id"),
             modell_rapportert=modell_rapportert, forbruk=forbruk, hendelser=hendelser,

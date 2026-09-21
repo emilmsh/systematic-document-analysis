@@ -106,7 +106,9 @@ def test_uleselig_dokument_stoppes_foer_vurdering(lager: Lager):
     assert hv["kjoring"]["status"] == KJ_ULESELIG
     assert hv["antall_forsok"] == 0
     assert "uten tekstlag" in hv["kjoring"]["merknad"] and "ikke «ikke omtalt»" in hv["kjoring"]["merknad"]
-    assert _kjoring_for(lager, aid, "fjordblikk_2025.pdf")["kjoring"]["status"] == KJ_FULLFORT
+    neste = _kjoring_for(lager, aid, "fjordblikk_2025.pdf")
+    assert neste["kjoring"]["status"] == KJ_FULLFORT and neste["antall_forsok"] == 1
+    assert tjeneste.vis_status(lager, aid)['workflow_block'] is None
 
 
 def test_valideringsfeil_og_ugyldig_svar(lager: Lager):
@@ -186,11 +188,12 @@ def test_uavklart_forsok_fra_dod_arbeider(lager: Lager):
     lager.sett_tilstand(f"arbeider:{aid}", {"pid": 999999, "tid": "tidligere"})
     assert not prosess_lever(999999) and prosess_lever(os.getpid())
     rapport = tjeneste.start(lager, aid)
-    assert rapport["ryddet_uavklart"] == [f"{fj['id']}.f1"]
-    assert fj["id"] not in rapport["startet"]  # uavklart sendes ikke på nytt automatisk
+    assert rapport['ryddet_uavklart'] == [f"{fj['id']}.f1"]
+    assert fj['id'] not in rapport['startet']
+    assert rapport['workflow_block'] is None
     assert lager.kjoring(fj["id"])["status"] == KJ_UAVKLART
     assert lager.forsok(f"{fj['id']}.f1")["status"] == FS_UAVKLART
-    assert len(rapport["startet"]) == 2
+    assert all(lager.kjoring(k['id'])['status'] == KJ_FULLFORT for k in kjoringer[1:])
     tjeneste.nytt_forsok(lager, fj["id"], "arbeideren døde; prøver igjen")
     tjeneste.start(lager, aid)
     assert lager.kjoring(fj["id"])["status"] == KJ_FULLFORT

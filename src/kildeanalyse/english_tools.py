@@ -27,7 +27,7 @@ def register(server, get_store):
             return json.dumps({'error': 'Operation failed; explain the details in the user’s language.',
                                'details': str(exc)}, ensure_ascii=False)
 
-    @server.tool(description='Show local configuration, projects and available reading engines. API key checks are local only. Explain legacy diagnostic messages in the user’s language.')
+    @server.tool(description='Show local configuration, projects and available reading engines. CLI readers require auth_gate.status=verified before classification. A blocked or unavailable reader is a hard stop: explain recovery, never substitute host analysis or subagents. API key checks are local only. Explain diagnostics in the user’s language.')
     def show_setup() -> str:
         return call(tjeneste.oppsett)
 
@@ -83,7 +83,7 @@ def register(server, get_store):
     def add_runs(analysis_id: str, document_ids: list[str] | None = None) -> str:
         return call(tjeneste.legg_til_kjoringer, analysis_id, document_ids)
 
-    @server.tool(description='Start planned runs for an approved plan in the background, only within the scope the user approved. Omitting run_ids selects all eligible runs; use explicit IDs for a subset or pilot. Follow show_status. No automatic engine switching.')
+    @server.tool(description='Start planned runs for an approved plan in the background, only within the approved scope. Missing tools, sign-in or specifications block startup. Individual run errors are reported while other runs finish. Omitting run_ids selects all eligible runs; use IDs for a subset. Follow show_status; explain workflow_block and report run_issues without stopping for individual failures. Never emulate blocked work with host analysis, subagents or another engine.')
     def start_runs(analysis_id: str, run_ids: list[str] | None = None, maximum: int | None = None) -> str:
         return call(tjeneste.start_i_bakgrunnen, analysis_id, run_ids, maximum)
 
@@ -91,11 +91,11 @@ def register(server, get_store):
     def stop_runs(analysis_id: str) -> str:
         return call(tjeneste.stopp, analysis_id)
 
-    @server.tool(description='Resume stopped work. Completed runs are skipped; uncertain attempts are never retried automatically.')
+    @server.tool(description='Resume eligible work on an explicit user request, after rechecking shared prerequisites. Completed, failed and uncertain runs are skipped; individual issues do not block other runs. Retrying a failed or uncertain run requires a separate explicit request.')
     def resume_runs(analysis_id: str) -> str:
         return call(tjeneste.gjenoppta, analysis_id, i_bakgrunnen=True)
 
-    @server.tool(description='Show progress, errors and review status. Translate technical status codes for the user without changing recorded values.')
+    @server.tool(description='Show progress, errors and review status. If workflow_block is present, clearly report the pause, its reason, existing results and corrective next step. Do not substitute another analysis. Translate technical status codes for the user without changing recorded values.')
     def show_status(analysis_id: str) -> str:
         return call(tjeneste.vis_status, analysis_id)
 

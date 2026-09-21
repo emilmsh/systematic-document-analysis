@@ -6,12 +6,16 @@ A plugin for Claude Code and Codex for systematic analysis of documents, spreads
 
 ## Quick install — Windows
 
-1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. The current release is **[0.8.6](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.6)**. Private repository: sign in with access, or use a ZIP shared by a colleague.
+**You only need to double-click `installer.cmd`.** It installs the plugin and any missing command-line tool (CLI), lets you choose a reader, and checks subscription sign-in. If the CLI is not signed in with a subscription, it starts sign-in for you to complete in your browser. Existing subscription sign-in is reused. Being signed in to the desktop app does not confirm that the CLI is signed in.
+
+1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. The current release is **[0.8.7](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.7)**. Private repository: sign in with access, or use a ZIP shared by a colleague.
 2. Open the extracted folder in File Explorer, double-click **installer.cmd**, and choose **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Codex terminal.
-3. For subscription-based reading, double-click **reader_setup.cmd**, choose Claude Code or Codex, and complete sign-in.
+3. **Continue in the same installer window:** choose your reader, **1 = Codex / ChatGPT or 2 = Claude Code**, and complete any required browser sign-in with the intended account. Wait for the installer to confirm sign-in. Choose **3 = Skip** if you will use an API or set up the reader later. The reader is independent of the app selected in step 2.
 4. Open your working folder in Claude Code's **Code tab** or in Codex, start a **new local conversation**, and describe your task: **“Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in [folder].”**
 
 First-time setup requires internet access. The installer provides Python and installs the selected app's command-line tool if it is missing; you do not need to use the terminal yourself.
+
+**`reader_setup.cmd` remains a helper for later use**, for example if you skipped or cancelled sign-in. You do not need to reinstall the plugin. To switch accounts, run `reader_setup.cmd claude --login` or `reader_setup.cmd codex --login` in a terminal.
 
 ## Project folder and results
 
@@ -38,7 +42,7 @@ The conversation stays in Claude Code or Codex. The plugin adds the record keepi
 ## What it does not do
 
 - It does not summarise across documents. Each file is one unit; comparison is your job, or the assistant's, using the exported results.
-- It does not retry, switch model or fall back to a paid API on its own. Errors and timeouts stop the queue and are shown.
+- It does not retry, switch model or fall back to a paid API on its own. Errors and timeouts are reported per run while other runs finish.
 - It does not read charts, photographs or embedded objects, and does not recalculate spreadsheet formulas.
 - It runs on Windows only and needs a local Python runtime, which the installer provides.
 
@@ -48,7 +52,7 @@ The repository is private. Downloading from GitHub needs repository access; a co
 
 ### Let your assistant do it
 
-Paste one of these into a new conversation. The assistant downloads and verifies the release, and either runs the installer or hands you the one step it must not do itself.
+Paste one of these into a new conversation. The assistant downloads and verifies the release, and either runs the installer or shows you how to start it yourself. **The Claude prompt uses `--non-interactive`, which skips sign-in.** After that route, use `reader_setup.cmd` if needed. A normal double-click on `installer.cmd` includes sign-in.
 
 Claude Code:
 
@@ -58,21 +62,29 @@ ChatGPT desktop / Codex:
 
 > Install Systematic Document Analysis for Codex. Release page: https://github.com/emilmsh/systematic-document-analysis/releases/latest (private repository; use the existing gh login, or ask me to download the ZIP if you cannot). Download systematic-document-analysis-windows.zip and SHA256SUMS.txt, verify the checksum and extract the ZIP to a folder under my Downloads. Show me the folder path so I can double-click installer.cmd in File Explorer and choose Codex. Leave that installation step to me. When I confirm, run `codex plugin list` and check that systematic-document-analysis is enabled. Do not change other plugins, settings or files.
 
-After installation, start a new conversation so the app loads the plugin.
+If sign-in was skipped, double-click **reader_setup.cmd** and choose your reader. The helper reuses existing subscription sign-in or starts sign-in if needed. Then start a new conversation so the app loads the plugin.
 
 ### By hand
 
 1. Download the [Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) from the [latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest) and extract it.
 2. Double-click `installer.cmd` in File Explorer and choose Claude Code, Codex or both. It prepares Python 3.12 or newer, installs a missing host CLI, registers the plugin and reports the installation folder.
-3. Double-click `reader_setup.cmd` to sign in for subscription-based reading, then start a new local conversation. The first start installs the Python dependencies.
+3. In the same window, choose your reader, **1 = Codex / ChatGPT or 2 = Claude Code**, and complete any required browser sign-in. The installer checks sign-in before reporting setup complete. **3 = Skip** postpones this step or lets you use an API. Then start a new local conversation. The first start installs the Python dependencies.
 
-Reading with your subscription uses the app's own CLI. If the CLI is missing, `reader_setup.cmd` installs it; you complete the vendor's sign-in yourself. `ocr_setup.cmd` installs local OCR for scanned PDFs. `settings.cmd` opens a local file for optional API keys.
+Subscription reading uses the app's CLI. Normal installation sets up the selected CLI and local OCR with English/Norwegian language data; you complete the vendor's sign-in yourself. CLI discovery handles stale PATH automatically. Reader sessions get file tools, parsers, PDF page images and OCR in a fresh workspace per call. `reader_setup.cmd` and `ocr_setup.cmd` remain available for later setup or repair. `settings.cmd` opens a local file for optional API keys.
 
 ### Updates
 
 Run `update.cmd` from the installed folder to check for a newer release, install it, or choose notify only (default), automatic or off. Start a new conversation after updating. See [installation and updates](docs/UPDATES.md) for settings and troubleshooting.
 
 ## Using it
+
+**Check the prerequisites before starting.** Available tools, reader sign-in, specified criteria and answer options, source selection and an approved plan must be in place. Missing shared prerequisites block startup, with the reason in `show_status`. Correct or clarify the issue, recheck and explicitly ask to continue. Plan changes require renewed approval.
+
+**Individual run problems do not stop the other runs.** Unreadable sources, timeouts, call errors and failed answer/evidence checks are recorded for follow-up. The other runs finish before you review the issues together. Results and available raw evidence are preserved; failed or uncertain attempts are not retried automatically or presented as successful. Shared infrastructure failure or verified loss of reader access can still block new dependent calls.
+
+Allowed answers such as “unclear” or “not mentioned” are valid findings when their evidence and coverage requirements are met. Human review is required before describing results as reviewed.
+
+**CLI sign-in is required before analysis.** The Claude and Codex readers verify subscription sign-in before every CLI call. Missing or unverifiable sign-in blocks new calls; a generic CLI error only fails that run. The assistant must explain how to sign in and may still prepare criteria and the plan, but must not replace the analysis with subagents or direct reading. After sign-in, recheck setup before asking to continue.
 
 Open an ordinary project folder in the app and put your own source files in a `documents` subfolder. No Git repository or example run is needed. Describe the task, for example:
 

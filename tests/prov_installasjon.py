@@ -29,7 +29,8 @@ def main():
         (base/'claude-home').mkdir()
         for iteration in range(2):
             print(f'Installasjonsrunde {iteration+1}',flush=True)
-            subprocess.run([sys.executable,'-X','utf8',str(ROOT/'bin/installer.py'),'begge','--base-dir',str(base/'plugins')],
+            subprocess.run([sys.executable,'-X','utf8',str(ROOT/'bin/installer.py'),'begge','--base-dir',str(base/'plugins'),
+                            '--non-interactive','--reader','none','--skip-ocr'],
                            env=env,check=True,timeout=120)
         # Reproduce the screenshot: same marketplace name, different local path.
         conflict = subprocess.run([sys.executable,'-X','utf8',str(ROOT/'bin/installer.py'),'begge',
@@ -39,7 +40,7 @@ def main():
         assert not (base/'replacement').exists()
         for flags in (['--replace-source'], ['--repair']):
             subprocess.run([sys.executable,'-X','utf8',str(ROOT/'bin/installer.py'),'begge',
-                            '--base-dir',str(base/'replacement'),'--non-interactive',*flags],env=env,check=True,timeout=120)
+                            '--base-dir',str(base/'replacement'),'--non-interactive','--reader','none','--skip-ocr',*flags],env=env,check=True,timeout=120)
         assert (base/'plugins/codex/systematic-document-analysis/pyproject.toml').exists()
         assert list((base/'replacement/codex/backups').glob('*/systematic-document-analysis/pyproject.toml'))
         codex=json.loads(subprocess.check_output(['codex','plugin','list','--marketplace','systematic-document-analysis-local','--json'],env=env,encoding='utf-8'))

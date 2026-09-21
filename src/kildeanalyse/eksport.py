@@ -117,11 +117,13 @@ def _legacy_export(lager: Lager, analyse_id: str, *, med_kilder: bool = False,
             if kilde.is_dir():
                 maal = mappe / "forsok" / f["id"]
                 maal.mkdir(exist_ok=True)
-                for navn in ("input.json", "manifest.json", "raasvar.txt", "systeminstruks.txt"):
+                for navn in ("input.json", "manifest.json", "raasvar.txt", "systeminstruks.txt", 'file-workspace.json', 'reader-helper.py'):
                     if (kilde / navn).is_file():
                         shutil.copy2(kilde / navn, maal / navn)
-                if (kilde/'calls').is_dir():
-                    shutil.copytree(kilde/'calls', maal/'calls', dirs_exist_ok=True)
+                from .reader_files import copy_artifacts
+                for folder in ('calls', 'workfiles'):
+                    if (kilde/folder).is_dir():
+                        copy_artifacts(kilde/folder, maal/folder, include_sources=med_kilder)
         json_kjoringer.append({"kjoring": kj, "dokument": {k: dok[k] for k in ("id", "navn", "sha256", "antall_sider", "lesbarhet")},
                                'source_metadata':metadata(dok), 'source_units':dok['sider'],
                                "gjeldende_forsok": gjeld, "vurderinger": vurd, "kontroller": [lager.kontroller(f["id"]) for f in forsok]})

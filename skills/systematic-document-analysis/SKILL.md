@@ -7,6 +7,20 @@ description: Auditable classification of comparable files, documents and spreads
 
 You are the conversational host in Codex or Claude Code. Use the shared `document_analysis` MCP service for plans, runs, results and reviews. Never write directly to the database or data directory. Respond in the user's language and explain legacy technical messages/status codes in that language.
 
+## Check shared prerequisites before starting; report individual run problems
+
+Before starting, verify the shared prerequisites that give the runs a chance to work: available service/tools, reader sign-in, specified questions and allowed answers, a defined source selection and analysis unit, and an approved plan with reader, model and settings. Missing prerequisites block startup. If a shared prerequisite is verified as unavailable later, do not dispatch new dependent calls. A generic call error is not proof that sign-in or the shared setup is missing. Optional pilots are not prerequisites.
+
+During execution, report individual run problems and let the other runs finish. Unreadable or changed sources, timeouts, call failures, quota responses, invalid answers/evidence and an uncertain earlier attempt do not by themselves pause the whole queue. Keep the failed run's status and available raw evidence; do not retry it automatically or present it as successful. Use `show_status`/`show_run`, report progress and summarize the runs needing follow-up when the queue finishes. Do not call `stop_runs` merely because one run failed. A failed extraction chunk stops dependent synthesis for that document, not other documents. Permitted uncertainty/absence answers remain valid findings when evidence and coverage checks pass. Human review is required only before claiming results have been reviewed.
+
+When startup or a shared prerequisite is blocked, explain what is missing, what exists and what must be corrected; use `workflow_block` where available. Preserve existing work and never substitute host analysis, subagents, another engine or fabricated records. After correction, recheck and resume on the user's explicit request. Changes to scope, criteria or execution settings require a newly approved plan. Respect explicit user stops. If the shared result store itself cannot record work, report that infrastructure failure rather than claiming success.
+
+### CLI sign-in
+
+Before classification, use `show_setup` to confirm that the chosen CLI reader is available and its `auth_gate.status` is `verified`. Missing/unverifiable sign-in, `CLI_AUTH_REQUIRED` or an unavailable MCP service blocks new dependent calls. Explain the block and the recovery command in the user's language. An ordinary CLI call failure is recorded for that run while other runs continue. Do not replace blocked classification with host analysis, subagents, alternative scripts, another reader/API/simulation or invented result files. Extraction checks and plan preparation may continue.
+
+The user completes CLI sign-in in a terminal through `reader_setup.cmd claude --login` or `reader_setup.cmd codex --login`. Then recheck `show_setup`; do not treat desktop-app login, plugin installation, or an earlier successful check as proof of current reader authentication. Resume only when the check passes and the user asks to continue. The runtime rechecks before every CLI call, including chunk extraction and synthesis, and stops the queue on failure. If the user explicitly chooses a different supported reader, make and approve a new plan version and check that reader before running; never choose a fallback automatically.
+
 ## From a short request to an agreed task
 
 A plain-language description is enough to begin. Do not require the user to know this workflow, formulate criteria, choose technical parameters or request safeguards. Guide the conversation, rather than presenting an intake questionnaire.

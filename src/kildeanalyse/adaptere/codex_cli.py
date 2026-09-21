@@ -15,6 +15,8 @@ import time
 
 from .base import Adapter, AdapterFeil
 from ..modell import Motorsvar, Stotte
+from ..cli_auth import subscription_confirmed, auth_gate, blocked_support, blocked_reply
+from ..reader_files import prepare as prepare_files, check_source
 
 STANDARD_MODELL = 'gpt-5.6-terra'
 FORBUDTE_ENV = ('OPENAI_API_KEY', 'CODEX_API_KEY', 'OPENAI_BASE_URL', 'AZURE_OPENAI_API_KEY', 'CODEX_ACCESS_TOKEN')
@@ -48,7 +50,7 @@ def strengt_skjema(skjema):
     return s
 
 
-def les_hendelser(stdout, returkode):
+def les_hendelser(stdout, returkode, *, file_tools=False):
     hendelser, meldinger, sesjon, forbruk, feil = [], [], None, {}, []
     fullfort = False
     for line in stdout.splitlines():
@@ -73,7 +75,8 @@ def les_hendelser(stdout, returkode):
         item = event.get('item') or {}
         if item.get('type') == 'error':
             feil.append(str(item.get('message', 'Verktøyfeil')))
-        if item.get('type') in ('command_execution', 'mcp_tool_call', 'web_search', 'file_change'):
+        forbidden = ('mcp_tool_call', 'web_search') if file_tools else ('command_execution', 'mcp_tool_call', 'web_search', 'file_change')
+        if item.get('type') in forbidden:
             feil.append('Uventet verktøyhendelse i lesekjøring: ' + item['type'])
         if typ == 'item.completed' and item.get('type') == 'agent_message':
             meldinger.append(item.get('text', ''))
@@ -111,27 +114,36 @@ class CodexCliAdapter(Adapter):
         return self.innstillinger.get('codex_bin') or find_cli('codex')
 
     def _env(self):
-        return {k: v for k, v in os.environ.items() if k not in FORBUDTE_ENV and not k.upper().endswith('_API_KEY')}
+        from ..cli_paths import execution_env
+        return execution_env({k: v for k, v in os.environ.items() if k not in FORBUDTE_ENV and not k.upper().endswith('_API_KEY')})
 
     def sjekk_stotte(self):
-        binary = self._bin()
+        try:
+            binary = self._bin()
+        except OSError:
+            return blocked_support('codex')
         if not binary:
-            return Stotte(False, ['Fant ikke codex på PATH. Installer Codex CLI.'])
+            return blocked_support('codex')
         try:
             version = subprocess.run([binary, '--version'], capture_output=True, timeout=20, stdin=subprocess.DEVNULL, env=self._env())
             self._versjon = version.stdout.decode('utf-8', 'replace').strip()
+            if version.returncode != 0:
+                return blocked_support('codex')
             auth = subprocess.run([binary, 'login', 'status'], capture_output=True, timeout=20, stdin=subprocess.DEVNULL, env=self._env())
-            status = (auth.stdout + auth.stderr).decode('utf-8', 'replace')
-        except (OSError, subprocess.SubprocessError) as exc:
-            return Stotte(False, [f'Kunne ikke kontrollere Codex CLI: {exc}'])
-        ok = auth.returncode == 0 and 'Logged in using ChatGPT' in status
+            ok = subscription_confirmed('codex', auth.returncode, auth.stdout.decode('utf-8', 'replace'),
+                                        auth.stderr.decode('utf-8', 'replace'))
+        except (OSError, subprocess.SubprocessError):
+            return blocked_support('codex')
         meldinger = ['Lesekjøringer bruker avgrenset kontekst. Full OS-isolasjon er ikke implementert.',
                      'Kvote og eventuell ekstraforbruksordning er ukjent. Ingen automatisk overgang til API.']
         if not ok:
-            meldinger.append('Denne prosessen finner ikke ChatGPT-innloggingen. Kjør codex login i samme brukermiljø. Sandkassen kan hindre tilgang til innloggingen.')
-        return Stotte(ok, meldinger, {'cli_versjon': self._versjon, 'innlogging': {'authMethod': 'chatgpt' if ok else 'ukjent'},
-                    'filtyper': ['pdf (tekstuttrekk)'], 'strukturert_svar': True, 'ny_sesjon_per_forsok': True,
-                    'kontrollnivaa': 'eksperimentell', 'deaktiverte_funksjoner': list(DEAKTIVERTE_FUNKSJONER),
+            return blocked_support('codex')
+        return Stotte(ok, meldinger, {'auth_gate': auth_gate('codex', True),
+                    'cli_versjon': self._versjon, 'innlogging': {'authMethod': 'chatgpt' if ok else 'ukjent'},
+                    'filtyper': ['pdf', 'docx', 'xlsx', 'csv', 'tsv', 'txt', 'md'], 'strukturert_svar': True, 'ny_sesjon_per_forsok': True,
+                    'file_tools_enabled': bool(self.innstillinger.get('file_tools')),
+                    'kontrollnivaa': 'eksperimentell', 'deaktiverte_funksjoner': [feature for feature in DEAKTIVERTE_FUNKSJONER
+                        if not self.innstillinger.get('file_tools') or feature not in ('shell_tool', 'unified_exec', 'view_image')],
                     'konfigurasjon': list(KONFIG), 'modell_standard': STANDARD_MODELL})
 
     def avbryt(self):
@@ -143,9 +155,12 @@ class CodexCliAdapter(Adapter):
         self._avbryt = False
         stotte = self.sjekk_stotte()
         if not stotte.ok:
-            raise AdapterFeil('; '.join(stotte.meldinger))
+            return blocked_reply(stotte)
         root = Path(arbeidsmappe).resolve()
+        workspace = prepare_files(pakke, root)
         cwd = root / 'tom_arbeidsmappe'
+        if workspace:
+            cwd = Path(workspace['cwd'])
         cwd.mkdir(parents=True, exist_ok=True)
         instruks = root / 'systeminstruks.txt'
         instruks.write_text(pakke.systeminstruks, encoding='utf-8')
@@ -153,12 +168,20 @@ class CodexCliAdapter(Adapter):
         schema.write_text(json.dumps(strengt_skjema(pakke.svarskjema), ensure_ascii=False), encoding='utf-8')
         modell = modell or STANDARD_MODELL
         args = [self._bin(), 'exec', '--ignore-user-config', '--ignore-rules', '--ephemeral', '--skip-git-repo-check',
-                '--sandbox', 'read-only', '--json', '--model', modell, '--output-schema', str(schema), '-C', str(cwd)]
+                '--sandbox', 'workspace-write' if workspace else 'read-only', '--json', '--model', modell, '--output-schema', str(schema), '-C', str(cwd)]
         nivaa = self.innstillinger.get('tenkenivaa', 'low')  # eldre planer beholder low
         for config in (*KONFIG, 'model_reasoning_effort=' + json.dumps(nivaa), 'model_instructions_file=' + json.dumps(str(instruks))):
             args += ['-c', config]
         for feature in DEAKTIVERTE_FUNKSJONER:
+            if workspace and feature in ('shell_tool', 'unified_exec', 'view_image'):
+                continue
             args += ['--disable', feature]
+        if workspace:
+            for feature in ('shell_tool', 'unified_exec', 'view_image'):
+                args += ['--enable', feature]
+            args += ['-c', 'sandbox_workspace_write.network_access=false',
+                     '-c', 'sandbox_workspace_write.exclude_slash_tmp=true',
+                     '-c', 'sandbox_workspace_write.exclude_tmpdir_env_var=true']
         args.append('-')
         start = time.monotonic()
         timeout = float(self.innstillinger.get('tidsavbrudd_sek', 600))
@@ -185,7 +208,11 @@ class CodexCliAdapter(Adapter):
                 proc.communicate()
             self._prosess = None
         stdout = out.decode('utf-8', 'replace')
-        result = les_hendelser(stdout, proc.returncode)
+        result = les_hendelser(stdout, proc.returncode, file_tools=bool(workspace))
+        source_error = check_source(workspace, pakke.dokument_sha256)
+        if source_error:
+            result.svar = None
+            result.feil = source_error
         if avbrutt or tidsavbrudd:
             result.svar = None
             result.avbrutt = avbrutt
@@ -195,7 +222,10 @@ class CodexCliAdapter(Adapter):
                             'modell_rapportert': 'ukjent (ikke eksponert i JSONL)',
                             'returkode': proc.returncode, 'varighet_sek': round(time.monotonic()-start, 2),
                             'stderr': err.decode('utf-8', 'replace')[:3000],
-                            'svarskjema_sendt': strengt_skjema(pakke.svarskjema), 'innlogging': 'chatgpt'}
-        result.motorinfo['stopp_ko'] = any(word in (result.feil or '').lower()
-                                           for word in ('usage limit', 'rate limit', 'quota', 'too many requests'))
+                            'svarskjema_sendt': strengt_skjema(pakke.svarskjema), 'innlogging': 'chatgpt',
+                            'file_workspace': workspace}
+        result.motorinfo['auth_gate'] = auth_gate('codex', True)
+        # Legacy metadata only; the queue now blocks on confirmed missing auth,
+        # while ordinary CLI failures remain individual run issues.
+        result.motorinfo['stopp_ko'] = result.svar is None or bool(result.feil) or result.avbrutt
         return result

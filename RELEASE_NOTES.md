@@ -1,3 +1,14 @@
+# 0.8.7 — Complete reader setup and document tools
+
+- Find installed Claude Code and Codex readers even when the current shell has an outdated PATH. Refresh child-process paths from Windows settings and report the actual executable found.
+- Complete reader selection and subscription sign-in from the installer. Reuse a verified existing login; missing or unconfirmed access blocks dependent reading instead of silently switching engines.
+- Prepare local Tesseract OCR with English and Norwegian language data during normal installation. Verify downloaded language data and report incomplete setup explicitly. `--skip-ocr` is available for deliberate minimal installations.
+- Give new CLI plans file tools, the preserved original document, PDF rendering, OCR and parsers for supported Word, Excel and text formats. Each call gets a fresh workspace; normal tool iterations can take place inside that session. Web tools and inherited conversations, memories, rules and integrations are disabled through the CLI configuration.
+- Preserve the exact input, source checksum, workspace manifest, raw CLI events and file artifacts for review. Evidence must still match the approved source extraction. CLI restrictions are not a claim of complete operating-system isolation; see `docs/DOCUMENT_PROCESSING.md`.
+- Block start when required tools, reader access, criteria, document selection or plan approval are missing. Record individual run errors and continue other independent runs; confirmed missing CLI authentication blocks later dependent calls. No automatic retry or alternative reader.
+
+Existing approved plans retain their settings. Create and approve a new CLI plan to use file tools. Install the ZIP or update through `update.cmd`, then start a new conversation. Verification and remaining acceptance limits are recorded in `tests/TESTLOGG.md`.
+
 # 0.8.6 — Start from an ordinary task description
 
 - Guide exploratory requests through a short conversation: propose criteria and routine settings, clarify consequential ambiguity, and distinguish user requirements from suggestions and assumptions.

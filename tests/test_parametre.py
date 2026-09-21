@@ -36,7 +36,7 @@ def test_planvalg_lagres_og_endring_bevarer_historikk(tmp_path):
     tjeneste.ny_planversjon(lager, aid, 'Mer tid', motorinnstillinger={'tidsavbrudd_sek':1200})
     assert lager.gjeldende_planversjon(aid)['plan'].motorinnstillinger == {
         'tenkenivaa':'high','tidsavbrudd_sek':1200,
-        'document_processing':'auto','input_budget_bytes':60000,'max_chunks':100}
+        'document_processing':'auto','input_budget_bytes':60000,'max_chunks':100,'file_tools':True}
     tjeneste.ny_planversjon(lager, aid, 'Claude', motor='claude_cli')
     assert lager.gjeldende_planversjon(aid)['plan'].modell == 'sonnet'
 

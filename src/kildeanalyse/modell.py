@@ -149,18 +149,22 @@ class Inputpakke:
     kjoreparametre: dict[str, Any] = field(default_factory=dict)
     api_foresporsel: dict[str, Any] | None = None
     source_metadata: dict[str, Any] = field(default_factory=dict)
+    local_source_path: str | None = field(default=None, repr=False)
 
     def hash(self) -> str:
+        from .reader_files import access
         innhold = json.dumps(
             {"systeminstruks": self.systeminstruks, "brukermelding": self.brukermelding, "svarskjema": self.svarskjema,
              **({"kjoreparametre": self.kjoreparametre} if self.kjoreparametre else {}),
-             **({"api_foresporsel": self.api_foresporsel} if self.api_foresporsel else {})},
+             **({"api_foresporsel": self.api_foresporsel} if self.api_foresporsel else {}),
+             **({'file_access': access(self)} if access(self) else {})},
             ensure_ascii=False,
             sort_keys=True,
         )
         return hashlib.sha256(innhold.encode("utf-8")).hexdigest()
 
     def til_dict(self) -> dict[str, Any]:
+        from .reader_files import access
         return {
             "forsok_id": self.forsok_id,
             "kjoring_id": self.kjoring_id,
@@ -176,6 +180,7 @@ class Inputpakke:
             "kjoreparametre": self.kjoreparametre,
             **({"api_foresporsel": self.api_foresporsel} if self.api_foresporsel else {}),
             "input_hash": self.hash(),
+            **({'file_access': access(self)} if access(self) else {}),
         }
 
 

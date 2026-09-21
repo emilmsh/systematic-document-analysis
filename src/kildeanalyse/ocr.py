@@ -13,22 +13,33 @@ def executable():
     explicit = os.environ.get('SDA_TESSERACT_BIN')
     if explicit:
         return explicit if Path(explicit).is_file() else None
-    found = shutil.which('tesseract')
-    if found:
+    from .cli_paths import find_cli
+    found = find_cli('tesseract')
+    if found != 'tesseract' and Path(found).is_file():
         return found
     candidates = [Path(os.environ.get('ProgramFiles', 'C:/Program Files'))/'Tesseract-OCR/tesseract.exe',
                   Path(os.environ.get('LOCALAPPDATA', Path.home()/'AppData/Local'))/'Programs/Tesseract-OCR/tesseract.exe']
     return next((str(p) for p in candidates if p.is_file()), None)
 
 
+def language_directory():
+    """Installer-owned language files live in a user-writable directory."""
+    return Path(os.environ.get('LOCALAPPDATA', Path.home()/'AppData/Local'))/'systematic-document-analysis/ocr/tessdata'
+
+
+def language_arguments():
+    root = language_directory()
+    return ['--tessdata-dir', str(root)] if all((root/f'{language}.traineddata').is_file() for language in ('eng', 'nor')) else []
+
+
 def setup():
     exe = executable()
     result = {'available': False, 'engine': 'Tesseract', 'executable': exe,
-              'installation': 'Install Tesseract with eng and nor language data; optionally set SDA_TESSERACT_BIN. See docs/DOCUMENT_PROCESSING.md.'}
+              'installation': 'Run installer.cmd to install and verify OCR, or ocr_setup.cmd to repair OCR only. See docs/DOCUMENT_PROCESSING.md.'}
     if exe:
         try:
             result['version'] = subprocess.check_output([exe, '--version'], timeout=10, encoding='utf-8', errors='replace').splitlines()[0]
-            langs = subprocess.check_output([exe, '--list-langs'], timeout=10, encoding='utf-8', errors='replace')
+            langs = subprocess.check_output([exe, *language_arguments(), '--list-langs'], timeout=10, encoding='utf-8', errors='replace')
             result['languages'] = [s.strip() for s in langs.splitlines() if re.fullmatch(r'[A-Za-z_0-9/]+', s.strip())]
             result['available'] = True
         except (OSError, subprocess.SubprocessError) as exc:
@@ -36,7 +47,7 @@ def setup():
     return result
 
 
-def apply_pdf(path, pages, *, mode='auto', languages='eng+nor'):
+def apply_pdf(path, pages, *, mode='auto', languages='eng+nor', temp_dir=None):
     """auto OCRs sparse pages; force OCRs every page (including mixed text/images)."""
     if mode not in ('off', 'auto', 'force'):
         raise ValueError('ocr_mode must be off, auto or force.')
@@ -57,7 +68,8 @@ def apply_pdf(path, pages, *, mode='auto', languages='eng+nor'):
     # OCR output is a derived transcription, not a verified quotation of page imagery.
     info['warnings'].append('OCR text may contain errors. Verify important quotations against the original page image. Auto mode can miss images on pages with an existing text layer; use force when needed.')
     result = [dict(p) for p in pages]
-    with pdfium.PdfDocument(str(path)) as pdf, tempfile.TemporaryDirectory(prefix='sda-ocr-') as temp:
+    by_number = {p['nr']: p for p in result}
+    with pdfium.PdfDocument(str(path)) as pdf, tempfile.TemporaryDirectory(prefix='sda-ocr-', dir=temp_dir) as temp:
         for original in targets:
             nr = original['nr']
             page = pdf[nr-1]
@@ -75,10 +87,10 @@ def apply_pdf(path, pages, *, mode='auto', languages='eng+nor'):
                 if bitmap is not None:
                     bitmap.close()
                 page.close()
-            output = subprocess.run([config['executable'], str(image_path), 'stdout', '-l', languages,
+            output = subprocess.run([config['executable'], str(image_path), 'stdout', *language_arguments(), '-l', languages,
                                      '--dpi', '300', '--psm', '3'], capture_output=True, timeout=120,
                                     encoding='utf-8', errors='strict', check=True).stdout
-            result[nr-1].update(tekst=output, tegn=len(re.sub(r'\s+', '', output)),
+            by_number[nr].update(tekst=output, tegn=len(re.sub(r'\s+', '', output)),
                                 extraction={'method':'ocr', 'engine':config['version'], 'languages':languages, 'dpi':300})
             info['pages'].append(nr)
     return result, info

@@ -6,12 +6,16 @@ En plugin for Claude Code og Codex for systematisk analyse av dokumenter, regnea
 
 ## Hurtiginstallasjon — Windows
 
-1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Gjeldende utgave er **[0.8.6](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.6)**. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
+**Du trenger bare å dobbeltklikke `installer.cmd`.** Det installerer pluginen og eventuelt manglende kommandolinjeverktøy (CLI), lar deg velge lesemotor og sjekker abonnementsinnloggingen. Er CLI-et ikke innlogget med abonnement, starter innloggingen, og du fullfører den i nettleseren. Eksisterende abonnementsinnlogging brukes videre. At du er innlogget i skrivebordsappen, er ikke en bekreftelse på at CLI-et er innlogget.
+
+1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Gjeldende utgave er **[0.8.7](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.7)**. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
 2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, og velg **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor terminalen i Codex.
-3. For lesing med abonnementet ditt: dobbeltklikk **reader_setup.cmd**, velg Claude Code eller Codex og fullfør innloggingen.
+3. **Fortsett i samme installasjonsvindu:** velg lesemotor, **1 = Codex / ChatGPT eller 2 = Claude Code**, og fullfør eventuell innlogging med riktig konto i nettleseren. Vent til installasjonsvinduet bekrefter innloggingen. Velg **3 = hopp over** hvis du skal bruke API eller sette opp lesemotoren senere. Valg av lesemotor er uavhengig av appen du valgte i steg 2.
 4. Åpne arbeidsmappen i **Code-fanen** i Claude eller i Codex, start en **ny lokal samtale**, og beskriv oppgaven: **«Bruk Systematic Document Analysis. Jeg vil undersøke hvordan disse årsrapportene omtaler egen bruk av KI. Filene ligger i [mappe].»**
 
 Førstegangsoppsett krever internett. Installasjonsprogrammet ordner Python og installerer den valgte appens kommandolinjeverktøy hvis det mangler; du trenger ikke bruke terminalen selv.
+
+**`reader_setup.cmd` er en hjelper for senere bruk**, for eksempel hvis du hoppet over eller avbrøt innloggingen. Du trenger ikke installere pluginen på nytt. For å bytte konto kan du kjøre `reader_setup.cmd claude --login` eller `reader_setup.cmd codex --login` i en terminal.
 
 ## Prosjektmappe og resultater
 
@@ -39,7 +43,7 @@ Samtalen foregår i Claude Code eller Codex. Pluginen legger til bokføringen og
 ## Hva den ikke gjør
 
 - Den sammenstiller ikke på tvers av dokumenter. Hver fil er én enhet; sammenligningen gjør du eller assistenten ut fra eksporten.
-- Den prøver ikke på nytt, bytter ikke modell og faller ikke tilbake til betalt API på egen hånd. Feil og tidsavbrudd stopper køen og vises.
+- Den prøver ikke på nytt, bytter ikke modell og faller ikke tilbake til betalt API på egen hånd. Feil og tidsavbrudd rapporteres per kjøring mens de øvrige kjøringene fullføres.
 - Den leser ikke diagrammer, bilder eller innebygde objekter, og beregner ikke regnearkformler.
 - Den kjører bare på Windows og trenger et lokalt Python-miljø, som installasjonsprogrammet ordner.
 
@@ -49,7 +53,7 @@ Repoet er privat. Nedlasting fra GitHub krever tilgang; en kollega kan også få
 
 ### La assistenten gjøre det
 
-Lim én av disse inn i en ny samtale. Assistenten laster ned og verifiserer utgaven, og kjører enten installasjonen eller gir deg det ene steget den ikke skal gjøre selv.
+Lim én av disse inn i en ny samtale. Assistenten laster ned og verifiserer utgaven, og kjører enten installasjonen eller viser deg hvordan du starter den selv. **Claude-prompten bruker `--non-interactive`, som hopper over innloggingen.** Etter denne varianten bruker du `reader_setup.cmd` ved behov. Ved vanlig dobbeltklikk på `installer.cmd` er innloggingen inkludert.
 
 Claude Code:
 
@@ -59,21 +63,29 @@ ChatGPT-appen / Codex:
 
 > Installer Systematic Document Analysis for Codex. Utgivelsesside: https://github.com/emilmsh/systematic-document-analysis/releases/latest (privat repo; bruk eksisterende gh-innlogging, eller be meg laste ned ZIP-en hvis du ikke får tilgang). Last ned systematic-document-analysis-windows.zip og SHA256SUMS.txt, verifiser sjekksummen og pakk ut ZIP-en i en mappe under Nedlastinger. Vis meg mappestien, slik at jeg kan dobbeltklikke installer.cmd i Filutforsker og velge Codex. Overlat selve installasjonssteget til meg. Når jeg bekrefter, kjør `codex plugin list` og sjekk at systematic-document-analysis er aktivert. Ikke endre andre plugins, innstillinger eller filer.
 
-Start en ny samtale etterpå, slik at appen laster pluginen.
+Hvis innloggingen ble hoppet over, dobbeltklikk **reader_setup.cmd** og velg lesemotor. Hjelperen bruker eksisterende abonnementsinnlogging eller starter innlogging ved behov. Start deretter en ny samtale, slik at appen laster pluginen.
 
 ### Manuelt
 
 1. Last ned [Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) fra [siste utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest) og pakk den ut.
 2. Dobbeltklikk `installer.cmd` i Filutforsker og velg Claude Code, Codex eller begge. Programmet klargjør Python 3.12 eller nyere, installerer et manglende kommandolinjeverktøy for appen, registrerer pluginen og viser installasjonsmappen.
-3. Dobbeltklikk `reader_setup.cmd` for å logge inn til lesing med abonnementet ditt, og start deretter en ny lokal samtale. Første oppstart installerer Python-avhengighetene.
+3. I samme vindu velger du lesemotor, **1 = Codex / ChatGPT eller 2 = Claude Code**, og fullfører eventuell innlogging i nettleseren. Installeringen sjekker innloggingen før den melder at oppsettet er ferdig. **3 = hopp over** utsetter dette steget eller lar deg bruke API. Start deretter en ny lokal samtale. Første oppstart installerer Python-avhengighetene.
 
-Lesing med abonnementet ditt bruker appens egen CLI. Mangler den, installerer `reader_setup.cmd` den; innloggingen fullfører du selv. `ocr_setup.cmd` installerer lokal OCR for skannede PDF-er. `settings.cmd` åpner en lokal fil for valgfrie API-nøkler.
+Lesing med abonnementet ditt bruker appens egen CLI. Normalinstallasjonen klargjør valgt CLI og lokal OCR med norsk og engelsk språkstøtte; innloggingen fullfører du selv. PATH håndteres automatisk. Lesesesjonene får filverktøy, parsere, PDF-sidebilder og OCR i en egen arbeidsmappe per kjøring. `reader_setup.cmd` og `ocr_setup.cmd` brukes ved senere oppsett eller reparasjon. `settings.cmd` åpner en lokal fil for valgfrie API-nøkler.
 
 ### Oppdateringer
 
 Kjør `update.cmd` fra den installerte mappen for å se etter en nyere utgave, installere den eller velge bare varsle (standard), automatisk eller av. Start en ny samtale etter oppdatering. Se [installasjon og oppdateringer](docs/UPDATES.md) for innstillinger og feilsøking.
 
 ## Bruk
+
+**Kontroller forutsetningene før oppstart.** Tilgjengelige verktøy, innlogging til lesemotoren, spesifiserte kriterier og svaralternativer, dokumentutvalg og en godkjent plan må være på plass. Manglende felles forutsetninger blokkerer oppstart, med årsaken i `show_status`. Rett eller avklar problemet, kontroller på nytt og be uttrykkelig om å fortsette. Planendringer krever ny godkjenning.
+
+**Problemer i én kjøring stopper ikke de andre.** Uleselige kilder, tidsavbrudd, leserfeil og mangelfulle svar eller belegg registreres til oppfølging. De øvrige kjøringene får fullføre før dere gjennomgår problemene samlet. Resultater og tilgjengelige råsvar bevares; feilede eller uavklarte forsøk kjøres ikke automatisk på nytt og fremstilles ikke som vellykkede. Feil i felles infrastruktur eller bekreftet bortfall av lesertilgang kan fortsatt blokkere nye avhengige kall.
+
+Tillatte svar som «uklart» eller «ikke omtalt» er gyldige funn når kravene til belegg og lesedekning er oppfylt. Resultater kan først omtales som menneskelig kontrollert når kontrollen faktisk er gjort.
+
+**Innlogging er en sperre før analysen starter.** Claude- og Codex-leserne kontrollerer abonnementsinnloggingen før hvert CLI-kall. Manglende eller uklar innlogging blokkerer nye kall; en vanlig CLI-feil feiler bare den aktuelle kjøringen. Assistenten skal forklare hvordan du logger inn og kan fortsatt forberede kriterier og plan, men skal ikke erstatte analysen med egne underagenter eller direkte lesing. Etter innlogging må oppsettet kontrolleres på nytt før du ber om å fortsette.
 
 Åpne en vanlig prosjektmappe i appen og legg egne kildefiler i undermappen `dokumenter`. Du trenger verken Git eller en eksempelkjøring. Beskriv oppgaven, for eksempel:
 

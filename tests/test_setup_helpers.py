@@ -37,10 +37,13 @@ def test_bad_settings_never_echo_values(line):
 def test_reader_download_checks_integrity_and_finds_private_binary(tmp_path, monkeypatch):
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'bin'))
     import setup_reader
+    from kildeanalyse import cli_paths
     from kildeanalyse.cli_paths import find_cli
     monkeypatch.setenv('LOCALAPPDATA',str(tmp_path))
     monkeypatch.delenv('SDA_CODEX_BIN',raising=False)
     monkeypatch.setattr(setup_reader.shutil,'which',lambda name:None)
+    monkeypatch.setattr(cli_paths,'windows_path_directories',lambda:[])
+    monkeypatch.setattr(cli_paths.Path,'home',lambda:tmp_path/'home')
     payload=b'local fake executable'
     monkeypatch.setattr(setup_reader.urllib.request,'urlretrieve',lambda url,path:Path(path).write_bytes(payload))
     with pytest.raises(RuntimeError,match='checksum'):

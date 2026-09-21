@@ -2,6 +2,10 @@
 
 Run `installer.cmd` from an extracted release to install or update Claude Code, Codex or both. It reports each app separately. Use File Explorer or a normal terminal as your ordinary Windows user.
 
+After successful installation, the interactive installer lets you choose a subscription reader or skip for API/later setup. It reuses existing subscription sign-in or starts login and verifies the result. This happens after the installation lock is released. Failed or cancelled login leaves the plugin installed; finish with `reader_setup.cmd`. `update.cmd`, automatic updates, `--recover` and `--prepare-only` do not start reader setup.
+
+Normal installation also checks local Tesseract OCR and installs missing English/Norwegian support. `--skip-ocr` explicitly skips that step. Updating an existing installation does not run onboarding; use `ocr_setup.cmd` if that installation has not yet set up OCR.
+
 ## Closing active plugin connections
 
 From **0.8.5**, a manual installation, recovery or `update.cmd --install` asks this plugin's connections to close automatically. It blocks new connections, finishes current tool calls and the current document (including its constituent model calls), saves their results, then stops the queue before the next document. Remaining documents stay pending and can be resumed explicitly after the update. Claude Code and Codex themselves stay open; other plugins are unaffected. Start a new conversation afterwards to load the updated tools and skill.
@@ -57,6 +61,8 @@ Update policy and the shared OS lock live under `%USERPROFILE%/.systematic-docum
 
 ```powershell
 .\installer.cmd both
+.\installer.cmd claude --reader claude
+.\installer.cmd codex --reader none
 .\installer.cmd codex --replace-source
 .\installer.cmd both --repair
 .\installer.cmd codex --allow-downgrade
@@ -71,5 +77,7 @@ Update policy and the shared OS lock live under `%USERPROFILE%/.systematic-docum
 ```
 
 Use `--base-dir <folder>` for a custom install location. `--replace-source` changes only this plugin's single-plugin local marketplace registration, after checking both paths. `--repair` replaces same-version files deliberately; `--allow-downgrade` authorises an older version. `--recover` resolves an interrupted installation and installs nothing. `--move-shadow` moves aside a stale Codex desktop copy after installing. These options are independent.
+
+`--reader claude` or `--reader codex` selects the subscription reader without the menu; `--reader none` skips reader setup. Without `--reader`, `--non-interactive` skips reader setup and prints follow-up instructions. With an explicit reader, noninteractive mode installs a missing CLI and checks existing subscription sign-in, returning an error if it cannot confirm it; it never opens a browser for login. `--reader` cannot be combined with `--recover` or `--prepare-only`.
 
 Implementation starts in `bin/installer.py` and `bin/update_plugin.py`; shared process locking and cached diagnostics are in `src/kildeanalyse/maintenance.py`. `tests/test_installer_updates.py` tests transactions and simulated releases; `tests/test_installer_recovery.py` interrupts every installer step and recovers. `tests/prov_installasjon.py` exercises real host CLIs in temporary profiles, including recovery, without using models or user registrations.

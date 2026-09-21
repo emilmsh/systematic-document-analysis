@@ -65,6 +65,18 @@ server = UpdatingMCPServer(
     version=VERSJON,
     instructions=(
         "Systematic Document Analysis: auditable reading, one document per run. Respond in the user's language. "
+        "Check shared startup prerequisites: service/tools, sign-in, specified criteria, source selection, reader/settings and plan approval. "
+        "Missing prerequisites block startup; follow workflow_block in show_status. "
+        "During execution, record individual problems and let other runs finish: unreadable/changed sources, timeouts, call/quota errors, "
+        "invalid answers/evidence and uncertain attempts are follow-up items, not reasons to stop the whole queue. "
+        "Do not call stop_runs for an individual failure. Failed chunks block only their dependent document synthesis. "
+        "Report progress and summarize failures after other runs finish; preserve raw evidence, never invent completion or retry automatically. "
+        "Permitted uncertainty answers are valid findings. Human review is required before claiming reviewed results. "
+        "CLI sign-in is a hard stop: if the selected reader is unavailable, auth_gate is blocked, "
+        "or CLI_AUTH_REQUIRED is reported, do not dispatch new dependent calls and explain recovery. A generic CLI error is not proof of missing sign-in. "
+        "Never substitute host analysis, subagents, an alternative script, API calls, simulation or replacement result files. "
+        "Criteria, extraction checks and plan preparation may continue. Recheck show_setup after user login; "
+        "resume only after verification and a user request to continue. A different reader requires an explicitly approved new plan. "
         "A short ordinary-language request is enough to begin: restate the goal, inspect the specified files, "
         "propose criteria and routine settings, and ask only for missing details that materially change the analysis. "
         "Reuse answers already given. Distinguish user requirements, your proposals and unresolved assumptions. "

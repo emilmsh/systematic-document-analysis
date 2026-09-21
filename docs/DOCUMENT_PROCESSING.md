@@ -6,12 +6,48 @@ and bounded reading use the same implementation from Codex and Claude Code.
 
 ## Local OCR
 
-Run `ocr_setup.cmd` once on Windows to install Tesseract and Norwegian
-language data. This downloads software/language data, never source documents.
-English is included in the installer. The script checks the downloaded Norwegian
-language file against a pinned SHA-256. Restart the host; `show_setup` reports the
-OCR version and available languages. Alternatively install Tesseract yourself and
-set `SDA_TESSERACT_BIN` if it is outside the standard locations/PATH.
+Normal Windows installation (`installer.cmd`) installs missing Tesseract OCR and
+verifies both English and Norwegian language data. Existing working OCR is reused.
+Missing language files are downloaded from a pinned upstream release, checked with
+SHA-256 and stored in the user's local application data, without writing into
+Program Files. No source documents are uploaded. `--skip-ocr` is an explicit opt-out.
+`ocr_setup.cmd` remains available for repair after a cancelled or failed install;
+an OCR failure leaves the plugin installed but reports incomplete setup.
+`show_setup` reports the OCR version and available languages. An explicit
+`SDA_TESSERACT_BIN` overrides automatic executable discovery.
+
+## File tools in local reader sessions
+
+New Claude/Codex plans enable `file_tools` by default. Existing approved plans keep
+their recorded settings; enabling tools for one requires a new plan version.
+Each reading call starts a fresh CLI session in a new `workfiles` directory with
+one original source copy, assigned source units and `SOURCE_GUIDE.md`. User/project
+instructions, memory, plugins, other MCP servers and previous conversations are
+disabled. Synthesis calls receive only checked findings and no original file.
+
+Readers have native file tools plus an explicit bundled Python interpreter and
+helper for PDF, Word, Excel, CSV/TSV, text/Markdown, PDF page rendering and per-page
+Tesseract OCR. No parser installation by the model is needed. The guide records
+the available commands. Web search is disabled. Codex uses workspace-write with
+network disabled; Claude scopes native file tools with `--restricted` and grants
+unattended shell access only to the fixed parser helper. Other shell operations
+remain subject to CLI permission checks. This is context control, not a claim of
+full filesystem read isolation: native Windows Claude lacks an OS shell sandbox,
+and Codex's workspace-write policy is primarily a write boundary.
+
+The source checksum, initial file hashes, workspace guide, helper identity, raw
+tool transcript and generated workfiles are retained with the attempt/export.
+The original source remains unchanged; changing the working source copy rejects
+the result. Export never follows worker-created symlinks or junctions. Omitting
+sources from export also omits `workfiles/source.*`; transcripts, OCR and rendered
+pages still contain source-derived content, just like recorded text input.
+
+Tool reading can examine the same original document beyond a chunk's inline
+excerpt, but that chunk's evidence must match its assigned source units/fragments.
+The inline byte budget does not cap tool output or total model context. CLI calls
+can include multiple tool turns. Visual/OCR findings do not silently change the
+approved extraction: quotations absent from it require reimport/review. This
+keeps a clear distinction between seeing content and validating exact evidence.
 
 Both MCP import tools accept `ocr_mode` and `ocr_languages`:
 
