@@ -227,7 +227,9 @@ def main():
             args.mode = {'3':'notify', '4':'auto', '5':'off'}.get(choice)
             if choice not in ('1','2','3','4','5'):
                 parser.error('Invalid choice; no changes made.')
-        with maintenance_lock():
+        # Checking and choosing a policy only need the shared lock, so they work
+        # while plugin sessions are open. Installing still requires exclusivity.
+        with maintenance_lock(shared=not args.install):
             if args.mode:
                 write_json(state_dir()/'updates.json', {'mode':args.mode})
                 print(f'Update policy: {args.mode}. Applies to managed installations in both apps.')

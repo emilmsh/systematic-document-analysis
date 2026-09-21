@@ -349,3 +349,20 @@ def test_codex_desktop_shadow_copy_is_detected_and_moved_aside_only_on_request(s
     Host(monkeypatch, 'claude')
     (shadow.parents[1]/'claude'/installer.NAME).mkdir(parents=True)
     assert installer.install('claude', base) == 'installed'
+
+
+def test_update_command_checks_and_sets_policy_beside_open_sessions(source, tmp_path, monkeypatch, capsys):
+    Host(monkeypatch); installer.install('codex', tmp_path/'installed')
+    target = tmp_path/'installed/codex'/installer.NAME
+    monkeypatch.setattr(updater, 'fetch', lambda *args: json.dumps({'tag_name':'v99.0.0', 'body':'notes',
+                        'assets':[{'name':updater.ARCHIVE,'id':2},{'name':'SHA256SUMS.txt','id':1}]}).encode())
+    monkeypatch.setattr(updater, 'apply_release', lambda *args: pytest.fail('No installation expected'))
+    monkeypatch.setattr(updater.Path, 'resolve', lambda self: target/'bin'/'update_plugin.py' if self.name == 'update_plugin.py' else Path.__new__(Path, self))
+    with maintenance_lock(shared=True):  # Another plugin session is open.
+        monkeypatch.setattr(sys, 'argv', ['update_plugin.py', '--check', '--mode', 'auto'])
+        assert updater.main() == 0
+        assert read_json(state_dir()/'updates.json') == {'mode':'auto'}
+        assert '99.0.0' in capsys.readouterr().out
+        monkeypatch.setattr(sys, 'argv', ['update_plugin.py', '--install'])
+        assert updater.main() == 1
+        assert 'Close other plugin sessions' in capsys.readouterr().err
