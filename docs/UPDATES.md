@@ -12,8 +12,11 @@ Run `installer.cmd` from an extracted release to install or update Claude Code, 
 | Same marketplace name, different local path | Show both paths; ask before switching. Keep the previous source folder. |
 | Disabled plugin | Preserve it; enable it in the host before updating. |
 | Remote source, shared marketplace or Claude project/local scope | Stop with an explanation; manage that registration in the host first. |
+| Codex: stale copy in the desktop app's LocalCache | Show the shadow path; ask before moving it aside. Nothing is deleted. |
 
-The default for source-switch, repair and downgrade questions is **keep the existing installation**. Noninteractive calls stop with an actionable error unless the corresponding option is supplied. The installer never removes other marketplaces.
+The packaged Codex desktop app (Microsoft Store/MSIX) redirects writes below `%LOCALAPPDATA%` into `Packages\OpenAI.Codex_*\LocalCache\Local` and reads a merged view in which those files win. A plugin copy installed from inside a Codex conversation lands there and masks the registered installation for the desktop app, even after the real files are replaced. The installer detects such a shadow for the Codex target and, with `--move-shadow` or an interactive yes, renames it to `systematic-document-analysis.shadow-<version>-<id>` after a successful installation. Start a new Codex conversation afterwards.
+
+The default for source-switch, repair, downgrade and shadow questions is **keep the existing installation**. Noninteractive calls stop with an actionable error unless the corresponding option is supplied. The installer never removes other marketplaces.
 
 ## Update menu
 
@@ -33,7 +36,9 @@ Network failure does not prevent ordinary plugin startup. Only published stable 
 
 Installation stages a complete package beside the destination before replacing it. Previous files are retained under `<base>/<app>/backups/<id>/systematic-document-analysis`. Failed copies are retained as `failed-install-<id>` for diagnosis. Routine registration failures restore the previous files and registration; the console reports if recovery itself failed.
 
-A process killed during installation can leave `<base>/<app>/pending-install.json`. This records the previous source and backup. The installer refuses further changes and a managed server refuses to start from that incomplete transaction. Preserve the listed folders and resolve the interrupted transaction before reinstalling; do not delete the recovery record as a shortcut. Backups are not automatically deleted.
+A process killed during installation can leave `<base>/<app>/pending-install.json`. This journal records the state before the installation started: the previous source, the backup location, the previous version and whether the plugin was registered. The installer refuses further changes and a managed server refuses to start from that incomplete transaction. Preserve the listed folders; do not delete the record as a shortcut. Backups are not automatically deleted.
+
+Resolve the interruption with `installer.cmd <app> --recover` from any release package. Recovery reads the journal and restores the state it describes: the previous files return from the backup, an incomplete copy is kept as `failed-install-<id>`, and the previous marketplace and plugin registration are restored through the host CLI and verified. A fresh installation that was interrupted ends with nothing registered. If every step had completed except closing the record, recovery verifies the installed copy and closes the record without changing files. Each recovery writes `recovery-<id>.json` beside the journal with the record and the actions taken. If the previous files or source are missing, recovery stops and keeps the record for manual restoration. Analysis data, provider settings and other marketplaces are never touched. Run `installer.cmd` again afterwards to install the package.
 
 Analysis data, provider settings and reader login are outside the managed program copy. Claude reinstalls use `--keep-data`. Run manifests retain the application version and, for managed sessions, the installed package fingerprint. The updater does not upgrade the Claude/Codex host CLI.
 
@@ -46,7 +51,9 @@ Update policy and the shared OS lock live under `%USERPROFILE%/.systematic-docum
 .\installer.cmd codex --replace-source
 .\installer.cmd both --repair
 .\installer.cmd codex --allow-downgrade
+.\installer.cmd codex --move-shadow
 .\installer.cmd both --non-interactive
+.\installer.cmd claude --recover
 .\update.cmd --check
 .\update.cmd --install
 .\update.cmd --mode notify
@@ -54,6 +61,6 @@ Update policy and the shared OS lock live under `%USERPROFILE%/.systematic-docum
 .\update.cmd --mode off
 ```
 
-Use `--base-dir <folder>` for a custom install location. `--replace-source` changes only this plugin's single-plugin local marketplace registration, after checking both paths. `--repair` replaces same-version files deliberately; `--allow-downgrade` authorises an older version. These options are independent.
+Use `--base-dir <folder>` for a custom install location. `--replace-source` changes only this plugin's single-plugin local marketplace registration, after checking both paths. `--repair` replaces same-version files deliberately; `--allow-downgrade` authorises an older version. `--recover` resolves an interrupted installation and installs nothing. `--move-shadow` moves aside a stale Codex desktop copy after installing. These options are independent.
 
-Implementation starts in `bin/installer.py` and `bin/update_plugin.py`; shared process locking and cached diagnostics are in `src/kildeanalyse/maintenance.py`. `tests/test_installer_updates.py` tests transactions and simulated releases. `tests/prov_installasjon.py` exercises real host CLIs in temporary profiles without using models or user registrations.
+Implementation starts in `bin/installer.py` and `bin/update_plugin.py`; shared process locking and cached diagnostics are in `src/kildeanalyse/maintenance.py`. `tests/test_installer_updates.py` tests transactions and simulated releases; `tests/test_installer_recovery.py` interrupts every installer step and recovers. `tests/prov_installasjon.py` exercises real host CLIs in temporary profiles, including recovery, without using models or user registrations.

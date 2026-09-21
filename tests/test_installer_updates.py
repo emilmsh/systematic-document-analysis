@@ -272,6 +272,9 @@ def test_notify_auto_off_and_busy_startup_policies(source,tmp_path,monkeypatch,c
     assert updater.startup(target) is False  # Default is notify, no installation.
     assert not calls
     output = capsys.readouterr(); assert output.out == '' and '99.0.0' in output.err
+    with maintenance_lock(shared=True):  # A concurrent session must still see the notice.
+        assert updater.startup(target) is False
+    assert '99.0.0' in capsys.readouterr().err
     write_json(state_dir()/'updates.json',{'mode':'auto'})
     with maintenance_lock(shared=True):
         assert updater.startup(target) is False
@@ -320,3 +323,29 @@ def test_release_rejects_runtime_or_marketplace_version_drift(source,file):
     path.write_text(path.read_text(encoding='utf-8').replace(installer.version(source),'99.88.77'),encoding='utf-8')
     with pytest.raises(ValueError,match='version differs'):
         installer.validate_package(source)
+
+
+def test_codex_desktop_shadow_copy_is_detected_and_moved_aside_only_on_request(source, tmp_path, monkeypatch):
+    host = Host(monkeypatch)
+    local = tmp_path/'L'  # Short paths: Windows MAX_PATH applies in the fake LocalAppData.
+    monkeypatch.setenv('LOCALAPPDATA', str(local))
+    base = local/'systematic-document-analysis'/'plugins'
+    target = base/'codex'/installer.NAME
+    shadow = local/'Packages'/'OpenAI.Codex_x'/'LocalCache'/'Local'/target.relative_to(local)
+    shadow.mkdir(parents=True)
+    (shadow/'pyproject.toml').write_text((source/'pyproject.toml').read_text(encoding='utf-8').replace(
+        installer.version(source), '0.1.0'), encoding='utf-8')
+    (shadow/'README.md').write_text('stale desktop copy', encoding='utf-8')
+    with pytest.raises(RuntimeError, match='shadow copy'):
+        installer.install('codex', base)
+    assert not target.exists() and shadow.exists() and host.source is None
+    assert installer.install('codex', base, move_shadow=True) == 'installed'
+    assert not shadow.exists()
+    aside = list(shadow.parent.glob(installer.NAME+'.shadow-*'))
+    assert len(aside) == 1 and (aside[0]/'README.md').read_text(encoding='utf-8') == 'stale desktop copy'
+    assert installer.version(target) == installer.version(source)
+    # Shadow-free Codex reinstalls and Claude installations are unaffected.
+    assert installer.install('codex', base) == 'already up to date'
+    Host(monkeypatch, 'claude')
+    (shadow.parents[1]/'claude'/installer.NAME).mkdir(parents=True)
+    assert installer.install('claude', base) == 'installed'

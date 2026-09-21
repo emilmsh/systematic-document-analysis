@@ -85,7 +85,8 @@ def main() -> int:
             if marker:
                 root = Path(marker['target'])
                 if (root.parent/'pending-install.json').exists():
-                    raise RuntimeError('An interrupted installation needs recovery. Run installer.cmd from the release package.')
+                    raise RuntimeError(f'An interrupted installation needs recovery. Run installer.cmd {marker["host"]} --recover '
+                                       'from the release package.')
                 installed_hash = package_hash(root)
                 os.environ['SDA_INSTALLED_SHA256'] = installed_hash
                 if installed_hash == marker.get('installed_sha256'):

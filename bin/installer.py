@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
 import uuid
 
@@ -138,14 +139,42 @@ def register_plugin(host, exe, *, reinstall=False):
         run([exe, 'plugin', 'update', SELECTOR, '--scope', 'user'])
 
 
+def codex_shadows(target):
+    """Stale copies the packaged Codex desktop app would read instead of the target.
+
+    The Store/MSIX Codex app redirects writes below LOCALAPPDATA into its
+    LocalCache and reads a merged view in which those files win. A plugin copy
+    installed from inside a Codex conversation therefore masks the registered
+    installation for the desktop app, even after the real files are replaced.
+    """
+    local = os.environ.get('LOCALAPPDATA')
+    if not local or os.name != 'nt':
+        return []
+    local = Path(local).resolve()
+    if not target.is_relative_to(local):
+        return []
+    relative = target.relative_to(local)
+    return sorted(p for p in (local/'Packages').glob('OpenAI.Codex_*/LocalCache/Local')
+                  for p in [p/relative] if p.exists() and p != target)
+
+
+def move_codex_shadows(shadows, version_hint):
+    moved = []
+    for shadow in shadows:
+        aside = shadow.with_name(f'{shadow.name}.shadow-{version_hint}-{uuid.uuid4().hex[:8]}')
+        shadow.rename(aside)
+        moved.append(aside)
+    return moved
+
+
 def install(host, base, *, replace_source=False, repair=False, allow_downgrade=False,
-            interactive=False, locked=False):
+            move_shadow=False, interactive=False, locked=False):
     with nullcontext() if locked else maintenance_lock():
         return _install(host, base, replace_source=replace_source, repair=repair,
-                        allow_downgrade=allow_downgrade, interactive=interactive)
+                        allow_downgrade=allow_downgrade, move_shadow=move_shadow, interactive=interactive)
 
 
-def _install(host, base, *, replace_source, repair, allow_downgrade, interactive):
+def _install(host, base, *, replace_source, repair, allow_downgrade, move_shadow, interactive):
     incoming = validate_package(ROOT)
     target = Path(base).resolve()/host/NAME
     if target == ROOT or ROOT.is_relative_to(target) or target.is_relative_to(ROOT):
@@ -154,9 +183,10 @@ def _install(host, base, *, replace_source, repair, allow_downgrade, interactive
         raise RuntimeError('The install target is a link/junction. Choose a regular installation directory.')
     if target.resolve() != target:
         raise RuntimeError('An installation parent is a link/junction. Choose a regular installation directory.')
-    transaction = target.parent/'pending-install.json'
+    transaction = journal_path(target)
     if transaction.exists():
-        raise RuntimeError(f'An interrupted installation needs recovery; see {transaction}. No new changes made.')
+        raise RuntimeError(f'An interrupted installation needs recovery; see {transaction}. '
+                           f'Run installer.cmd {host} --recover. No new changes made.')
     exe = ensure_reader(host)
     market, old_source, plugin = inspect(host, exe)
     if market and old_source is None:
@@ -203,6 +233,16 @@ def _install(host, base, *, replace_source, repair, allow_downgrade, interactive
             if not confirm('Same version, different files. Repair with this package?', interactive=interactive):
                 return 'kept existing files'
 
+    shadows = codex_shadows(target) if host == 'codex' else []
+    if shadows:
+        for shadow in shadows:
+            shadow_version = version(shadow) if (shadow/'pyproject.toml').exists() else 'unknown version'
+            print(f'{host}: the Codex desktop app reads a shadow copy ({shadow_version}) that masks this installation:\n{shadow}')
+        print('Option: --move-shadow')
+        if not confirm('Move the shadow copy aside (kept, not deleted) so the desktop app uses this installation?',
+                       allowed=move_shadow, interactive=interactive):
+            return 'kept shadow copy'
+
     # Complete preflight before copying; stage the full package before switching.
     target.parent.mkdir(parents=True, exist_ok=True)
     backup = target.parent/'backups'/uuid.uuid4().hex/NAME
@@ -217,8 +257,13 @@ def _install(host, base, *, replace_source, repair, allow_downgrade, interactive
                                  'version':incoming, 'package_sha256':wanted_hash,
                                  'installed_sha256':package_hash(staged)})
         validate_package(staged)
+        # The journal describes the state before any change, so --recover can
+        # restore it after a forced interruption at any later step.
         write_json(transaction, {'target':str(target), 'backup':str(backup), 'old_source':str(old_source) if old_source else None,
-                                 'host':host, 'previous_version':installed_version})
+                                 'host':host, 'previous_version':installed_version,
+                                 'target_existed':target.exists(), 'plugin_registered':bool(plugin),
+                                 'incoming_version':incoming, 'incoming_sha256':wanted_hash,
+                                 'started_at':time.time()})
         moved = False
         placed = False
         registered_new = False
@@ -274,7 +319,157 @@ def _install(host, base, *, replace_source, repair, allow_downgrade, interactive
     if moved:
         print(f'Previous copy kept at: {backup}')
     print(f'Updates: notify by default; run {target / "update.cmd"} to change this.')
+    if shadows:
+        try:
+            for aside in move_codex_shadows(shadows, installed_version or 'previous'):
+                print(f'{host}: shadow copy kept aside at: {aside}')
+        except OSError as exc:
+            return f'installed; the Codex desktop shadow copy could not be moved ({exc}). Close Codex and run installer.cmd codex --repair --move-shadow.'
     return 'installed'
+
+
+def journal_path(target):
+    return Path(target).parent/'pending-install.json'
+
+
+def recover(host, base, *, locked=False):
+    """Resolve an interrupted installation from its journal, restoring the previous state.
+
+    The journal records the state before the installation started. Recovery
+    restores that state (files and host registration), or closes the record when
+    the interrupted installation had in fact completed. Nothing is deleted:
+    incomplete copies become failed-install-<id> folders and backups are kept.
+    """
+    with nullcontext() if locked else maintenance_lock():
+        return _recover(host, base)
+
+
+def _recover(host, base):
+    target = Path(base).resolve()/host/NAME
+    transaction = journal_path(target)
+    journal = read_json(transaction)
+    if not journal:
+        raise RuntimeError(f'No interrupted installation record at {transaction}. Nothing to recover.')
+    if (not isinstance(journal, dict) or journal.get('host', host) != host
+            or local_path(journal.get('target') or target) != target):
+        raise RuntimeError(f'The recovery record {transaction} describes another installation. No files changed.')
+    backup = local_path(journal['backup']) if journal.get('backup') else None
+    if backup is not None and not backup.is_relative_to(target.parent):
+        raise RuntimeError('The recovery record points outside the installation folder. No files changed.')
+    old_source = local_path(journal['old_source']) if journal.get('old_source') else None
+    previous_version = journal.get('previous_version')
+    # Records written by 0.8.2 lack these fields; infer them from what that
+    # installer could have seen. A backup folder proves the previous files moved.
+    target_existed = journal.get('target_existed')
+    if target_existed is None:
+        target_existed = previous_version is not None and (old_source is None or old_source == target)
+    plugin_registered = journal.get('plugin_registered', old_source is not None)
+    incoming_sha256 = journal.get('incoming_sha256')
+    actions = []
+
+    def note(message):
+        print(f'{host}: {message}', flush=True)
+        actions.append(message)
+
+    exe = ensure_reader(host)
+    for leftover in sorted(target.parent.glob('.sda-stage-*')):
+        note(f'staging folder left by the interrupted installation, kept for inspection: {leftover}')
+    moved = backup is not None and backup.exists()
+    target_is_new = moved or not target_existed
+
+    # Case 1: every step had finished except closing the journal.
+    market, source, plugin = inspect(host, exe)
+    if target_is_new and target.exists() and _completed(target, source, plugin, incoming_sha256):
+        note(f'the interrupted installation had completed as version {version(target)}; closing the record')
+        return _finish(host, transaction, journal, actions, 'recovered completed installation')
+
+    # Case 2: restore the previous files.
+    if moved:
+        if target.exists():
+            failed = target.parent/f'failed-install-{uuid.uuid4().hex}'
+            target.rename(failed)
+            note(f'incomplete copy kept at {failed}')
+        backup.rename(target)
+        note(f'previous files restored from {backup}')
+    elif target_existed:
+        if not target.exists():
+            raise RuntimeError(f'Neither {target} nor its backup exists. Restore the files manually; the record is kept.')
+        note('previous files were never moved')
+    elif target.exists():
+        failed = target.parent/f'failed-install-{uuid.uuid4().hex}'
+        target.rename(failed)
+        note(f'incomplete copy kept at {failed}; nothing was installed before')
+    if old_source is not None and not old_source.exists():
+        raise RuntimeError(f'The previous source {old_source} is missing. Restore it manually; the record is kept.')
+
+    # Case 2, continued: restore the host registration through the vendor CLI.
+    market, source, plugin = inspect(host, exe)
+    if old_source is None:
+        if plugin:
+            remove_plugin(host, exe)
+            note('removed the plugin registration from the interrupted installation')
+        if market:
+            run([exe, 'plugin', 'marketplace', 'remove', MARKET])
+            note('removed the marketplace registration from the interrupted installation')
+    else:
+        if market and source != old_source:
+            if plugin:
+                remove_plugin(host, exe)
+                plugin = None
+            run([exe, 'plugin', 'marketplace', 'remove', MARKET])
+            market = None
+            note('removed the marketplace registration pointing at the interrupted installation')
+        if not market:
+            run([exe, 'plugin', 'marketplace', 'add', str(old_source)])
+            note(f'registered the previous source {old_source}')
+        elif host == 'claude':
+            run([exe, 'plugin', 'marketplace', 'update', MARKET])
+        if plugin_registered:
+            # Re-register after restored files so host caches match the restored copy.
+            register_plugin(host, exe, reinstall=bool(plugin))
+            note('re-registered the previous plugin')
+        elif plugin:
+            remove_plugin(host, exe)
+            note('removed a plugin registration that did not exist before')
+
+    market, source, plugin = inspect(host, exe)
+    if old_source is None:
+        consistent = market is None and plugin is None
+    else:
+        consistent = (source == old_source and bool(plugin) == bool(plugin_registered)
+                      and (not plugin or plugin.get('enabled') is not False))
+        if consistent and plugin and previous_version and plugin.get('version'):
+            consistent = version_key(plugin['version']) == version_key(previous_version)
+    if not consistent:
+        raise RuntimeError('The host does not report the previous installation after recovery. '
+                           f'The record {transaction} is kept for diagnosis.')
+    restored = f'version {version(target)}' if (target/'pyproject.toml').exists() else 'no installation'
+    note(f'previous state restored: {restored}. Run installer.cmd again to install the package.')
+    return _finish(host, transaction, journal, actions, 'recovered previous installation')
+
+
+def _completed(target, source, plugin, incoming_sha256):
+    try:
+        record = read_json(target/MARKER)
+        if not isinstance(record, dict) or record.get('target') != str(target):
+            return False
+        if record.get('installed_sha256') != package_hash(target):
+            return False
+        if incoming_sha256 and record.get('package_sha256') != incoming_sha256:
+            return False
+        if source != target or not plugin or plugin.get('enabled') is False:
+            return False
+        return not plugin.get('version') or version_key(plugin['version']) == version_key(record['version'])
+    except (OSError, ValueError, KeyError):
+        return False
+
+
+def _finish(host, transaction, journal, actions, result):
+    receipt = transaction.parent/f'recovery-{uuid.uuid4().hex}.json'
+    write_json(receipt, {'host':host, 'result':result, 'recovered_at':time.time(), 'record':journal, 'actions':actions})
+    transaction.unlink()
+    print(f'{host}: recovery record closed; receipt: {receipt}', flush=True)
+    return result
 
 
 def main():
@@ -285,7 +480,11 @@ def main():
     parser.add_argument('--replace-source', action='store_true', help='Explicitly replace this plugin\'s local marketplace source')
     parser.add_argument('--repair', action='store_true', help='Reinstall even when the version is unchanged')
     parser.add_argument('--allow-downgrade', action='store_true')
+    parser.add_argument('--move-shadow', action='store_true',
+                        help='Move aside a stale copy that the packaged Codex desktop app reads instead of the installation')
     parser.add_argument('--non-interactive', action='store_true', help='Never prompt; conflicts require explicit options')
+    parser.add_argument('--recover', action='store_true',
+                        help='Resolve an interrupted installation (pending-install.json) by restoring the previous state')
     args = parser.parse_args()
     if sys.version_info < (3,12) or os.name != 'nt':
         parser.error('This installation package requires Windows and Python 3.12 or newer.')
@@ -303,9 +502,12 @@ def main():
         try:
             if args.prepare_only:
                 print(prepare(host, args.base_dir))
+            elif args.recover:
+                print(f'{host}: {recover(host, args.base_dir)}')
             else:
                 result = install(host, args.base_dir, replace_source=args.replace_source, repair=args.repair,
-                                 allow_downgrade=args.allow_downgrade, interactive=interactive)
+                                 allow_downgrade=args.allow_downgrade, move_shadow=args.move_shadow,
+                                 interactive=interactive)
                 print(f'{host}: {result}')
         except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
             failures.append(host)

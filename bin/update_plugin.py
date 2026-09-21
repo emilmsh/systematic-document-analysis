@@ -181,22 +181,26 @@ def startup(root):
         mode = read_json(state_dir()/'updates.json').get('mode', 'notify')
         if mode == 'off':
             return False
-        with maintenance_lock(), redirect_stdout(sys.stderr):
-            release = check()
+        with redirect_stdout(sys.stderr):
+            # The daily check and its notice only need the shared lock, so every
+            # concurrent session still sees the notice. Installation needs exclusivity.
+            with maintenance_lock(shared=True):
+                release = check()
             target = Path(marker['target'])
             if not release.get('version') or version_key(release['version']) <= version_key(version(target)):
                 return False
             print(f'[Systematic Document Analysis] Version {release["version"]} is available. Run {target / "update.cmd"}.', file=sys.stderr)
             if mode != 'auto':
                 return False
-            # A failed download/install should not repeat for every new session.
-            attempts_path = state_dir()/'update-attempts.json'
-            attempts = read_json(attempts_path)
-            if time.time() - attempts.get(str(target), 0) < DAY:
-                return False
-            attempts[str(target)] = time.time()
-            write_json(attempts_path, attempts)
-            applied = apply_release(marker, release)
+            with maintenance_lock():
+                # A failed download/install should not repeat for every new session.
+                attempts_path = state_dir()/'update-attempts.json'
+                attempts = read_json(attempts_path)
+                if time.time() - attempts.get(str(target), 0) < DAY:
+                    return False
+                attempts[str(target)] = time.time()
+                write_json(attempts_path, attempts)
+                applied = apply_release(marker, release)
             if applied:
                 print('[Systematic Document Analysis] Updated. Start a new conversation to load the new plugin and tools.', file=sys.stderr)
             return applied
