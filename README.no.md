@@ -1,6 +1,6 @@
 # Systematic Document Analysis
 
-En plugin for Claude Code og Codex som leser en samling dokumenter mot kriterier du bestemmer, ett dokument om gangen, og tar vare på hva modellen fikk, hva den svarte, hvilke sitater den bygde på og hvordan et menneske kontrollerte resultatet.
+En plugin for Claude Code og Codex for systematisk analyse av dokumenter, regneark og tekstfiler etter avtalte kriterier. Den behandler én fil om gangen og tar vare på hva modellen fikk, hva den svarte, hvilke sitater den bygde på og hvordan et menneske kontrollerte resultatet.
 
 [English](README.md) · [Start her](START_HER.md) · [Installasjon og oppdateringer](docs/UPDATES.md)
 
