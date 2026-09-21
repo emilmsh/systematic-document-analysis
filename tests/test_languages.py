@@ -26,7 +26,7 @@ def test_english_workflow_and_export_boundary(tmp_path):
                 return fn
             return decorator
     register(Server(), lambda:store)
-    assert len(functions) == 18
+    assert len(functions) == 19
     def call(tool_name, **kwargs):
         result = json.loads(functions[tool_name](**kwargs))
         assert 'error' not in result, result
@@ -50,7 +50,7 @@ def test_english_workflow_and_export_boundary(tmp_path):
     call('new_plan_version', analysis_id=aid, change_note='Norwegian commentary', language='nb')
     plan = call('show_plan', analysis_id=aid)
     assert [v['plan']['language'] for v in plan['versions']] == ['en','nb']
-    out = Path(call('export_results', analysis_id=aid)['directory'])
+    out = Path(call('export_results', analysis_id=aid, legacy_format=True)['directory'])
     with (out/'results.csv').open(encoding='utf-8-sig', newline='') as f:
         rows = list(csv.DictReader(f, delimiter=';'))
     assert rows[0]['language'] == 'en' and 'navn_answer' in rows[0]

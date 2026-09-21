@@ -47,7 +47,7 @@ def configure_codex(maal, launch_root=None):
         'command': sys._base_executable,
         'args': ['-X', 'utf8', str(launch_root/'bin'/'start_server.py')],
         'env': {'PYTHONUTF8': '1'},
-        'env_vars': ['SDA_DATA', 'CODEX_HOME', 'SDA_CODEX_BIN', 'SDA_CLAUDE_BIN', 'SDA_TESSERACT_BIN', 'SDA_SETTINGS_DIR', 'SDA_MAINTENANCE_DIR',
+        'env_vars': ['SDA_DATA', 'SDA_PROJECTS_ROOT', 'CODEX_HOME', 'SDA_CODEX_BIN', 'SDA_CLAUDE_BIN', 'SDA_TESSERACT_BIN', 'SDA_SETTINGS_DIR', 'SDA_MAINTENANCE_DIR',
                      'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'SDA_CUSTOM_API_KEY'],
         'startup_timeout_sec': 300,
     }}}

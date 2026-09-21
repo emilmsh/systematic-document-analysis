@@ -4,7 +4,22 @@ A plugin for Claude Code and Codex that reads a set of documents against criteri
 
 [Norsk](README.no.md) · [Start here](START_HERE.md) · [Installation and updates](docs/UPDATES.md)
 
-## Why
+## Quick install — Windows
+
+1. Download the **[Windows ZIP from the latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest)** and extract it under Downloads. Private repository: sign in with access, or use a ZIP shared by a colleague.
+2. Open the extracted folder in File Explorer, double-click **installer.cmd**, and choose **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Codex terminal.
+3. Start a **new conversation** and write: **“Use Systematic Document Analysis on the documents in [folder]. Help me choose criteria and show the plan before running.”**
+
+If the reader CLI or login is missing, double-click **reader_setup.cmd** and follow its instructions. For your first upgrade from **0.8.4 or earlier**, finish active analyses and fully close Claude Code and Codex before installing. Subsequent manual updates close this plugin's connections automatically after current work is saved; reopen a conversation afterwards.
+
+## Project folder and results
+
+Choose a visible project folder in the conversation. Plans and input previews are saved there
+before execution; results arrive in a new snapshot with one Excel workbook, a plan, a start
+file, source copies and a separate audit folder. CSV is optional. Start in `START_HERE.md`.
+Excel edits do not update recorded results. See [Project files and exports](docs/PROJECT_FILES.md).
+
+## Why use it
 
 A chat assistant can read one report and answer questions about it. It is less useful when the same questions must be answered for forty reports, a stack of tender offers or a folder of workbooks, and the answers will be used later. Then you need to know that every document was read with the same instructions, model and settings, that each answer is tied to a quotation you can look up, and that someone has actually checked the result. Ordinary conversations do not give you that. This plugin does, without leaving the app you already work in.
 
@@ -15,7 +30,7 @@ A chat assistant can read one report and answer questions about it. It is less u
 - **Runs one document per attempt with fixed settings.** The plan records reader, model, reasoning effort, language and instructions. A named person approves it before anything is read. Changing it creates a new version; earlier attempts are untouched.
 - **Stores the evidence.** For every attempt: the exact input, the raw answer, verbatim quotations with their location (PDF page, Word block, sheet and cell range, text line or CSV record), and automatic checks of answer labels, quotations and coverage.
 - **Records human review.** A person approves, corrects or rejects each assessment with a reason. Automatic checks are never recorded as human review.
-- **Exports to CSV.** Results, evidence, attempts and reviews, plus the full audit trail.
+- **Exports to Excel.** One workbook for results, evidence, attempts and reviews, with a separate full audit trail. CSV and the previous export layout are optional.
 
 The conversation stays in Claude Code or Codex. The plugin adds the record keeping and the repeatable reading; the assistant still helps you think about the question, the criteria and problem files.
 

@@ -18,7 +18,8 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="kildeanalyse", description=f"Systematic Document Analysis {VERSJON}")
     sub = p.add_subparsers(dest="kommando", required=True)
     sub.add_parser("oppsett", help="vis oppsett og motorstatus")
-    s = sub.add_parser("prosjekt", help="opprett prosjekt"); s.add_argument("navn")
+    s = sub.add_parser("prosjekt", help="opprett prosjekt"); s.add_argument("navn"); s.add_argument("--mappe")
+    s = sub.add_parser("prosjektmappe", help="velg synlig prosjektmappe"); s.add_argument("prosjekt_id"); s.add_argument("mappe")
     s = sub.add_parser("importer", help="importer støttede filer eller mapper"); s.add_argument("prosjekt_id"); s.add_argument("stier", nargs="+")
     s = sub.add_parser("analyse", help="opprett analyse med planversjon 1")
     for a in ("prosjekt_id", "navn", "oppgavetekst", "kriteriefil"):
@@ -39,7 +40,9 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("nytt-forsok", help="bestill nytt forsøk"); s.add_argument("kjoring_id"); s.add_argument("begrunnelse")
     s = sub.add_parser("kontroll", help="registrer kontroll"); s.add_argument("forsok_id"); s.add_argument("ansvarlig"); s.add_argument("handling")
     s.add_argument("begrunnelse"); s.add_argument("--kriterium"); s.add_argument("--nytt-svar"); s.add_argument("--nytt-belegg", help="JSON-liste")
-    s = sub.add_parser("eksporter", help="eksporter resultatpakke"); s.add_argument("analyse_id"); s.add_argument("--med-kilder", action="store_true")
+    s = sub.add_parser("eksporter", help="eksporter resultatpakke"); s.add_argument("analyse_id")
+    s.add_argument("--med-kilder", action=argparse.BooleanOptionalAction, default=True)
+    s.add_argument("--med-csv", action="store_true"); s.add_argument("--gammelt-format", action="store_true")
     args = p.parse_args(argv)
     lager = Lager(datamappe())
     try:
@@ -56,8 +59,10 @@ def _utfor(lager: Lager, a: argparse.Namespace) -> str:
     if k == "oppsett":
         return visning.md_oppsett(tjeneste.oppsett(lager))
     if k == "prosjekt":
-        pr = tjeneste.opprett_prosjekt(lager, a.navn)
-        return f"Prosjekt {pr['id']} «{pr['navn']}» opprettet."
+        pr = tjeneste.opprett_prosjekt(lager, a.navn, a.mappe)
+        return f"Prosjekt {pr['id']} «{pr['navn']}» opprettet i {pr['directory']}."
+    if k == "prosjektmappe":
+        return json.dumps(tjeneste.set_project_directory(lager, a.prosjekt_id, a.mappe), ensure_ascii=False)
     if k == "importer":
         return visning.md_import(tjeneste.importer_dokumenter(lager, a.prosjekt_id, a.stier))
     if k == "analyse":
@@ -93,7 +98,7 @@ def _utfor(lager: Lager, a: argparse.Namespace) -> str:
                                         nytt_svar=a.nytt_svar, nytt_belegg=json.loads(a.nytt_belegg) if a.nytt_belegg else None)
         return f"Kontroll {r['kontroll']['id']} registrert."
     if k == "eksporter":
-        return visning.md_eksport(tjeneste.eksporter(lager, a.analyse_id, a.med_kilder))
+        return visning.md_eksport(tjeneste.eksporter(lager, a.analyse_id, a.med_kilder, include_csv=a.med_csv, legacy_format=a.gammelt_format))
     raise TjenesteFeil(f"Ukjent kommando {k}")
 
 

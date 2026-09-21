@@ -26,14 +26,15 @@ ROOT = Path(__file__).resolve().parents[1]
 async def probe(root: Path, data: Path, *, expected_project: bool = False) -> None:
     env = dict(os.environ, CLAUDE_PLUGIN_DATA=str(data / "runtime"),
                SDA_DATA=str(data / "analyse"),
-               SDA_PYTHON=sys.executable, PYTHONUTF8="1", SDA_MAINTENANCE_DIR=str(data/'maintenance'))
+               SDA_PYTHON=sys.executable, PYTHONUTF8="1", SDA_MAINTENANCE_DIR=str(data/'maintenance'),
+               SDA_PROJECTS_ROOT=str(data/'visible-projects'))
     params = StdioServerParameters(command="cmd.exe", args=["/d", "/c", str(root / "bin" / "start_server.cmd")], env=env)
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             initialized = await session.initialize()
             assert initialized.server_info.version == VERSJON
             names = {tool.name for tool in (await session.list_tools()).tools}
-            assert len(names) == 36 and 'create_analysis' in names and 'opprett_analyse' in names, names
+            assert len(names) == 38 and 'set_project_directory' in names and 'opprett_analyse' in names, names
             # Ingen vis_oppsett her: testen trenger verken innlogging eller leverandørkontakt.
             result = await session.call_tool("opprett_prosjekt", {"navn": "Røykprøve æøå"})
             text = "\n".join(c.text for c in result.content if hasattr(c, "text"))
@@ -80,7 +81,7 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
             preview = json.loads(await call('show_input_package', {'run_id':runs['new'][0]['id']}))
             assert preview['package']['source_units'][0]['location'] == 'Line 1', preview
             exported = json.loads(await call('export_results', {'analysis_id':aid}))
-            assert (Path(exported['directory'])/'plan-summary.md').is_file(), exported
+            assert (Path(exported['directory'])/'Plan.md').is_file() and Path(exported['workbook']).is_file(), exported
 
 
 async def main(plugin_root: Path | None = None) -> None:

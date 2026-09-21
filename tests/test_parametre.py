@@ -118,7 +118,7 @@ def test_parametre_i_input_historikk_og_eksport(engine, adapter, tmp_path, monke
         assert json.loads((saved/'input.json').read_text(encoding='utf-8'))['input_hash'] == preview['input_hash']
         assert json.loads((saved/'manifest.json').read_text(encoding='utf-8'))['kjoreparametre']['tenkenivaa'] == level
     assert observed == [('valgt-modell','medium','nb'),('valgt-modell','high','en')]
-    out = Path(tjeneste.eksporter(lager, aid)['mappe'])
+    out = Path(tjeneste.eksporter(lager, aid, legacy_format=True)['mappe'])
     exported = json.loads((out/'resultater.json').read_text(encoding='utf-8'))
     assert [v['plan']['motorinnstillinger']['tenkenivaa'] for v in exported['planversjoner']] == ['medium','high']
     assert [v['plan']['sprak'] for v in exported['planversjoner']] == ['nb','en']

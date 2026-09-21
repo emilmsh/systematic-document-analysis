@@ -24,7 +24,7 @@ from .lager import (
 from .modell import Motorsvar
 from .prompt import bygg_inputpakke
 from .validering import valider
-from .maintenance import maintenance_lock
+from .maintenance import maintenance_lock, update_pending, draining
 
 
 class KoFeil(Exception):
@@ -173,7 +173,7 @@ class Koer:
         self.lager.logg("ko_startet", analyse_id=analyse_id, motor=adapter.navn, antall=len(kandidater))
         try:
             for i, kj in enumerate(kandidater):
-                if self.stopp_forespurt(analyse_id):
+                if self.stopp_forespurt(analyse_id) or draining() or update_pending():
                     rapport["stoppet_foer"] = [k["id"] for k in kandidater[i:]]
                     self.lager.logg("ko_stoppet", analyse_id=analyse_id, gjenstaar=rapport["stoppet_foer"])
                     break

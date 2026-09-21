@@ -64,7 +64,7 @@ def test_complete_format_workflow_without_models(tmp_path, monkeypatch, extensio
     details = tjeneste.vis_kjoring(store,run)
     assert details['forsok'][0]['vurderinger']['policy']['belegg'][0]['source']['location'] == locator
     assert locator in visning.md_kjoring(details)
-    output = Path(tjeneste.eksporter(store,aid,True)['mappe'])
+    output = Path(tjeneste.eksporter(store,aid,True,legacy_format=True)['mappe'])
     with (output/'evidence.csv').open(encoding='utf-8-sig',newline='') as f:
         row = next(csv.DictReader(f,delimiter=';'))
     assert row['source_location'] == locator and row['physical_page'] == '' and row['quote'] == QUOTE

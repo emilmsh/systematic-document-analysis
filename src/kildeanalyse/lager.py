@@ -97,6 +97,8 @@ class Lager:
             con.execute('BEGIN IMMEDIATE')
             if 'metadata_json' not in {row[1] for row in con.execute('PRAGMA table_info(dokument)')}:
                 con.execute("ALTER TABLE dokument ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}'")
+            if 'directory' not in {row[1] for row in con.execute('PRAGMA table_info(prosjekt)')}:
+                con.execute('ALTER TABLE prosjekt ADD COLUMN directory TEXT')
             con.commit()
         finally:
             con.close()
@@ -154,7 +156,13 @@ class Lager:
     def opprett_prosjekt(self, navn: str) -> dict[str, Any]:
         with self.transaksjon() as con:
             id = self.neste_id(con, "pr")
-            con.execute("INSERT INTO prosjekt VALUES (?, ?, ?)", (id, navn, naa()))
+            con.execute("INSERT INTO prosjekt(id, navn, opprettet) VALUES (?, ?, ?)", (id, navn, naa()))
+        return self.prosjekt(id)
+
+    def sett_prosjektmappe(self, id: str, directory: str) -> dict[str, Any]:
+        self.prosjekt(id)
+        with self.transaksjon() as con:
+            self._oppdater(con, 'prosjekt', id, directory=directory)
         return self.prosjekt(id)
 
     def prosjekt(self, id: str) -> dict[str, Any]:

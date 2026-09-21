@@ -86,7 +86,7 @@ def test_tre_dokumenter_gjennom_hele_flyten(lager: Lager):
     fj_pakke = tjeneste.vis_inputpakke(lager, fj["kjoring"]["id"])["pakke"]
     assert "ønsker å være" in fj_pakke["brukermelding"]
 
-    eks = tjeneste.eksporter(lager, aid)
+    eks = tjeneste.eksporter(lager, aid, legacy_format=True)
     mappe = Path(eks["mappe"])
     for navn in ("resultater.csv", "belegg.csv", "forsok.csv", "kontroll.csv", "LESMEG.md", "plan.md", "resultater.json"):
         assert (mappe / navn).is_file(), navn
@@ -173,7 +173,7 @@ def test_rettelse_bevarer_original_og_overlever_omstart(lager: Lager, tmp_path: 
     assert nytt["id"].endswith(".f2")
     vurd = tjeneste.vis_kjoring(lager2, fj["kjoring"]["id"])["forsok"][-1]["vurderinger"]
     assert all(v["kontrollstatus"] == "ikke kontrollert" for v in vurd.values())
-    eks = tjeneste.eksporter(lager2, aid)
+    eks = tjeneste.eksporter(lager2, aid, legacy_format=True)
     assert eks["kontrollert_av_totalt"] == "0/9"  # gjeldende forsøk er det nye, ukontrollerte
 
 
@@ -254,7 +254,7 @@ def test_ny_planversjon_krever_godkjenning_og_nye_kjoringer(lager: Lager):
     gammel = tjeneste.vis_inputpakke(lager, kjoringer[0]["id"])["pakke"]
     assert "Innleide" not in gammel["systeminstruks"]
     tjeneste.start(lager, aid)
-    eks = tjeneste.eksporter(lager, aid)
+    eks = tjeneste.eksporter(lager, aid, legacy_format=True)
     assert eks["antall_kjoringer"] == 6
     assert "blandede versjoner" in (Path(eks["mappe"]) / "LESMEG.md").read_text(encoding="utf-8")
 

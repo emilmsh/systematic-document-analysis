@@ -1,10 +1,12 @@
 """Standard-library coordination of installers and live plugin sessions."""
 from __future__ import annotations
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 import json
 import os
 from pathlib import Path
 import uuid
+import time
+import threading
 
 
 class MaintenanceBusy(RuntimeError):
@@ -35,7 +37,7 @@ def write_json(path: Path, value) -> None:
 
 
 @contextmanager
-def maintenance_lock(*, shared=False):
+def _file_lock(name, *, shared=False):
     """Sessions share an OS lock; installation requires exclusive access.
 
     Locks are released on process exit, including crashes. All installations
@@ -43,7 +45,7 @@ def maintenance_lock(*, shared=False):
     """
     folder = state_dir()
     folder.mkdir(parents=True, exist_ok=True)
-    with (folder / 'sessions.lock').open('a+b') as stream:
+    with (folder / name).open('a+b') as stream:
         if os.name == 'nt':
             import ctypes
             from ctypes import wintypes
@@ -81,6 +83,68 @@ def maintenance_lock(*, shared=False):
                 yield
             finally:
                 fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+
+def update_pending() -> bool:
+    """An OS-held intent lock is the request; a crashed installer leaves none."""
+    try:
+        with _file_lock('update.lock', shared=True):
+            return False
+    except MaintenanceBusy:
+        return True
+
+
+_draining = threading.Event()
+
+
+def draining() -> bool:
+    return _draining.is_set()
+
+
+def request_drain() -> None:
+    _draining.set()
+
+
+@contextmanager
+def maintenance_lock(*, shared=False):
+    if shared and update_pending():
+        raise MaintenanceBusy('An update is in progress. Start a new conversation after installation finishes.')
+    with _file_lock('sessions.lock', shared=shared):
+        # Close the race with an installer that requested shutdown during entry.
+        if shared and update_pending():
+            raise MaintenanceBusy('An update is in progress. Start a new conversation after installation finishes.')
+        yield
+
+
+@contextmanager
+def installation_lock(*, wait_seconds=60, notify=None):
+    """Drain cooperating sessions, then hold exclusive access for installation.
+
+    This never kills processes. Older sessions time out with manual instructions.
+    The separate intent lock excludes competing installers and reconnects.
+    """
+    with _file_lock('update.lock'):
+        deadline = time.monotonic() + wait_seconds
+        announced = False
+        with ExitStack() as stack:
+            while True:
+                try:
+                    stack.enter_context(maintenance_lock())
+                    break
+                except MaintenanceBusy as exc:
+                    if not announced and notify:
+                        notify('Closing plugin connections; waiting for current work to be saved. '
+                               'No new documents will start. The host apps stay open.')
+                        announced = True
+                    if time.monotonic() >= deadline:
+                        raise MaintenanceBusy(
+                            'Plugin connections have not closed; no installation files changed. '
+                            'Let current work finish and retry. Sessions from 0.8.4 or earlier '
+                            'cannot close automatically: close their plugin connections, or fully '
+                            'exit Claude Code and Codex once, then rerun installer.cmd. '
+                            'No processes were forcibly terminated.') from exc
+                    time.sleep(min(0.2, max(0, deadline-time.monotonic())))
+            yield
 
 
 def packaged_process() -> bool:

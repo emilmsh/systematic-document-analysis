@@ -18,7 +18,7 @@ import urllib.request
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'src'))
-from kildeanalyse.maintenance import (MaintenanceBusy, PACKAGED_MESSAGE, maintenance_lock, packaged_process,
+from kildeanalyse.maintenance import (MaintenanceBusy, PACKAGED_MESSAGE, maintenance_lock, installation_lock, packaged_process,
                                       read_json, state_dir, write_json)
 from kildeanalyse.cli_paths import find_cli
 from installer import MARKER, NAME, local_path, version, version_key, validate_package, package_hash
@@ -234,7 +234,9 @@ def main():
                 parser.error('Invalid choice; no changes made.')
         # Checking and choosing a policy only need the shared lock, so they work
         # while plugin sessions are open. Installing still requires exclusivity.
-        with maintenance_lock(shared=not args.install):
+        if args.install and packaged_process():
+            raise RuntimeError(PACKAGED_MESSAGE)
+        with installation_lock(notify=lambda message: print(message, flush=True)) if args.install else maintenance_lock(shared=True):
             if args.mode:
                 write_json(state_dir()/'updates.json', {'mode':args.mode})
                 print(f'Update policy: {args.mode}. Applies to managed installations in both apps.')

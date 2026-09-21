@@ -7,22 +7,68 @@ from __future__ import annotations
 
 import json
 import sys
+import anyio
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
+from mcp.server.stdio import stdio_server
 
 from . import VERSJON, tjeneste, visning
 from .konfig import datamappe
 from .lager import Lager, LagerFeil
 from .tjeneste import TjenesteFeil
+from .maintenance import maintenance_lock, update_pending, request_drain, draining
+from .stdio_input import PipeInput
 
-server = MCPServer(
+
+class UpdatingMCPServer(MCPServer):
+    """Finish active tool calls and workers before closing the plugin connection."""
+    active_calls = 0
+
+    async def call_tool(self, name, arguments, context=None):
+        if draining() or update_pending():
+            request_drain()
+            raise ToolError('Plugin update in progress. Start a new conversation after installation finishes.')
+        self.active_calls += 1
+        try:
+            return await super().call_tool(name, arguments, context)
+        finally:
+            self.active_calls -= 1
+
+    async def run_stdio_async(self):
+        # Also protect direct `python -m ...` launches, not only start_server.py.
+        with maintenance_lock(shared=True):
+            async with anyio.create_task_group() as group:
+                async def watch_update():
+                    while True:
+                        if update_pending():
+                            request_drain()
+                        if draining() and not self.active_calls and not any(
+                                worker.is_alive() for worker in list(tjeneste._traader.values())):
+                            print('[Systematic Document Analysis] Connection closed for update. '
+                                  'Start a new conversation after installation.', file=sys.stderr, flush=True)
+                            group.cancel_scope.cancel()
+                            return
+                        await anyio.sleep(0.2)
+                group.start_soon(watch_update)
+                try:
+                    async with stdio_server(stdin=PipeInput()) as (reader, writer):
+                        await self._lowlevel_server.run(reader, writer,
+                            self._lowlevel_server.create_initialization_options())
+                finally:
+                    group.cancel_scope.cancel()
+
+
+server = UpdatingMCPServer(
     name="systematic-document-analysis",
     version=VERSJON,
     instructions=(
         "Systematic Document Analysis: auditable reading, one document per run. Respond in the user's language. "
         "Prefer the English tools: show_setup → create_project → import_documents → create_analysis → show_plan "
         "→ add_runs → show_input_package → approve_plan → start_runs → show_status → show_run → record_review → export_results. "
+        "Choose a visible project directory with create_project(directory=...) or set_project_directory; show the returned path. "
+        "Plans and input previews are saved there before execution. Export XLSX snapshots there after execution; CSV is optional. "
         "Choose language en or nb explicitly in the plan. Use the user's own documents; simulation is optional. "
         "Never translate source quotes or answer labels. Explain legacy diagnostics/status codes in the user's language. "
         "Norwegian tool names remain available for compatibility."
@@ -56,11 +102,19 @@ def vis_oppsett() -> str:
 
 
 @server.tool(description="Opprett et prosjekt som kan inneholde dokumenter og analyser.")
-def opprett_prosjekt(navn: str) -> str:
+def opprett_prosjekt(navn: str, mappe: str | None = None) -> str:
     try:
-        p = tjeneste.opprett_prosjekt(_lager(), navn)
-        return f"Prosjekt {p['id']} «{p['navn']}» er opprettet. Importer dokumenter med importer_dokumenter."
+        p = tjeneste.opprett_prosjekt(_lager(), navn, mappe)
+        return f"Prosjekt {p['id']} «{p['navn']}» er opprettet i {p['directory']}. Start med START_HERE.md. Importer dokumenter med importer_dokumenter."
     except (TjenesteFeil, LagerFeil, ValueError) as e:
+        return _feil(e)
+
+
+@server.tool(description='Velg ny eller tom prosjektmappe for planer, input og eksport. Eksisterende analysedata og gamle eksporter beholdes på opprinnelig sted.')
+def sett_prosjektmappe(prosjekt_id: str, mappe: str) -> str:
+    try:
+        return json.dumps(tjeneste.set_project_directory(_lager(), prosjekt_id, mappe), ensure_ascii=False)
+    except (TjenesteFeil, LagerFeil, ValueError, OSError) as e:
         return _feil(e)
 
 
@@ -233,10 +287,10 @@ def registrer_kontroll(forsok_id: str, ansvarlig: str, handling: str, begrunnels
         return _feil(e)
 
 
-@server.tool(description="Eksporter resultatpakke (CSV med «;», LESMEG.md, plan.md, resultater.json, manifester per forsøk, valgfritt kildekopier).")
-def eksporter(analyse_id: str, med_kilder: bool = False) -> str:
+@server.tool(description="Eksporter et nytt øyeblikksbilde i prosjektmappen: Excel med fem ark, én plan/startfil, kilder og komplett kontrollspor. med_csv gir ekstra tabeller; gammelt_format gir tidligere tospråklig CSV-eksport. Excel-endringer registreres ikke som menneskelig kontroll.")
+def eksporter(analyse_id: str, med_kilder: bool = True, med_csv: bool = False, gammelt_format: bool = False) -> str:
     try:
-        return visning.md_eksport(tjeneste.eksporter(_lager(), analyse_id, med_kilder))
+        return visning.md_eksport(tjeneste.eksporter(_lager(), analyse_id, med_kilder, include_csv=med_csv, legacy_format=gammelt_format))
     except (TjenesteFeil, LagerFeil, ValueError) as e:
         return _feil(e)
 

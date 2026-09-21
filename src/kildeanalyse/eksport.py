@@ -8,6 +8,8 @@ from __future__ import annotations
 import csv
 import json
 import shutil
+import tempfile
+from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -28,7 +30,8 @@ def _skriv_csv(sti: Path, rader: list[dict[str, Any]], felter: list[str]) -> Non
             w.writerow({k: ("" if v is None else v) for k, v in r.items()})
 
 
-def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dict[str, Any]:
+def _legacy_export(lager: Lager, analyse_id: str, *, med_kilder: bool = False,
+                   destination: Path | None = None) -> dict[str, Any]:
     from .tjeneste import gjeldende_vurderinger
 
     analyse = lager.analyse(analyse_id)
@@ -37,7 +40,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
     gjeldende = lager.gjeldende_planversjon(analyse_id)
     kjoringer = lager.kjoringer(analyse_id)
     stempel = datetime.now().strftime("%Y%m%d-%H%M%S")
-    mappe = undermappe(f"eksport/{analyse_id}_{stempel}", lager.mappe)
+    mappe = destination or undermappe(f"eksport/{analyse_id}_{stempel}-{uuid4().hex[:8]}", lager.mappe)
     (mappe / "forsok").mkdir(exist_ok=True)
 
     alle_kriterier: list[str] = []
@@ -128,6 +131,8 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
             kopi = Path(dok["lagret_kopi"])
             if kopi.is_file():
                 shutil.copy2(kopi, kildemappe / f"{dok['id']}_{dok['navn']}")
+            else:
+                raise ValueError(f'Missing preserved source: {dok["id"]}. Export without source copies or restore the source.')
 
     felter = ["kjoring_id", "dokument_id", "dokument", "sha256", "planversjon", "status", "forsok_id", "antall_forsok", "motor", "simulert",
               "modell", "modell_onsket", "tenkenivaa_onsket", "language", "api_endpoint", "api_provider_valg", "maks_output_tokens",
@@ -199,6 +204,100 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = False) -> dic
     (mappe / "LESMEG.md").write_text("\n".join(lesmeg), encoding="utf-8")
     from .english_export import write_english_export
     write_english_export(mappe, analyse, versjoner, alle_kriterier)
-    lager.logg("eksportert", analyse_id=analyse_id, mappe=str(mappe), med_kilder=med_kilder)
+    if destination is None:
+        lager.logg("eksportert", analyse_id=analyse_id, mappe=str(mappe), med_kilder=med_kilder)
     return {"mappe": str(mappe), "filer": sorted(p.name for p in mappe.iterdir()), "antall_kjoringer": len(kjoringer),
             "kontrollert_av_totalt": f"{kontrollert_totalt}/{vurderinger_totalt}", "simulert": simulert_finnes, "ekte": ekte_finnes, "teller": teller}
+
+
+def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = True,
+              include_csv: bool = False, legacy_format: bool = False) -> dict[str, Any]:
+    """Publish a complete, unique snapshot; never overwrite an edited workbook."""
+    from .project_files import root_for, plan_text, write_index
+    from .workbook_export import write_workbook
+    analysis = lager.analyse(analyse_id)
+    if any(r['status'] == 'aktiv' for r in lager.kjoringer(analyse_id)):
+        raise ValueError('Wait for active runs to finish before exporting a consistent snapshot.')
+    root = root_for(lager, analysis['prosjekt_id'])
+    exports = root/'exports'
+    exports.mkdir(exist_ok=True)
+    versions = lager.planversjoner(analyse_id)
+    language = versions[-1]['plan'].sprak
+    nb = language == 'nb'
+    documentation = 'Dokumentasjon' if nb else 'Documentation'
+    source_folder = 'Kilder' if nb else 'Sources'
+    entry = 'START_HER.md' if nb else 'START_HERE.md'
+    final = exports/f'{analyse_id}-{datetime.now():%Y%m%d-%H%M%S}-{uuid4().hex[:8]}'
+    if legacy_format:
+        with tempfile.TemporaryDirectory(prefix='.building-', dir=exports) as temporary:
+            stage = Path(temporary)
+            result = _legacy_export(lager, analyse_id, med_kilder=med_kilder, destination=stage)
+            stage.rename(final)
+        result.update(mappe=str(final), project_directory=str(root), entrypoint=str(final/'LESMEG.md'))
+        lager.logg('eksportert', analyse_id=analyse_id, mappe=str(final), legacy_format=True)
+        write_index(lager, analysis['prosjekt_id'])
+        return result
+    # Failed writes leave no apparently successful export and preserve old snapshots.
+    with tempfile.TemporaryDirectory(prefix='.building-', dir=exports) as temporary:
+        stage = Path(temporary)
+        result = _legacy_export(lager, analyse_id, med_kilder=med_kilder, destination=stage)
+        docdir = stage/documentation
+        docdir.mkdir()
+        data = json.loads((stage/'resultater.json').read_text(encoding='utf-8'))
+        def rows(name):
+            with (stage/name).open(encoding='utf-8-sig', newline='') as f:
+                return list(csv.DictReader(f, delimiter=';'))
+        attempts, reviews = rows('forsok.csv'), rows('kontroll.csv')
+        (stage/'resultater.json').rename(docdir/'analyse.json')
+        (stage/'forsok').rename(docdir/'modellkall')
+        if (stage/'kilder').exists():
+            (stage/'kilder').rename(stage/source_folder)
+        workbook, notices = write_workbook(stage, analysis, versions, data['kjoringer'], attempts,
+                                           reviews, language, med_kilder, documentation)
+        (stage/'plan.md').unlink()
+        (stage/'Plan.md').write_text(plan_text(analysis, versions, language), encoding='utf-8')
+        csv_names = ['resultater','belegg','forsok','kontroll'] if nb else ['results','evidence','attempts','reviews']
+        if include_csv:
+            (stage/'CSV').mkdir()
+            for name in csv_names:
+                (stage/f'{name}.csv').rename(stage/'CSV'/f'{name}.csv')
+        # Only known generated duplicates in this private staging directory are removed.
+        for name in ['resultater.csv','belegg.csv','forsok.csv','kontroll.csv','results.csv','evidence.csv',
+                     'attempts.csv','reviews.csv','LESMEG.md','README.md','plan.md','plan-summary.md']:
+            path = stage/name
+            # Windows is case-insensitive: preserve the newly written Plan.md.
+            if name != 'plan.md' and path.exists():
+                path.unlink()
+        mode = ('SIMULERT' if nb else 'SIMULATED') if result['simulert'] and not result['ekte'] else (
+            ('Blandet: simulert og ekte' if nb else 'Mixed: simulated and real') if result['simulert'] else
+            ('Ekte modellkall' if nb else 'Real model calls') if result['ekte'] else ('Ikke startet' if nb else 'Not started'))
+        lines = [f'# {analysis["navn"]}', '',
+                 f'**{mode}**', '',
+                 f'- [{"Åpne arbeidsboken" if nb else "Open workbook"}]({workbook})',
+                 '- [Plan](Plan.md)',
+                 f'- [{"Fullstendig kontrollspor" if nb else "Full audit data"}]({documentation}/analyse.json)', '',
+                 f'{"Status" if nb else "Status"}: {json.dumps(result["teller"], ensure_ascii=False)}',
+                 f'{"Menneskelig kontroll" if nb else "Human review"}: {result["kontrollert_av_totalt"]}', '',
+                 ('Arbeidsboken samler oversikt, svar og begrunnelser, belegg, kontrollhistorikk og kjøringer.' if nb else
+                  'The workbook contains overview, answers and comments, evidence, review history and runs.'), '',
+                 ('Automatisk validering er ikke menneskelig kontroll. Endringer i Excel føres ikke tilbake til pluginen.' if nb else
+                  'Automatic validation is not human review. Excel edits do not write back to the plugin.'), '',
+                 ('Blandede versjoner kan påvirke sammenlignbarheten; se Planversjon i arbeidsboken.' if nb else
+                  'Mixed plan versions may affect comparability; see Plan version in the workbook.'), '',
+                 f'{documentation}/modellkall/: '+('eksakt input, instruks, råsvar og metadata per forsøk og delkall.' if nb else
+                  'exact input, instructions, raw replies and metadata per attempt and call.'), '',
+                 (f'{source_folder}/: '+('bevarte kilder.' if nb else 'preserved sources.')) if med_kilder else
+                 ('Kildekopier er ikke inkludert.' if nb else 'Source copies are not included.'), '',
+                 ('Hele mappen kan flyttes samlet; lenkene er relative. Hver eksport er et eget øyeblikksbilde.' if nb else
+                  'Move the whole folder together; links are relative. Each export is a separate snapshot.')]
+        if notices:
+            lines += ['', ('Noe tekst overskrider Excels begrensninger; full tekst er lenket fra cellene: ' if nb else
+                           'Some text exceeds Excel limits; cells link to the full text: ') + ', '.join(notices)]
+        (stage/entry).write_text('\n'.join(lines)+'\n', encoding='utf-8')
+        stage.rename(final)
+    result.update(mappe=str(final), filer=sorted(p.name for p in final.iterdir()),
+                  workbook=str(final/workbook), entrypoint=str(final/entry), project_directory=str(root))
+    lager.logg('eksportert', analyse_id=analyse_id, mappe=str(final), med_kilder=med_kilder,
+               include_csv=include_csv, legacy_format=False)
+    write_index(lager, analysis['prosjekt_id'])
+    return result

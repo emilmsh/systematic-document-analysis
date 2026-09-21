@@ -352,6 +352,9 @@ def test_codex_desktop_shadow_copy_is_detected_and_moved_aside_only_on_request(s
 
 
 def test_update_command_checks_and_sets_policy_beside_open_sessions(source, tmp_path, monkeypatch, capsys):
+    from kildeanalyse.maintenance import installation_lock
+    monkeypatch.setattr(updater, 'packaged_process', lambda: False)
+    monkeypatch.setattr(updater, 'installation_lock', lambda **kw: installation_lock(wait_seconds=0))
     Host(monkeypatch); installer.install('codex', tmp_path/'installed')
     target = tmp_path/'installed/codex'/installer.NAME
     monkeypatch.setattr(updater, 'fetch', lambda *args: json.dumps({'tag_name':'v99.0.0', 'body':'notes',
@@ -365,7 +368,7 @@ def test_update_command_checks_and_sets_policy_beside_open_sessions(source, tmp_
         assert '99.0.0' in capsys.readouterr().out
         monkeypatch.setattr(sys, 'argv', ['update_plugin.py', '--install'])
         assert updater.main() == 1
-        assert 'Close other plugin sessions' in capsys.readouterr().err
+        assert '0.8.4 or earlier' in capsys.readouterr().err
 
 
 def test_packaged_desktop_process_never_installs_recovers_or_updates(source, tmp_path, monkeypatch, capsys):

@@ -17,7 +17,7 @@ import uuid
 
 from pakk_plugin import ROOT, pakk, pakkefiler, configure_codex
 from setup_reader import install as ensure_reader
-from kildeanalyse.maintenance import PACKAGED_MESSAGE, maintenance_lock, packaged_process, read_json, write_json
+from kildeanalyse.maintenance import PACKAGED_MESSAGE, maintenance_lock, installation_lock, packaged_process, read_json, write_json
 
 NAME = 'systematic-document-analysis'
 MARKET = 'systematic-document-analysis-local'
@@ -502,20 +502,28 @@ def main():
         if not app:
             parser.error('Invalid choice; installation has not started.')
     failures = []
-    for host in (['claude','codex'] if app in ('both','begge') else [app]):
-        try:
-            if args.prepare_only:
-                print(prepare(host, args.base_dir))
-            elif args.recover:
-                print(f'{host}: {recover(host, args.base_dir)}')
-            else:
-                result = install(host, args.base_dir, replace_source=args.replace_source, repair=args.repair,
-                                 allow_downgrade=args.allow_downgrade, move_shadow=args.move_shadow,
-                                 interactive=interactive)
-                print(f'{host}: {result}')
-        except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
-            failures.append(host)
-            print(f'{host}: installation stopped: {exc}', file=sys.stderr)
+    try:
+        if not args.prepare_only and packaged_process():
+            raise RuntimeError(PACKAGED_MESSAGE)
+        # One gate for both hosts: clients cannot reconnect between installations.
+        with nullcontext() if args.prepare_only else installation_lock(notify=lambda message: print(message, flush=True)):
+            for host in (['claude','codex'] if app in ('both','begge') else [app]):
+                try:
+                    if args.prepare_only:
+                        print(prepare(host, args.base_dir))
+                    elif args.recover:
+                        print(f'{host}: {recover(host, args.base_dir, locked=True)}')
+                    else:
+                        result = install(host, args.base_dir, replace_source=args.replace_source, repair=args.repair,
+                                         allow_downgrade=args.allow_downgrade, move_shadow=args.move_shadow,
+                                         interactive=interactive, locked=True)
+                        print(f'{host}: {result}')
+                except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
+                    failures.append(host)
+                    print(f'{host}: installation stopped: {exc}', file=sys.stderr)
+    except (RuntimeError, OSError, ValueError) as exc:
+        print(f'Installation stopped: {exc}', file=sys.stderr)
+        return 1
     return 1 if failures else 0
 
 

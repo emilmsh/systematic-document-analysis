@@ -233,7 +233,7 @@ def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
     tjeneste.start(lager, aid)
     assert lager.kjoring(kid)['status'] == KJ_FULLFORT and len(requests) == 1
     attempt = lager.forsok_for_kjoring(kid)[0]
-    export = Path(tjeneste.eksporter(lager, aid)['mappe'])
+    export = Path(tjeneste.eksporter(lager, aid, legacy_format=True)['mappe'])
     saved = json.loads((export/'forsok'/attempt['id']/'input.json').read_text(encoding='utf-8'))
     assert saved['input_hash'] == preview['input_hash'] and saved['api_foresporsel'] == preview['api_foresporsel']
     manifest = json.loads((export/'forsok'/attempt['id']/'manifest.json').read_text(encoding='utf-8'))
@@ -274,7 +274,7 @@ def test_api_quota_stops_actual_queue_and_redacts_export(transport, tmp_path):
     report = tjeneste.start(lager, aid)
     assert len(calls) == 1 and report['startet'] == [jobs[0]['id']]
     assert lager.kjoring(jobs[1]['id'])['status'] == 'planlagt'
-    export = Path(tjeneste.eksporter(lager, aid)['mappe'])
+    export = Path(tjeneste.eksporter(lager, aid, legacy_format=True)['mappe'])
     for file in export.rglob('*'):
         if file.is_file():
             assert b'fake-secret-for-offline-tests' not in file.read_bytes()

@@ -94,7 +94,7 @@ def test_complete_chunk_workflow_all_engines(tmp_path, monkeypatch, engine):
     assert store.kjoring(run)['status'] == KJ_FULLFORT
     attempt = store.forsok_for_kjoring(run)[0]
     assert attempt['input_hash'] == planned['input_hash']
-    exported = Path(tjeneste.eksporter(store,aid)['mappe'])/'forsok'/attempt['id']
+    exported = Path(tjeneste.eksporter(store,aid,legacy_format=True)['mappe'])/'forsok'/attempt['id']
     calls = list((exported/'calls').glob('*/input.json'))
     assert len(calls) == len(observed) == planned['processing']['calls']
     assert json.loads((exported/'input.json').read_text(encoding='utf-8'))['processing']['mode'] == 'chunked'

@@ -1,3 +1,15 @@
+# 0.8.5 — Visible project folders, Excel exports and controlled session closure
+
+- Choose and remember a visible project directory. Plans and exact input previews are saved there before execution; the start file links to them and to completed exports.
+- Export one workbook with overview, results/comments, evidence, actual human reviews and attempts. Quotes and labels stay unchanged; failures and unreviewed results remain visible.
+- Keep one start file and plan in the chosen language, source copies and a separate JSON/raw audit folder. CSV is opt-in; the previous bilingual export remains available explicitly.
+- Use unique snapshots and staged publication to preserve previous exports and user-edited workbooks. Links remain relative. Excel edits never count as registered human review.
+- Preserve long or XML-incompatible cell text in linked text files; source strings are never Excel formulas.
+- Add project-directory fields through a non-destructive database migration. Existing data and old exports are not moved.
+- Manual installation/update/recovery closes cooperating plugin connections after current work is saved, pauses the remaining document queue and prevents reconnection until installation ends. A 60-second timeout leaves installed files unchanged; no processes are killed. Automatic startup updates continue to defer around active sessions.
+- Add cancellable Windows pipe input so idle MCP connections can actually close without waiting for the host to disconnect.
+- Put a three-step quick-install guide at the top of both READMEs. Upgrading from 0.8.4 or earlier requires closing the old connections once; those versions do not implement cooperative shutdown.
+
 # 0.8.4 — Plain README, assisted setup and Codex desktop guard
 
 - The README now states plainly what the plugin does, why it is useful, what it does not do and how to install it, in English and Norwegian. It includes two paste-in setup prompts: one for Claude Code, which lets the assistant download, verify and install, and one for the ChatGPT/Codex app, which stops before the installer and asks the user to double-click it.

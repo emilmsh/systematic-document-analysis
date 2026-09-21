@@ -210,4 +210,5 @@ def md_eksport(d: dict[str, Any]) -> str:
                       f"- Kjøringer: {d['antall_kjoringer']} ({', '.join(f'{k}: {v}' for k, v in sorted(d['teller'].items()))})",
                       f"- Kontrollerte vurderinger: {d['kontrollert_av_totalt']}",
                       f"- Innhold: {'SIMULERT' if d['simulert'] and not d['ekte'] else 'blandet simulert/ekte' if d['simulert'] else 'ekte'}",
-                      "", "Åpne LESMEG.md i mappen for leseveiledning."])
+                      "", f"Start her: {d.get('entrypoint', 'LESMEG.md')}",
+                      f"Arbeidsbok: {d['workbook']}" if d.get('workbook') else ""])

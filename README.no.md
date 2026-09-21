@@ -4,6 +4,22 @@ En plugin for Claude Code og Codex som leser en samling dokumenter mot kriterier
 
 [English](README.md) · [Start her](START_HER.md) · [Installasjon og oppdateringer](docs/UPDATES.md)
 
+## Hurtiginstallasjon — Windows
+
+1. Last ned **[Windows-ZIP-en fra siste utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest)** og pakk den ut under Nedlastinger. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
+2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, og velg **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor terminalen i Codex.
+3. Start en **ny samtale** og skriv: **«Bruk Systematic Document Analysis på dokumentene i [mappe]. Hjelp meg med kriterier og vis planen før kjøring.»**
+
+Mangler lesemotoren eller innloggingen, dobbeltklikk **reader_setup.cmd** og følg instruksjonene. Ved første oppgradering fra **0.8.4 eller eldre** må du la aktive analyser bli ferdige og lukke Claude Code og Codex helt før installasjon. Senere manuelle oppdateringer lukker pluginens forbindelser automatisk etter at pågående arbeid er lagret; åpne en ny samtale etterpå.
+
+## Prosjektmappe og resultater
+
+Velg en synlig prosjektmappe i samtalen. Planer og inputforhåndsvisninger lagres der før kjøring.
+Hver eksport får en ny mappe med én Excel-arbeidsbok, én plan, én startfil, kildekopier og et eget
+område for kontrollsporet. CSV er valgfritt. Begynn i `START_HERE.md` i prosjektmappen.
+Excel-endringer endrer ikke registrerte resultater eller menneskelig kontroll.
+Se [Prosjektfiler og eksportformater](docs/PROJECT_FILES.md).
+
 ## Hvorfor
 
 En samtaleassistent kan lese én rapport og svare på spørsmål om den. Det holder ikke når de samme spørsmålene skal besvares for førti årsrapporter, en bunke tilbud eller en mappe regneark, og svarene skal brukes senere. Da må du vite at alle dokumentene ble lest med samme instruks, modell og innstillinger, at hvert svar er knyttet til et sitat du kan slå opp, og at noen faktisk har kontrollert resultatet. Det gir ikke en vanlig samtale. Det gjør denne pluginen, uten at du forlater appen du allerede bruker.
@@ -15,7 +31,7 @@ En samtaleassistent kan lese én rapport og svare på spørsmål om den. Det hol
 - **Kjører ett dokument per forsøk med faste innstillinger.** Planen lagrer lesemotor, modell, tenkenivå, språk og instruks. En navngitt person godkjenner den før noe leses. Endringer gir en ny versjon; tidligere forsøk står urørt.
 - **Lagrer beleggene.** For hvert forsøk: nøyaktig input, råsvar, ordrette sitater med plassering (PDF-side, Word-blokk, ark og celleområde, tekstlinje eller CSV-rad) og automatiske kontroller av svaretiketter, sitater og dekning.
 - **Registrerer menneskelig kontroll.** En person godkjenner, korrigerer eller avviser hver vurdering med begrunnelse. Automatiske kontroller registreres aldri som menneskelig kontroll.
-- **Eksporterer til CSV.** Resultater, belegg, forsøk og kontroller, sammen med hele sporet.
+- **Eksporterer til Excel.** Resultater, belegg, forsøk og kontroller samles i én arbeidsbok, med kontrollsporet i en egen mappe. CSV og tidligere eksportformat kan velges ved behov.
 
 Samtalen foregår i Claude Code eller Codex. Pluginen legger til bokføringen og den repeterbare lesingen; assistenten hjelper fortsatt med spørsmålet, kriteriene og vanskelige filer.
 

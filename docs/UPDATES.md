@@ -1,6 +1,14 @@
 # Installation and updates
 
-Run `installer.cmd` from an extracted release to install or update Claude Code, Codex or both. It reports each app separately. Close existing plugin sessions first, including before the first upgrade from a version without session locking.
+Run `installer.cmd` from an extracted release to install or update Claude Code, Codex or both. It reports each app separately. Use File Explorer or a normal terminal as your ordinary Windows user.
+
+## Closing active plugin connections
+
+From **0.8.5**, a manual installation, recovery or `update.cmd --install` asks this plugin's connections to close automatically. It blocks new connections, finishes current tool calls and the current document (including its constituent model calls), saves their results, then stops the queue before the next document. Remaining documents stay pending and can be resumed explicitly after the update. Claude Code and Codex themselves stay open; other plugins are unaffected. Start a new conversation afterwards to load the updated tools and skill.
+
+The installer waits up to **60 seconds** for exclusive access. If work takes longer, or an old session cannot cooperate, it leaves the installed files unchanged and explains how to retry. No process is forcibly terminated. The request is an OS lock that disappears automatically if the installer exits or crashes; it cannot leave a stale shutdown flag. Both host installations share one gate, so connections cannot reopen between the two updates.
+
+**First upgrade from 0.8.4 or earlier:** those running sessions do not understand the shutdown request. Let analyses finish, fully close Claude Code and Codex once, then double-click the new release's `installer.cmd`. The old version's `update.cmd` also retains its old behaviour. Installing 0.8.5 enables cooperative closure for later manual updates. Automatic startup updates still defer while another session is open; they do not interrupt work.
 
 | Existing installation | Behaviour |
 | --- | --- |

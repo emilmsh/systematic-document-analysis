@@ -31,9 +31,13 @@ def register(server, get_store):
     def show_setup() -> str:
         return call(tjeneste.oppsett)
 
-    @server.tool(description='Create a project for documents and analyses.')
-    def create_project(name: str) -> str:
-        return call(tjeneste.opprett_prosjekt, name)
+    @server.tool(description='Create a project with a visible working directory. Choose an absolute new or empty directory with the user; otherwise a unique folder under Documents/Systematic Document Analysis is used. Plans, input previews and exports go here, never in the plugin installation. Returns the directory.')
+    def create_project(name: str, directory: str | None = None) -> str:
+        return call(tjeneste.opprett_prosjekt, name, directory)
+
+    @server.tool(description='Choose a new or empty visible directory for an existing project. Original data and earlier exports remain untouched. New plans, previews and exports use this directory; old exports are not moved.')
+    def set_project_directory(project_id: str, directory: str) -> str:
+        return call(tjeneste.set_project_directory, project_id, directory)
 
     @server.tool(description='Import local PDF, DOCX, XLSX, CSV/TSV, TXT or Markdown files, or folders of supported files. Subfolders are not imported automatically. Report extraction scope and structural differences before agreeing a shared plan.')
     def import_documents(project_id: str, paths: list[str], ocr_mode: str = 'auto', ocr_languages: str = 'eng+nor') -> str:
@@ -114,6 +118,6 @@ def register(server, get_store):
         return call(tjeneste.registrer_kontroll, attempt_id, reviewer, actions[action], reason,
                     kriterium_id=criterion_id, nytt_svar=new_answer, nytt_belegg=evidence)
 
-    @server.tool(description='Export results, evidence, plan history and audit files. English CSV/README accompany legacy audit files. Quotes and answer labels remain in their recorded language.')
-    def export_results(analysis_id: str, include_sources: bool = False) -> str:
-        return call(tjeneste.eksporter, analysis_id, include_sources)
+    @server.tool(description='Export a new snapshot in the visible project directory: one XLSX workbook (overview, results, evidence, review and runs), one plan and start file in the plan language, optional source copies and full JSON/raw audit history under Documentation. include_csv adds tables in one language. legacy_format requests the old bilingual CSV layout. Returns entrypoint and workbook paths. Excel edits do not write back or count as human review.')
+    def export_results(analysis_id: str, include_sources: bool = True, include_csv: bool = False, legacy_format: bool = False) -> str:
+        return call(tjeneste.eksporter, analysis_id, include_sources, include_csv=include_csv, legacy_format=legacy_format)
