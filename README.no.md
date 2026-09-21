@@ -6,10 +6,10 @@ En plugin for Claude Code og Codex som leser en samling dokumenter mot kriterier
 
 ## Hurtiginstallasjon — Windows
 
-1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Gjeldende utgave er **[0.8.5](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.5)**. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
+1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Gjeldende utgave er **[0.8.6](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.6)**. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
 2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, og velg **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor terminalen i Codex.
 3. For lesing med abonnementet ditt: dobbeltklikk **reader_setup.cmd**, velg Claude Code eller Codex og fullfør innloggingen.
-4. Start en **ny lokal samtale** i **Code-fanen** i Claude eller i Codex og skriv: **«Bruk Systematic Document Analysis på dokumentene i [mappe]. Hjelp meg med kriterier og vis planen før kjøring.»**
+4. Åpne arbeidsmappen i **Code-fanen** i Claude eller i Codex, start en **ny lokal samtale**, og beskriv oppgaven: **«Bruk Systematic Document Analysis. Jeg vil undersøke hvordan disse årsrapportene omtaler egen bruk av KI. Filene ligger i [mappe].»**
 
 Førstegangsoppsett krever internett. Installasjonsprogrammet ordner Python og installerer den valgte appens kommandolinjeverktøy hvis det mangler; du trenger ikke bruke terminalen selv.
 
@@ -29,7 +29,7 @@ En samtaleassistent kan lese én rapport og svare på spørsmål om den. Det hol
 
 - **Leser filer fra en mappe du velger.** PDF, DOCX, XLSX, CSV/TSV, TXT og Markdown. Skannede PDF-er kan OCR-behandles lokalt. Store filer leses i avgrensede deler før funnene settes sammen i ett ekstra kall, og alle kallene lagres.
 - **Bruker kriterier du definerer.** En liten JSON-fil lister spørsmålene, tillatte svar og tolkningsregler. Assistenten hjelper deg å skrive den i samtalen.
-- **Kjører ett dokument per forsøk med faste innstillinger.** Planen lagrer lesemotor, modell, tenkenivå, språk og instruks. En navngitt person godkjenner den før noe leses. Endringer gir en ny versjon; tidligere forsøk står urørt.
+- **Kjører ett dokument per forsøk med faste innstillinger.** Planen lagrer lesemotor, modell, tenkenivå, språk og instruks. Assistenten kan inspisere kildetekst under forberedelsen; en navngitt person godkjenner planen før lesemotoren starter. Endringer gir en ny versjon; tidligere forsøk står urørt.
 - **Lagrer beleggene.** For hvert forsøk: nøyaktig input, råsvar, ordrette sitater med plassering (PDF-side, Word-blokk, ark og celleområde, tekstlinje eller CSV-rad) og automatiske kontroller av svaretiketter, sitater og dekning.
 - **Registrerer menneskelig kontroll.** En person godkjenner, korrigerer eller avviser hver vurdering med begrunnelse. Automatiske kontroller registreres aldri som menneskelig kontroll.
 - **Eksporterer til Excel.** Resultater, belegg, forsøk og kontroller samles i én arbeidsbok, med kontrollsporet i en egen mappe. CSV kan velges ved behov.
@@ -75,11 +75,15 @@ Kjør `update.cmd` fra den installerte mappen for å se etter en nyere utgave, i
 
 ## Bruk
 
-Legg dokumentene i en mappe og åpne mappen i appen. Beskriv så oppgaven, for eksempel:
+Åpne en vanlig prosjektmappe i appen og legg egne kildefiler i undermappen `dokumenter`. Du trenger verken Git eller en eksempelkjøring. Beskriv oppgaven, for eksempel:
 
-> Bruk Systematic Document Analysis på filene i C:\Users\meg\Documents\Årsrapporter\dokumenter. Jeg vil vite hvordan hver virksomhet rapporterer om egen bruk av KI. Hjelp meg å definere kriterier og svaralternativer. Bruk codex_cli med gpt-5.6-terra og tenkenivå high, kommentarer på norsk. Vis planen, tekstdekningen og nøyaktig input før jeg godkjenner. Kjør deretter alle dokumentene, vis svarene med sitater og plassering, og eksporter resultatene. Ikke registrer menneskelig kontroll på mine vegne.
+> Bruk Systematic Document Analysis. Jeg vil undersøke hvordan disse årsrapportene omtaler egen bruk av KI. Filene ligger i dokumenter-mappen.
 
-Assistenten inspiserer den uttrukne teksten, foreslår kriterier, viser planen og den nøyaktige inputpakken, og venter på din godkjenning. Dokumentene kjøres så ett om gangen. Du kan stoppe, gjenoppta og se enkeltforsøk, registrere kontroll og eksportere.
+Du trenger ikke ferdige kriterier eller tekniske innstillinger. Assistenten er instruert til å avklare hva du ønsker å finne ut, inspisere filene, foreslå spørsmål og svaralternativer og spørre om valg som faktisk påvirker analysen. Den skal skille dine krav fra egne forslag og si fra om manglende eller ustøttede kilder. Dere kan utvikle problemstillingen sammen og eventuelt prøve et lite, avtalt utvalg først.
+
+Før lesemotoren starter, får du en kort plan med dokumentutvalg, kriterier, håndtering av usikkerhet, lesemotor/modell og plassering av resultatene. Detaljert plan og nøyaktig input er tilgjengelig for inspeksjon. Du godkjenner den konkrete planen og oppgir ansvarlig person. Assistenten foreslår normalt appens abonnementsbaserte lesemotor, samtalens språk, en ny analyseundermappe og Excel-resultater; du kan endre valgene. Kontroller planen: veiledning i samtalen reduserer unødige feil, men garanterer ikke at assistenten har forstått alt.
+
+Dokumentene kjøres deretter ett om gangen. Du kan stoppe, gjenoppta og se enkeltforsøk, registrere faktisk menneskelig kontroll og eksportere. Endrede kriterier krever en ny planversjon og godkjenning.
 
 Vert og lesemotor velges uavhengig: Claude Code eller Codex som samtaleapp; `claude_cli` (standard `sonnet`, high), `codex_cli` (standard `gpt-5.6-terra`, high) eller en API-motor med eksplisitt modell-ID som leser. CLI-motorene bruker abonnementsinnloggingen din; API-motorer faktureres av leverandøren. Ønsket modell og tenkenivå lagres; om leverandøren faktisk fulgte tenkenivået, vet vi bare når den rapporterer det.
 

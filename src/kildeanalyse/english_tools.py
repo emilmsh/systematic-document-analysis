@@ -39,7 +39,7 @@ def register(server, get_store):
     def set_project_directory(project_id: str, directory: str) -> str:
         return call(tjeneste.set_project_directory, project_id, directory)
 
-    @server.tool(description='Import local PDF, DOCX, XLSX, CSV/TSV, TXT or Markdown files, or folders of supported files. Subfolders are not imported automatically. Report extraction scope and structural differences before agreeing a shared plan.')
+    @server.tool(description='Import local PDF, DOCX, XLSX, CSV/TSV, TXT or Markdown files, or folders of supported files. Subfolders are not imported automatically. Inspect results and skipped entries; report failures, exclusions, extraction scope and structural differences and resolve relevant gaps before agreeing the plan.')
     def import_documents(project_id: str, paths: list[str], ocr_mode: str = 'auto', ocr_languages: str = 'eng+nor') -> str:
         return call(tjeneste.importer_dokumenter, project_id, paths, ocr_mode=ocr_mode, ocr_languages=ocr_languages)
 
@@ -56,7 +56,7 @@ def register(server, get_store):
                     modell=model, sprak=language, tenkenivaa=reasoning_effort or None, motorinnstillinger=engine_settings,
                     formaal=purpose, tilleggsinstruks=additional_instructions, tillat_sider_uten_tekst=allow_pages_without_text)
 
-    @server.tool(description='Show all plan versions, language, model, effort, engine settings and runs. Present the plan in the user’s language.')
+    @server.tool(description='Show all plan versions, language, model, effort, engine settings and runs. Summarize the goal, selected files/exclusions, criteria, uncertainty handling, reader/settings/recipient, output and material limits in ordinary language before approval; link the detailed plan and input preview.')
     def show_plan(analysis_id: str) -> str:
         return call(tjeneste.vis_plan, analysis_id)
 
@@ -64,7 +64,7 @@ def register(server, get_store):
     def show_input_package(run_id: str) -> str:
         return call(tjeneste.vis_inputpakke, run_id)
 
-    @server.tool(description='Approve a draft plan only when the user requests it. Requires the responsible person’s name. Does not approve model answers.')
+    @server.tool(description='Approve a draft plan only after actual user approval of the displayed concrete plan and file scope. A vague request to analyse or decide is not approval of unseen criteria. Requires the responsible person’s name; never infer it from an account or folder. Reuse valid approval already given. Does not approve model answers.')
     def approve_plan(analysis_id: str, approved_by: str, plan_version_id: str | None = None) -> str:
         return call(tjeneste.godkjenn_plan, analysis_id, approved_by, plan_version_id)
 
@@ -79,11 +79,11 @@ def register(server, get_store):
                     tenkenivaa=reasoning_effort, motorinnstillinger=engine_settings, formaal=purpose,
                     tilleggsinstruks=additional_instructions, tillat_sider_uten_tekst=allow_pages_without_text)
 
-    @server.tool(description='Add one planned run per selected document, or all project documents. This makes no model calls.')
+    @server.tool(description='Add one planned run per selected document. Omitting document_ids selects ALL project documents, including earlier imports: use explicit IDs for an agreed subset or pilot. This makes no model calls.')
     def add_runs(analysis_id: str, document_ids: list[str] | None = None) -> str:
         return call(tjeneste.legg_til_kjoringer, analysis_id, document_ids)
 
-    @server.tool(description='Start planned runs for an approved plan in the background. Follow show_status. A subset is optional; no automatic engine switching.')
+    @server.tool(description='Start planned runs for an approved plan in the background, only within the scope the user approved. Omitting run_ids selects all eligible runs; use explicit IDs for a subset or pilot. Follow show_status. No automatic engine switching.')
     def start_runs(analysis_id: str, run_ids: list[str] | None = None, maximum: int | None = None) -> str:
         return call(tjeneste.start_i_bakgrunnen, analysis_id, run_ids, maximum)
 

@@ -1,3 +1,12 @@
+# 0.8.6 — Start from an ordinary task description
+
+- Guide exploratory requests through a short conversation: propose criteria and routine settings, clarify consequential ambiguity, and distinguish user requirements from suggestions and assumptions.
+- Present a plain-language plan with the selected files, uncertainty rules, reader settings and result location before approval. Offer an optional pilot and keep actual human review separate from machine checks.
+- Report unsupported files and subfolders omitted during folder import. Explicitly selected children get their own import results; existing source files stay unchanged.
+- Simplify the English and Norwegian quick-start examples around the user's own annual reports. Users do not need to prepare criteria or technical parameters before beginning.
+
+Update through `update.cmd` or install the Windows ZIP, then start a new local conversation. Existing analysis data is retained. Verification and limits are recorded in `tests/TESTLOGG.md`; the conversational guidance has not yet been tested with a first-time user.
+
 # 0.8.5 — Visible project folders, Excel exports and controlled session closure
 
 - Choose and remember a visible project directory. Plans and exact input previews are saved there before execution; the start file links to them and to completed exports.

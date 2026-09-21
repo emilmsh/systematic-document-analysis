@@ -81,9 +81,23 @@ def set_project_directory(lager: Lager, project_id: str, directory: str) -> dict
 def importer_dokumenter(lager: Lager, prosjekt_id: str, stier: list[str], *, ocr_mode: str = 'off', ocr_languages: str = 'eng+nor') -> dict[str, Any]:
     lager.prosjekt(prosjekt_id)
     resultater = []
+    skipped = []
+    explicit_paths = {Path(sti).resolve() for sti in stier}
     for sti in stier:
         p = Path(sti)
-        kandidater = sorted(f for f in p.iterdir() if f.is_file() and f.suffix.lower() in SUPPORTED) if p.is_dir() else [p]
+        if p.is_dir():
+            kandidater = []
+            for entry in sorted(p.iterdir()):
+                if entry.is_dir():
+                    skipped.append({'path': str(entry), 'reason': 'subdirectory',
+                                    'message': 'Subfolders are not imported automatically. Select this folder explicitly if it belongs in scope.'})
+                elif entry.is_file() and entry.suffix.lower() in SUPPORTED:
+                    kandidater.append(entry)
+                else:
+                    skipped.append({'path': str(entry), 'reason': 'unsupported_format',
+                                    'message': 'Not a supported source file. Resolve relevant exclusions before starting the analysis.'})
+        else:
+            kandidater = [p]
         if not kandidater:
             resultater.append({"sti": sti, "feil": "No supported files in this directory."})
         for fil in kandidater:
@@ -92,7 +106,9 @@ def importer_dokumenter(lager: Lager, prosjekt_id: str, stier: list[str], *, ocr
                 resultater.append({"sti": str(fil), "dokument": dok, "nytt": nytt, "sider_uten_tekst": sider_uten_tekst(dok)})
             except DokumentFeil as e:
                 resultater.append({"sti": str(fil), "feil": str(e)})
-    return {"prosjekt_id": prosjekt_id, "resultater": resultater}
+    # An explicitly selected child has its own result; do not also report it as skipped.
+    skipped = [item for item in skipped if Path(item['path']).resolve() not in explicit_paths]
+    return {"prosjekt_id": prosjekt_id, "resultater": resultater, "skipped": skipped}
 
 
 # --- analyse og plan -----------------------------------------------------------------

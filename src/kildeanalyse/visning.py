@@ -53,6 +53,11 @@ def md_import(d: dict[str, Any]) -> str:
         ut.append(f"- {'✓' if r['nytt'] else '='} {dok['id']}: `{dok['navn']}` — {dok['antall_sider']} kildeenheter, {status}, SHA-256 {dok['sha256'][:12]}…"
                   + ("" if r["nytt"] else " (fantes allerede, samme innhold)"))
         ut.append('  - Uttrekksomfang: ' + json.dumps(metadata(dok), ensure_ascii=False))
+    if d.get('skipped'):
+        ut += ['', '## Ikke importert', '', 'Avklar relevante utelatelser før analysen starter.']
+        for item in d['skipped']:
+            reason = 'Undermappe; velg den uttrykkelig for å importere innholdet.' if item['reason'] == 'subdirectory' else 'Ikke en støttet kildefil.'
+            ut.append(f"- `{item['path']}`: {reason}")
     return "\n".join(ut)
 
 

@@ -11,8 +11,8 @@ Created and developed by **Emil Mathias Strøm Halseth**, with development assis
 
 The plugin is installed elsewhere. Your working folder holds the documents and a criteria file the assistant can help create. Import only the source folder; subfolders are not traversed automatically. Both hosts share the local analysis store; ask `show_setup` for its exact location.
 
-> Use Systematic Document Analysis on [absolute path to documents]. I want to investigate [question] consistently across the files. Help me define criteria. Inspect extraction and discuss scans, tables, formulas, large files and any sections that deserve priority. Use [reader/model/effort] and report in English. Show the plan and exact input before execution. Preserve full coverage unless we explicitly agree otherwise. Export results with quotations and source locations. Do not record human review on my behalf.
+> Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in the documents folder.
 
-If you do not know which reader/model to select, ask the assistant to explain available choices before creating the plan. It can help run setup locally when permitted, but account sign-in and key entry remain yours.
+Describe your own task in ordinary language. You do not need criteria ready: the assistant is instructed to propose an approach and ask necessary follow-up questions using your files. It also suggests a reader, model and a new analysis subfolder with Excel results. Before the reader starts, you receive a short plan to inspect and approve, with links to the details. A small pilot is optional. Identify the person responsible for approval; the assistant must not record human review on your behalf.
 
 Optional [example gallery](examples/README.md) has five ready-made folders and prompts. Normal use requires no simulation or example run. [Setup and sharing](docs/SETUP_AND_SHARING.md) explains app catalogs, CLI installation, keys and troubleshooting. The completed key file is private plaintext outside the package: never share it.

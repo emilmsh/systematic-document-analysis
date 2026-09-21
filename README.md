@@ -6,10 +6,10 @@ A plugin for Claude Code and Codex that reads a set of documents against criteri
 
 ## Quick install — Windows
 
-1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. The current release is **[0.8.5](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.5)**. Private repository: sign in with access, or use a ZIP shared by a colleague.
+1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. The current release is **[0.8.6](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.6)**. Private repository: sign in with access, or use a ZIP shared by a colleague.
 2. Open the extracted folder in File Explorer, double-click **installer.cmd**, and choose **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Codex terminal.
 3. For subscription-based reading, double-click **reader_setup.cmd**, choose Claude Code or Codex, and complete sign-in.
-4. Start a **new local conversation** in Claude Code's **Code tab** or in Codex and write: **“Use Systematic Document Analysis on the documents in [folder]. Help me choose criteria and show the plan before running.”**
+4. Open your working folder in Claude Code's **Code tab** or in Codex, start a **new local conversation**, and describe your task: **“Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in [folder].”**
 
 First-time setup requires internet access. The installer provides Python and installs the selected app's command-line tool if it is missing; you do not need to use the terminal yourself.
 
@@ -28,7 +28,7 @@ A chat assistant can read one report and answer questions about it. It is less u
 
 - **Reads files from a folder you choose.** PDF, DOCX, XLSX, CSV/TSV, TXT and Markdown. Scanned PDFs can be OCR-processed locally. Large files are read in bounded pieces and the findings are then combined in one further call, with every call recorded.
 - **Applies criteria you define.** A small JSON file lists the questions, the allowed answers and interpretation rules. The assistant helps you write it in conversation; you do not need to write JSON yourself.
-- **Runs one document per attempt with fixed settings.** The plan records reader, model, reasoning effort, language and instructions. A named person approves it before anything is read. Changing it creates a new version; earlier attempts are untouched.
+- **Runs one document per attempt with fixed settings.** The plan records reader, model, reasoning effort, language and instructions. The assistant can inspect source text during preparation; a named person approves the plan before the reader runs. Changing it creates a new version; earlier attempts are untouched.
 - **Stores the evidence.** For every attempt: the exact input, the raw answer, verbatim quotations with their location (PDF page, Word block, sheet and cell range, text line or CSV record), and automatic checks of answer labels, quotations and coverage.
 - **Records human review.** A person approves, corrects or rejects each assessment with a reason. Automatic checks are never recorded as human review.
 - **Exports to Excel.** One workbook for results, evidence, attempts and reviews, with a separate full audit trail. CSV is optional.
@@ -74,11 +74,15 @@ Run `update.cmd` from the installed folder to check for a newer release, install
 
 ## Using it
 
-Put the documents in a folder and open that folder in the app. Then describe the task, for example:
+Open an ordinary project folder in the app and put your own source files in a `documents` subfolder. No Git repository or example run is needed. Describe the task, for example:
 
-> Use Systematic Document Analysis on the files in C:\Users\me\Documents\Annual reports\documents. I want to know how each organisation reports on its own use of AI. Help me define criteria and answer options. Use codex_cli with gpt-5.6-terra and high reasoning effort, commentary in English. Show the plan, text coverage and the exact input before I approve. Then run all documents, show the answers with quotations and locations, and export the results. Do not record human review on my behalf.
+> Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in the documents folder.
 
-The assistant inspects the extracted text, proposes criteria, shows the plan and the exact input package, and waits for your approval. Runs are then executed one document at a time. You can stop, resume and inspect individual attempts, record your review, and export.
+You do not need ready-made criteria or technical settings. The assistant is instructed to clarify what you want to learn, inspect the files, propose questions and answer options, and ask about choices that materially affect the analysis. It should distinguish your requirements from its suggestions and flag missing or unsupported sources. You can refine the question together and optionally try a small agreed pilot.
+
+Before the reader starts, you receive a short plan covering the file selection, criteria, uncertain evidence, reader/model and result location. The detailed plan and exact input remain available to inspect. You approve the concrete plan and identify the responsible person. The assistant normally proposes the host's subscription reader, your conversation language, a new analysis subfolder and Excel results; you can change these choices. Inspect the plan: conversational guidance reduces avoidable mistakes but does not guarantee the assistant has understood everything.
+
+Runs then execute one document at a time. You can stop, resume and inspect individual attempts, record actual human review, and export. Changed criteria require a new plan version and approval.
 
 ### Hosts and readers
 

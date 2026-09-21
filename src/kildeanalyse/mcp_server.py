@@ -65,6 +65,14 @@ server = UpdatingMCPServer(
     version=VERSJON,
     instructions=(
         "Systematic Document Analysis: auditable reading, one document per run. Respond in the user's language. "
+        "A short ordinary-language request is enough to begin: restate the goal, inspect the specified files, "
+        "propose criteria and routine settings, and ask only for missing details that materially change the analysis. "
+        "Reuse answers already given. Distinguish user requirements, your proposals and unresolved assumptions. "
+        "Do not silently choose the research question, infer negative findings from missing evidence, or force uncertain evidence into yes/no. "
+        "Report skipped/failed imports and resolve relevant scope gaps. Use explicit document/run IDs for subsets. "
+        "Present a concise plain-language plan with file scope, criteria, uncertainty rules, output location, reader/settings/recipient "
+        "and material limitations, with links to the detailed plan and input preview. Actual approval of that concrete plan and scope "
+        "is required before reader execution; never invent the responsible person's name. Offer an optional pilot for exploratory criteria. "
         "Prefer the English tools: show_setup → create_project → import_documents → create_analysis → show_plan "
         "→ add_runs → show_input_package → approve_plan → start_runs → show_status → show_run → record_review → export_results. "
         "Choose a visible project directory with create_project(directory=...) or set_project_directory; show the returned path. "
@@ -167,7 +175,7 @@ def vis_inputpakke(kjoring_id: str) -> str:
         return _feil(e)
 
 
-@server.tool(description="Godkjenn siste planversjon med status utkast. Krever navn på ansvarlig. Kan ikke gjøres mens køen kjører.")
+@server.tool(description="Godkjenn siste planversjon med status utkast bare etter brukerens faktiske godkjenning av den viste planen og dokumentutvalget. Krever navn på ansvarlig; ikke utled navnet fra konto eller mappe. Kan ikke gjøres mens køen kjører.")
 def godkjenn_plan(analyse_id: str, ansvarlig: str) -> str:
     try:
         v = tjeneste.godkjenn_plan(_lager(), analyse_id, ansvarlig)
