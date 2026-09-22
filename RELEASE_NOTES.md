@@ -1,3 +1,9 @@
+# 0.8.8 — One setup menu and a smaller user package
+
+- Use `installer.cmd` for installation, reader sign-in, OCR, API settings, updates, repair and recovery. Existing host/flag commands still work.
+- Keep one short bilingual README at the package root and detailed user guides in `docs`. Omit separate setup launchers, development material, test fixtures and optional examples from the distributed package. No new dependencies.
+- This package-layout transition requires installing the new ZIP once when upgrading from 0.8.7 or earlier; their fixed-file-list updater cannot apply the smaller package. Data/settings are retained and previous program files are backed up. Future updates use `installer.cmd update` from the installed folder.
+
 # 0.8.7 — Complete reader setup and document tools
 
 - Find installed Claude Code and Codex readers even when the current shell has an outdated PATH. Refresh child-process paths from Windows settings and report the actual executable found.

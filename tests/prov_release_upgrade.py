@@ -37,12 +37,16 @@ def main():
             (base/name).mkdir()
         (base/'analysis/keep.txt').write_text('analysis sentinel',encoding='utf-8')
         (base/'settings/keep.txt').write_text('settings sentinel',encoding='utf-8')
-        for source in (old,candidate,candidate):
+        for iteration, source in enumerate((old,candidate,candidate)):
             # This probe tests registration/upgrade; onboarding is tested separately.
             flags = ['--non-interactive']
             if version_key(version(source)) >= (0, 8, 7):
                 flags += ['--reader', 'none', '--skip-ocr']
-            subprocess.run([sys.executable,'-X','utf8',str(source/'bin/installer.py'),'both',
+            if iteration == 1 and version(source) == version(old):
+                # Also allow testing a not-yet-versioned layout change locally.
+                flags += ['--repair']
+            entry = source/'bin/manage.py' if (source/'bin/manage.py').exists() else source/'bin/installer.py'
+            subprocess.run([sys.executable,'-X','utf8',str(entry),'both',
                             '--base-dir',str(base/'plugins'),*flags],env=env,check=True,timeout=180)
         codex = json.loads(subprocess.check_output([reader('codex'),'plugin','list','--json'],env=env,encoding='utf-8'))
         claude = json.loads(subprocess.check_output([reader('claude'),'plugin','list','--json'],env=env,encoding='utf-8'))

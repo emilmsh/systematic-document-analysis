@@ -322,7 +322,7 @@ def _install(host, base, *, replace_source, repair, allow_downgrade, move_shadow
     print(f'{host}: installed {incoming}. Start a new conversation to load the plugin.')
     if moved:
         print(f'Previous copy kept at: {backup}')
-    print(f'Updates: notify by default; run {target / "update.cmd"} to change this.')
+    print(f'Updates: notify by default; run "{target / "installer.cmd"}" update to change this.')
     if shadows:
         try:
             for aside in move_codex_shadows(shadows, installed_version or 'previous'):
@@ -489,7 +489,7 @@ def finish_reader_setup(reader, *, interactive):
                 print('Choose 1, 2 or 3.')
     if reader in (None, 'none'):
         print('Subscription reader setup skipped. '
-              'For subscription reading, run reader_setup.cmd later; for API reading, use settings.cmd.')
+              'For subscription reading, run installer.cmd reader later; for API reading, use installer.cmd settings.')
         return
     setup_subscription_reader(reader, allow_login=interactive)
     print('Subscription sign-in complete. Start a new local conversation after setup finishes.')
@@ -557,13 +557,13 @@ def main():
                 setup_local_ocr()
             except (RuntimeError, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt, EOFError) as exc:
                 print(f'Plugin files are installed, but OCR setup is incomplete: {exc or "cancelled"}. '
-                      'Run ocr_setup.cmd to finish OCR; reinstalling the plugin is not necessary.', file=sys.stderr)
+                      'Run installer.cmd ocr to finish OCR; reinstalling the plugin is not necessary.', file=sys.stderr)
                 failures.append('ocr')
         try:
             finish_reader_setup(args.reader, interactive=interactive)
         except (RuntimeError, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt, EOFError) as exc:
             print(f'Plugin installation is complete, but reader setup is incomplete: {exc or "cancelled"}. '
-                  'Run reader_setup.cmd to finish; reinstalling the plugin is not necessary.', file=sys.stderr)
+                  'Run installer.cmd reader to finish; reinstalling the plugin is not necessary.', file=sys.stderr)
             return 1
     return 1 if failures else 0
 

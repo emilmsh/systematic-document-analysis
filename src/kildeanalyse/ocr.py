@@ -35,7 +35,7 @@ def language_arguments():
 def setup():
     exe = executable()
     result = {'available': False, 'engine': 'Tesseract', 'executable': exe,
-              'installation': 'Run installer.cmd to install and verify OCR, or ocr_setup.cmd to repair OCR only. See docs/DOCUMENT_PROCESSING.md.'}
+              'installation': 'Run installer.cmd to install and verify OCR, or installer.cmd ocr to repair OCR only. See docs/DOCUMENT_PROCESSING.md.'}
     if exe:
         try:
             result['version'] = subprocess.check_output([exe, '--version'], timeout=10, encoding='utf-8', errors='replace').splitlines()[0]

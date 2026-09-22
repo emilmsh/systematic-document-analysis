@@ -1,6 +1,6 @@
 {
   "name": "systematic-document-analysis",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "description": "Auditable document analysis in English and Norwegian, with source evidence and human review.",
   "author": {
     "name": "Emil Mathias Strøm Halseth"

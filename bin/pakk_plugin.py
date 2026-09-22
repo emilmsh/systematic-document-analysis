@@ -10,9 +10,14 @@ import json
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
-FILER=('pyproject.toml','.mcp.json','oppsett.cmd','installer.cmd','update.cmd','settings.cmd','ocr_setup.cmd','reader_setup.cmd','README.md','START_HER.md','START_HERE.md','README.no.md','DEVELOPMENT.md','UTVIKLINGSSTRATEGI.md','tests/TESTLOGG.md',
-       'RELEASE_NOTES.md','eksempler/arsrapporter-2024/kilder.json','eksempler/arsrapporter-2024/STARTPROMPT.md')
-MAPPER=('.codex-plugin','.claude-plugin','bin','skills','src/kildeanalyse','tests/fixtures/syntetisk','docs','examples')
+FILER=('pyproject.toml','.mcp.json','installer.cmd','README.md',
+       'docs/USAGE.md','docs/USAGE.no.md','docs/UPDATES.md','docs/SETUP_AND_SHARING.md',
+       'docs/DOCUMENT_PROCESSING.md','docs/SOURCE_FORMATS.md','docs/PROJECT_FILES.md',
+       'docs/providers.env.example',
+       'bin/manage.py','bin/installer.py','bin/pakk_plugin.py','bin/launch.ps1',
+       'bin/setup_reader.py','bin/setup_ocr.py','bin/configure_keys.py',
+       'bin/update_plugin.py','bin/start_server.py','bin/start_server.cmd')
+MAPPER=('.codex-plugin','.claude-plugin','skills','src/kildeanalyse')
 
 def pakkefiler(root=ROOT):
     """Eksplisitt filliste, også etter at pip har lagt byggemetadata i mappen."""
@@ -27,12 +32,10 @@ def pakk(maal, codex=False, root=ROOT):
     if maal==root or maal.name!='systematic-document-analysis':
         raise ValueError('Bruk en separat målmappe med navnet systematic-document-analysis.')
     maal.mkdir(parents=True,exist_ok=True)
-    for name in FILER:
-        target=maal/name
+    for source in pakkefiler(root):
+        target=maal/source.relative_to(root)
         target.parent.mkdir(parents=True,exist_ok=True)
-        shutil.copy2(root/name,target)
-    for name in MAPPER:
-        shutil.copytree(root/name,maal/name,dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+        shutil.copy2(source,target)
     if codex:
         configure_codex(maal)
     print(f'Plugin copy: {maal}')

@@ -104,7 +104,7 @@ class ApiAdapter(Adapter):
         ready = bool(local_key(self.navn))
         messages = ['Separat API-forbruk. Nøkkelen er bare kontrollert lokalt; konto, modell og saldo er ikke verifisert.']
         if not ready:
-            messages.append('Open settings.cmd and fill the selected provider key locally. Do not paste keys into the conversation.')
+            messages.append('Open installer.cmd settings and fill the selected provider key locally. Do not paste keys into the conversation.')
         if self.navn == 'kompatibel_api' and not self.innstillinger.get('base_url'):
             ready = False
             messages.append('Velg base_url og modell eksplisitt i planen.')

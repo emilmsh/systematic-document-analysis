@@ -1,18 +1,20 @@
 # Installation and updates
 
-Run `installer.cmd` from an extracted release to install or update Claude Code, Codex or both. It reports each app separately. Use File Explorer or a normal terminal as your ordinary Windows user.
+Run `installer.cmd` from an extracted release and choose Install to install or update Claude Code, Codex or both. It reports each app separately. Use File Explorer or a normal terminal as your ordinary Windows user. The same menu offers repair, recovery, reader sign-in, OCR, API settings and updates. Direct commands remain available; `installer.cmd --help` lists them.
 
-After successful installation, the interactive installer lets you choose a subscription reader or skip for API/later setup. It reuses existing subscription sign-in or starts login and verifies the result. This happens after the installation lock is released. Failed or cancelled login leaves the plugin installed; finish with `reader_setup.cmd`. `update.cmd`, automatic updates, `--recover` and `--prepare-only` do not start reader setup.
+**Transition from 0.8.7 or earlier:** use the new ZIP's installer once. Those older updaters use a fixed file list containing development files and separate launchers that the compact package omits. They cannot apply the compact layout. The new installer keeps the previous copy as a backup and retains external data and settings. After this transition, use `installer.cmd update` in the installed plugin folder. Do not remove files manually from an older installation.
 
-Normal installation also checks local Tesseract OCR and installs missing English/Norwegian support. `--skip-ocr` explicitly skips that step. Updating an existing installation does not run onboarding; use `ocr_setup.cmd` if that installation has not yet set up OCR.
+After successful installation, the interactive installer lets you choose a subscription reader or skip for API/later setup. It reuses existing subscription sign-in or starts login and verifies the result. This happens after the installation lock is released. Failed or cancelled login leaves the plugin installed; finish with `installer.cmd reader`. `installer.cmd update`, automatic updates, `--recover` and `--prepare-only` do not start reader setup.
+
+Normal installation also checks local Tesseract OCR and installs missing English/Norwegian support. `--skip-ocr` explicitly skips that step. Updating an existing installation does not run onboarding; use `installer.cmd ocr` if that installation has not yet set up OCR.
 
 ## Closing active plugin connections
 
-From **0.8.5**, a manual installation, recovery or `update.cmd --install` asks this plugin's connections to close automatically. It blocks new connections, finishes current tool calls and the current document (including its constituent model calls), saves their results, then stops the queue before the next document. Remaining documents stay pending and can be resumed explicitly after the update. Claude Code and Codex themselves stay open; other plugins are unaffected. Start a new conversation afterwards to load the updated tools and skill.
+From **0.8.5**, a manual installation, recovery or `installer.cmd update --install` asks this plugin's connections to close automatically. It blocks new connections, finishes current tool calls and the current document (including its constituent model calls), saves their results, then stops the queue before the next document. Remaining documents stay pending and can be resumed explicitly after the update. Claude Code and Codex themselves stay open; other plugins are unaffected. Start a new conversation afterwards to load the updated tools and skill.
 
 The installer waits up to **60 seconds** for exclusive access. If work takes longer, or an old session cannot cooperate, it leaves the installed files unchanged and explains how to retry. No process is forcibly terminated. The request is an OS lock that disappears automatically if the installer exits or crashes; it cannot leave a stale shutdown flag. Both host installations share one gate, so connections cannot reopen between the two updates.
 
-**First upgrade from 0.8.4 or earlier:** those running sessions do not understand the shutdown request. Let analyses finish, fully close Claude Code and Codex once, then double-click the new release's `installer.cmd`. The old version's `update.cmd` also retains its old behaviour. Installing 0.8.5 enables cooperative closure for later manual updates. Automatic startup updates still defer while another session is open; they do not interrupt work.
+**First upgrade from 0.8.4 or earlier:** those running sessions do not understand the shutdown request. Let analyses finish, fully close Claude Code and Codex once, then double-click the new release's `installer.cmd`. The old version's `installer.cmd update` also retains its old behaviour. Installing 0.8.5 enables cooperative closure for later manual updates. Automatic startup updates still defer while another session is open; they do not interrupt work.
 
 | Existing installation | Behaviour |
 | --- | --- |
@@ -33,13 +35,13 @@ The default for source-switch, repair, downgrade and shadow questions is **keep 
 
 ## Update menu
 
-Run **update.cmd from the installed plugin folder**, printed at the end of installation. Choose check now, update now, notify only, automatic, or off. `show_setup` also displays the cached update status.
+Run **installer.cmd update from the installed plugin folder**, printed at the end of installation. Choose check now, update now, notify only, automatic, or off. `show_setup` also displays the cached update status.
 
 - **Notify only** is the default. A managed plugin checks GitHub at most once a day when starting a session. A newer stable release is reported in startup diagnostics and `show_setup`.
 - **Automatic** uses the same checks, downloads the release and verifies its SHA-256 against that release's `SHA256SUMS.txt`. It installs only a newer stable version, only into the currently registered managed copy, and only when no other plugin session or analysis worker holds the shared lock. Local edits block automatic replacement. A failed attempt is not repeated for that installation until the next day; a manual update retries immediately.
 - **Off** disables automatic checks and installations. Manual checks still work.
 
-Policy applies to both apps, but each installed copy updates when that app next starts the plugin. The Codex desktop app starts the plugin inside its own package, where writes are virtualized, so a session started by the desktop app only reports the new version and defers installation; run `update.cmd` from Explorer or a normal terminal instead. Sessions started by the Codex CLI in a normal terminal, and Claude Code sessions, can install automatically. There is no background service or scheduled task. Development copies are not automatically checked or updated. After installation, start a new conversation so the host reloads skills and tools; a startup that just applied an automatic update ends with this instruction.
+Policy applies to both apps, but each installed copy updates when that app next starts the plugin. The Codex desktop app starts the plugin inside its own package, where writes are virtualized, so a session started by the desktop app only reports the new version and defers installation; run `installer.cmd update` from Explorer or a normal terminal instead. Sessions started by the Codex CLI in a normal terminal, and Claude Code sessions, can install automatically. There is no background service or scheduled task. Development copies are not automatically checked or updated. After installation, start a new conversation so the host reloads skills and tools; a startup that just applied an automatic update ends with this instruction.
 
 This repository is private. Remote checks/downloads use the **existing GitHub CLI (`gh`) login** when available. The account must have repository access. The updater does not request, read or save a token and never changes repository visibility. Without access, checks report that they are unavailable and the installed plugin continues to work. You can always install a shared ZIP instead. Public repositories can also be checked without `gh`.
 
@@ -69,11 +71,11 @@ Update policy and the shared OS lock live under `%USERPROFILE%/.systematic-docum
 .\installer.cmd codex --move-shadow
 .\installer.cmd both --non-interactive
 .\installer.cmd claude --recover
-.\update.cmd --check
-.\update.cmd --install
-.\update.cmd --mode notify
-.\update.cmd --mode auto
-.\update.cmd --mode off
+.\installer.cmd update --check
+.\installer.cmd update --install
+.\installer.cmd update --mode notify
+.\installer.cmd update --mode auto
+.\installer.cmd update --mode off
 ```
 
 Use `--base-dir <folder>` for a custom install location. `--replace-source` changes only this plugin's single-plugin local marketplace registration, after checking both paths. `--repair` replaces same-version files deliberately; `--allow-downgrade` authorises an older version. `--recover` resolves an interrupted installation and installs nothing. `--move-shadow` moves aside a stale Codex desktop copy after installing. These options are independent.

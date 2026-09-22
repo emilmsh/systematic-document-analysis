@@ -138,7 +138,7 @@ def test_setup_exposes_machine_readable_block_and_recovery(monkeypatch, tmp_path
                 yield from gates(child)
     gate, = gates(result)
     assert gate['code'] == 'CLI_AUTH_REQUIRED'
-    assert gate['recovery_command'] == f'reader_setup.cmd {name} --login'
+    assert gate['recovery_command'] == f'installer.cmd reader {name} --login'
     assert 'private-secret' not in json.dumps(result)
 
 

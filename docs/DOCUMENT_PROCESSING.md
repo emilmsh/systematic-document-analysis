@@ -11,7 +11,7 @@ verifies both English and Norwegian language data. Existing working OCR is reuse
 Missing language files are downloaded from a pinned upstream release, checked with
 SHA-256 and stored in the user's local application data, without writing into
 Program Files. No source documents are uploaded. `--skip-ocr` is an explicit opt-out.
-`ocr_setup.cmd` remains available for repair after a cancelled or failed install;
+`installer.cmd ocr` remains available for repair after a cancelled or failed install;
 an OCR failure leaves the plugin installed but reports incomplete setup.
 `show_setup` reports the OCR version and available languages. An explicit
 `SDA_TESSERACT_BIN` overrides automatic executable discovery.

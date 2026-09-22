@@ -25,7 +25,7 @@ def file_values():
     if not path.is_file():
         return {}
     if path.stat().st_size > 65536:
-        raise ValueError('API settings file is too large. Open settings.cmd to correct it.')
+        raise ValueError('API settings file is too large. Open installer.cmd settings to correct it.')
     result = {}
     for line in path.read_text(encoding='utf-8-sig').splitlines():
         line = line.strip()

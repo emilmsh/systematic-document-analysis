@@ -49,7 +49,7 @@ def oppsett(lager: Lager) -> dict[str, Any]:
         "app_versjon": VERSJON, "datamappe": str(lager.mappe), "database": str(lager.db), "python": platform.python_version(),
         "plattform": platform.platform(), "motorer": motorer, "prosjekter": lager.prosjekter(),
         "plugin_root": os.environ.get("CLAUDE_PLUGIN_ROOT"), 'ocr': ocr_setup(),
-        'api_settings_file':str(settings_path()), 'api_settings_help':'Open settings.cmd to paste keys locally. Never share the completed file.',
+        'api_settings_file':str(settings_path()), 'api_settings_help':'Open installer.cmd settings to paste keys locally. Never share the completed file.',
         'updates': update_status(),
     }
 

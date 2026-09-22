@@ -164,8 +164,8 @@ def packaged_process() -> bool:
 
 
 PACKAGED_MESSAGE = ('This command runs inside the Codex desktop app, where files written below %LOCALAPPDATA% are '
-                    'redirected into the app\'s LocalCache and would mask the real installation. Run installer.cmd or '
-                    'update.cmd by double-clicking it in Explorer or from a normal terminal. No files changed.')
+                    'redirected into the app\'s LocalCache and would mask the real installation. Open installer.cmd '
+                    'in Explorer and choose installation or updates, or run it from a normal terminal. No files changed.')
 
 
 def update_status() -> dict:
@@ -175,4 +175,4 @@ def update_status() -> dict:
         status = read_json(state_dir() / 'last-check.json')
         return {'mode': settings.get('mode', 'notify'), **status}
     except (OSError, ValueError):
-        return {'mode': 'unknown', 'message': 'Update settings could not be read. Run update.cmd.'}
+        return {'mode': 'unknown', 'message': 'Update settings could not be read. Run installer.cmd update.'}

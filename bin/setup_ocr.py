@@ -32,7 +32,7 @@ def install():
         subprocess.run([winget,'install','--id','UB-Mannheim.TesseractOCR','--exact','--silent',
             '--accept-package-agreements','--accept-source-agreements','--disable-interactivity'],check=True)
     if not ocr.executable():
-        raise RuntimeError('Tesseract was not found after installation. Run ocr_setup.cmd to retry; keep the installation error.')
+        raise RuntimeError('Tesseract was not found after installation. Run installer.cmd ocr to retry; keep the installation error.')
     root = ocr.language_directory()
     root.mkdir(parents=True, exist_ok=True)
     for language, expected in LANGUAGES.items():
@@ -49,7 +49,7 @@ def install():
         temporary.replace(target)
     status = ocr.setup()
     if not status['available'] or not set(LANGUAGES) <= set(status.get('languages', [])):
-        raise RuntimeError('OCR installation completed but Tesseract with eng+nor could not be verified. Run ocr_setup.cmd to retry.')
+        raise RuntimeError('OCR installation completed but Tesseract with eng+nor could not be verified. Run installer.cmd ocr to retry.')
     print('Local OCR installed and verified: Tesseract with English and Norwegian.', flush=True)
     return status
 

@@ -162,7 +162,7 @@ def apply_release(marker, release):
         raise RuntimeError('Installed files have local changes. Use installer.cmd to repair or keep them.')
     exe = find_cli(marker['host'])
     if not Path(exe).is_file() and not shutil.which(exe):
-        raise RuntimeError('The host CLI is unavailable. Run reader_setup.cmd before updating.')
+        raise RuntimeError('The host CLI is unavailable. Run installer.cmd reader before updating.')
     _, registered, plugin = installer.inspect(marker['host'], exe)
     if registered != target or not plugin or not plugin.get('enabled', True):
         raise RuntimeError('This copy is not the active enabled installation. Run installer.cmd.')
@@ -194,7 +194,7 @@ def startup(root):
             target = Path(marker['target'])
             if not release.get('version') or version_key(release['version']) <= version_key(version(target)):
                 return False
-            print(f'[Systematic Document Analysis] Version {release["version"]} is available. Run {target / "update.cmd"}.', file=sys.stderr)
+            print(f'[Systematic Document Analysis] Version {release["version"]} is available. Run "{target / "installer.cmd"}" update.', file=sys.stderr)
             if mode != 'auto':
                 return False
             with maintenance_lock():
@@ -249,7 +249,7 @@ def main():
                 if args.install:
                     marker = managed_install(root)
                     if not marker:
-                        raise RuntimeError('Run update.cmd from the installed plugin folder. For first setup, run installer.cmd.')
+                        raise RuntimeError('Run installer.cmd update from the installed plugin folder. For first setup, run installer.cmd.')
                     print('Updated. Start a new conversation.' if apply_release(marker, release) else 'Already up to date.')
     except (OSError, ValueError, RuntimeError, KeyError, subprocess.SubprocessError) as exc:
         print(f'Update stopped: {exc}', file=sys.stderr)

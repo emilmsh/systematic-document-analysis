@@ -36,7 +36,7 @@ def signed_in(name, binary):
                                 stdin=subprocess.DEVNULL, env=subscription_env(),
                                 text=True, encoding='utf-8', errors='replace')
     except (OSError, subprocess.SubprocessError):
-        raise RuntimeError(f'Could not check {name} sign-in. Retry reader_setup.cmd {name} --login.') from None
+        raise RuntimeError(f'Could not check {name} sign-in. Retry installer.cmd reader {name} --login.') from None
     if result.returncode != 0:
         return False
     if name == 'claude':
@@ -57,17 +57,17 @@ def setup(name, *, allow_login=True, force_login=False):
         return
     if not allow_login:
         raise RuntimeError(f'{name}: subscription sign-in is not confirmed. '
-                           f'Run reader_setup.cmd {name} --login in a terminal.')
+                           f'Run installer.cmd reader {name} --login in a terminal.')
     print(f'{name}: complete subscription sign-in in your browser using the intended account. '
           'This window will wait, then verify sign-in.', flush=True)
     command = ['auth', 'login'] if name == 'claude' else ['login']
     try:
         subprocess.run([binary, *command], check=True, env=subscription_env())
     except (OSError, subprocess.SubprocessError):
-        raise RuntimeError(f'{name}: sign-in did not complete. Retry reader_setup.cmd {name} --login.') from None
+        raise RuntimeError(f'{name}: sign-in did not complete. Retry installer.cmd reader {name} --login.') from None
     if not signed_in(name, binary):
         raise RuntimeError(f'{name}: subscription sign-in could not be verified after login. '
-                           f'Run reader_setup.cmd {name} --login and choose your subscription account.')
+                           f'Run installer.cmd reader {name} --login and choose your subscription account.')
     print(f'{name}: subscription sign-in verified.', flush=True)
 
 
@@ -85,7 +85,7 @@ def install(name):
         found = find_cli(name)
         if found == name and not shutil.which(found):
             raise RuntimeError('WinGet completed, but the Claude Code executable could not be located. '
-                               'Set SDA_CLAUDE_BIN to its full path and retry reader_setup.cmd claude.')
+                               'Set SDA_CLAUDE_BIN to its full path and retry installer.cmd reader claude.')
         return found
     target = Path(os.environ['LOCALAPPDATA'])/'systematic-document-analysis/readers/codex/codex.exe'
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -119,7 +119,7 @@ def main():
     else:
         binary = install(args.reader)
         subprocess.run([binary, '--version'], check=True)
-        print(f'To sign in: reader_setup.cmd {args.reader} --login')
+        print(f'To sign in: installer.cmd reader {args.reader} --login')
 
 
 if __name__ == '__main__':

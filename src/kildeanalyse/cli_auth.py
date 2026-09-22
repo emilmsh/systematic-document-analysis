@@ -24,14 +24,14 @@ def auth_gate(name, verified):
             'scope': 'preflight_only',
             'code': None if verified else 'CLI_AUTH_REQUIRED',
             'reader': name + '_cli', 'automatic_fallback_allowed': False,
-            'recovery_command': f'reader_setup.cmd {name} --login'}
+            'recovery_command': f'installer.cmd reader {name} --login'}
 
 
 def blocked_support(name):
     message = (f'CLI_AUTH_REQUIRED: Subscription sign-in for {name} could not be confirmed. '
                'Document analysis is blocked. Do not substitute host analysis, subagents, another reader, '
                'API calls or simulated results. You may prepare criteria and the plan, but produce no classifications. '
-               f'Ask the user to run reader_setup.cmd {name} --login in a terminal, then check show_setup again. '
+               f'Ask the user to run installer.cmd reader {name} --login in a terminal, then check show_setup again. '
                'Resume only after sign-in is verified and the user asks to continue.')
     return Stotte(False, [message], {'auth_gate': auth_gate(name, False)})
 
