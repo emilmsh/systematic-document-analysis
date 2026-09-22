@@ -12,6 +12,24 @@ from kildeanalyse.dokument import importer_dokument
 from kildeanalyse.adaptere import lag_adapter
 
 
+def test_existing_key_file_gains_azure_without_rewriting_or_duplicates(monkeypatch):
+    path = credentials.prepare_file()
+    original = b'# Keep my comments\r\nOPENAI_API_KEY="existing-test-secret"'
+    path.write_bytes(original)
+    assert credentials.prepare_file() == path
+    updated = path.read_bytes()
+    assert updated.startswith(original) and updated.count(b'AZURE_AI_API_KEY=') == 1
+    credentials.prepare_file()
+    assert path.read_bytes() == updated
+    monkeypatch.delenv('AZURE_AI_API_KEY', raising=False)
+    path.write_text('AZURE_AI_API_KEY=azure-test-secret\n', encoding='utf-8')
+    assert local_key('azure_foundry_api') == 'azure-test-secret'
+    monkeypatch.setenv('AZURE_AI_API_KEY', 'environment-test-secret')
+    assert local_key('azure_foundry_api') == 'environment-test-secret'
+    for engine in ('codex_cli', 'claude_cli'):
+        assert 'AZURE_AI_API_KEY' not in lag_adapter(engine)._env()
+
+
 def test_key_file_creation_preservation_precedence_and_no_environment_copy(monkeypatch):
     monkeypatch.delenv('OPENAI_API_KEY', raising=False)
     path = credentials.prepare_file()

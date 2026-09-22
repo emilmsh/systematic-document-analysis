@@ -482,11 +482,11 @@ def finish_reader_setup(reader, *, interactive):
     """Run after the installation transaction, so login cannot roll it back or hold its lock."""
     if reader is None and interactive:
         print('\nSet up subscription reading (independent of the app hosting the plugin):')
-        print('1 = Codex / ChatGPT, 2 = Claude Code, 3 = Skip (API or set up later)')
+        print('1 = Codex / ChatGPT, 2 = Claude Code, 3 = Both / Begge, 4 = Skip (API or set up later)')
         while reader is None:
-            reader = {'1': 'codex', '2': 'claude', '3': 'none'}.get(input('Choose 1, 2 or 3: ').strip())
+            reader = {'1': 'codex', '2': 'claude', '3': 'both', '4': 'none'}.get(input('Choose 1, 2, 3 or 4: ').strip())
             if reader is None:
-                print('Choose 1, 2 or 3.')
+                print('Choose 1, 2, 3 or 4.')
     if reader in (None, 'none'):
         print('Subscription reader setup skipped. '
               'For subscription reading, run installer.cmd reader later; for API reading, use installer.cmd settings.')
@@ -506,7 +506,7 @@ def main():
     parser.add_argument('--move-shadow', action='store_true',
                         help='Move aside a stale copy that the packaged Codex desktop app reads instead of the installation')
     parser.add_argument('--non-interactive', action='store_true', help='Never prompt; conflicts require explicit options')
-    parser.add_argument('--reader', choices=['claude', 'codex', 'none'],
+    parser.add_argument('--reader', choices=['claude', 'codex', 'both', 'begge', 'none'],
                         help='Subscription reader to set up after installation; none skips it. '
                              'Non-interactive mode only checks sign-in, never opens login.')
     parser.add_argument('--skip-ocr', action='store_true', help='Explicitly skip installation/check of local OCR.')

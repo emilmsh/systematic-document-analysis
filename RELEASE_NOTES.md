@@ -1,3 +1,10 @@
+# 0.8.9 — Simpler setup and Azure Foundry
+
+- Reduce the setup menu to Install, Sign-in and settings, and Update or repair, with Back available in submenus. Existing direct commands remain available.
+- Set up Codex and Claude Code readers together with Both. Reuse verified sign-ins and continue the second reader if the first fails; report incomplete setup without undoing successful sign-ins. Each analysis still selects its reader explicitly.
+- Add Azure AI Foundry key-based reading through Responses, OpenAI-compatible Chat Completions and Claude Messages. Require an explicit resource endpoint, deployment name and API format, retained in the approval/audit trail. No automatic protocol fallback, new dependencies or tool access. Deployments must support the requested structured output and parameters; Entra ID and legacy inference endpoints are not included.
+- Add an empty `AZURE_AI_API_KEY` field when opening older local settings files, preserving existing keys and comments.
+
 # 0.8.8 — One setup menu and a smaller user package
 
 - Use `installer.cmd` for installation, reader sign-in, OCR, API settings, updates, repair and recovery. Existing host/flag commands still work.

@@ -19,7 +19,7 @@ Double-click installer.cmd for the menu, or use:
   installer.cmd install [claude|codex|both] [installation options]
   installer.cmd repair [claude|codex|both]
   installer.cmd recover [claude|codex|both]
-  installer.cmd reader [claude|codex] [--login]
+  installer.cmd reader [claude|codex|both] [--login]
   installer.cmd ocr
   installer.cmd settings
   installer.cmd update [--check|--install|--mode notify|auto|off]
@@ -28,6 +28,45 @@ For updates, open installer.cmd in the installed plugin folder.
 Existing commands such as installer.cmd both --non-interactive still work.
 Use installer.cmd install --help for advanced installation options.
 '''
+
+
+def choose(title, options, *, back=False):
+    print('\n' + title)
+    for number, (_, label) in enumerate(options, 1):
+        print(f'{number} = {label}')
+    print('0 = Back / Tilbake' if back else '0 = Exit / Avslutt')
+    while True:
+        choice = input(f'Choose / Velg 0-{len(options)}: ').strip()
+        if choice == '0':
+            return None
+        if choice in {str(number) for number in range(1, len(options) + 1)}:
+            return options[int(choice) - 1][0]
+        print(f'Choose a number from 0 to {len(options)}.')
+
+
+def menu_action():
+    while True:
+        action = choose('Systematic Document Analysis', [
+            ('install', 'Install / Installer'),
+            ('account', 'Sign-in and settings / Innlogging og innstillinger'),
+            ('maintenance', 'Update or repair / Oppdater eller reparer'),
+        ])
+        if action in (None, 'install'):
+            return action
+        if action == 'account':
+            action = choose('Sign-in and settings / Innlogging og innstillinger', [
+                ('reader', 'Reader sign-in / Lesermotor og innlogging'),
+                ('settings', 'API settings / API-innstillinger'),
+            ], back=True)
+        else:
+            action = choose('Update or repair / Oppdater eller reparer', [
+                ('update', 'Updates / Oppdateringer'),
+                ('repair', 'Repair plugin / Reparer plugin'),
+                ('ocr', 'Repair OCR / Reparer OCR'),
+                ('recover', 'Recover interrupted installation / Gjenopprett avbrutt installasjon'),
+            ], back=True)
+        if action is not None:
+            return action
 
 
 def main(argv=None):
@@ -40,25 +79,10 @@ def main(argv=None):
             if not sys.stdin.isatty():
                 print('Choose an action or host. Use installer.cmd --help.', file=sys.stderr)
                 return 2
-            print('Systematic Document Analysis\n'
-                  '1 = Install / Installer\n'
-                  '2 = Repair plugin / Reparer plugin\n'
-                  '3 = Reader sign-in / Lesermotor og innlogging\n'
-                  '4 = Set up or repair OCR / Klargjor eller reparer OCR\n'
-                  '5 = API settings / API-innstillinger\n'
-                  '6 = Updates / Oppdateringer\n'
-                  '7 = Recover interrupted installation / Gjenopprett avbrutt installasjon\n'
-                  '0 = Exit / Avslutt')
-            choices = {'1': 'install', '2': 'repair', '3': 'reader', '4': 'ocr',
-                       '5': 'settings', '6': 'update', '7': 'recover'}
-            while not args:
-                choice = input('Choose / Velg 0-7: ').strip()
-                if choice == '0':
-                    return 0
-                if choice in choices:
-                    args = [choices[choice]]
-                else:
-                    print('Choose a number from 0 to 7.')
+            action = menu_action()
+            if action is None:
+                return 0
+            args = [action]
         if args[0] in ACTIONS:
             script, flags = ACTIONS[args.pop(0)]
         else:

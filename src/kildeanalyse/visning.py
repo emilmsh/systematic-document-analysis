@@ -88,6 +88,8 @@ def md_plan(d: dict[str, Any]) -> str:
                    f"- Maks output-tokenbudsjett: {api['maks_output_tokens']}. Nøkkel hentes lokalt fra `{api['nokkelvariabel']}`.",
                    '- standard betyr at tenkeparameter utelates. Støtte og tolkning av nivå avhenger av modellen.',
                    '- Ett kall per lesedel og en sammenstilling for store dokumenter. Ingen automatisk bytting eller nytt forsøk.']
+            if api.get('api_format'):
+                ut.append(f"- API-format: `{api['api_format']}`. Modellnavnet viser valgt Azure-deployment.")
         ut.append("")
     ut += ['', '## Kilder og felles struktur', '',
            'Kontroller at filene kan vurderes med samme kriterier. Ulik struktur eller utelatt innhold kan begrense sammenlignbarheten.',

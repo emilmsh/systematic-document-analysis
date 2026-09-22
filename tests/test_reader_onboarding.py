@@ -45,6 +45,55 @@ def logins(calls):
     return [command for command, _ in calls if command[1:] in (['auth', 'login'], ['login'])]
 
 
+def test_both_readers_reuse_existing_signins(cli):
+    calls, replies = cli
+    replies.extend([authenticated('codex'), authenticated('claude')])
+    setup_reader.setup('both')
+    assert not replies and not logins(calls)
+    assert {command[0] for command, _ in calls} == {'codex.exe', 'claude.exe'}
+
+
+def test_both_readers_sign_in_and_verify_separately(cli):
+    calls, replies = cli
+    replies.extend([(1, '', ''), authenticated('codex'), (1, '', ''), authenticated('claude')])
+    setup_reader.setup('both')
+    assert logins(calls) == [['codex.exe', 'login'], ['claude.exe', 'auth', 'login']]
+    assert not replies
+
+
+def test_both_noninteractive_continues_other_reader_without_browser(cli, capsys):
+    calls, replies = cli
+    replies.extend([(1, '', ''), authenticated('claude')])
+    with pytest.raises(RuntimeError, match='Successful sign-ins are kept'):
+        setup_reader.setup('both', allow_login=False)
+    assert not replies and not logins(calls)
+    assert 'claude: existing subscription sign-in confirmed' in capsys.readouterr().out
+
+
+def test_both_install_failure_still_checks_other_reader(cli, monkeypatch):
+    calls, replies = cli
+    def install(name):
+        if name == 'codex':
+            raise OSError('test installation failure')
+        return 'claude.exe'
+    monkeypatch.setattr(setup_reader, 'install', install)
+    replies.append(authenticated('claude'))
+    with pytest.raises(RuntimeError, match='test installation failure'):
+        setup_reader.setup('both')
+    assert not replies and not logins(calls)
+
+
+def test_both_cancel_stops_before_second_reader(cli, monkeypatch):
+    installed = []
+    def install(name):
+        installed.append(name)
+        raise KeyboardInterrupt()
+    monkeypatch.setattr(setup_reader, 'install', install)
+    with pytest.raises(KeyboardInterrupt):
+        setup_reader.setup('both')
+    assert installed == ['codex']
+
+
 @pytest.mark.parametrize('name', ['claude', 'codex'])
 def test_existing_subscription_never_opens_login(cli, capsys, name):
     calls, replies = cli
@@ -205,11 +254,13 @@ def test_redirected_input_never_opens_login(main_setup, monkeypatch):
 
 
 @pytest.mark.parametrize('flags,choice,expected', [
-    ([], '3', []),
+    ([], '4', []),
+    ([], '3', [('both', {'allow_login': True})]),
     (['--reader', 'none'], None, []),
     (['--non-interactive'], None, []),
     (['--reader', 'claude', '--non-interactive'], None, [('claude', {'allow_login': False})]),
     (['--reader', 'codex'], None, [('codex', {'allow_login': True})]),
+    (['--reader', 'both', '--non-interactive'], None, [('both', {'allow_login': False})]),
 ])
 def test_skip_and_explicit_or_noninteractive_reader(main_setup, monkeypatch, flags, choice, expected):
     monkeypatch.setattr(sys, 'argv', sys.argv + flags)

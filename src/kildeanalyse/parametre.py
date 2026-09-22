@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import math
-from .api_oppsett import API_MOTORER, api_valg, api_metadata
+from .api_oppsett import API_MOTORER, api_valg, api_metadata, wire_engine
 
 MODELLER = {"claude_cli": "sonnet", "codex_cli": "gpt-5.6-terra"}
 TENKENIVAA = {
     "claude_cli": ("low", "medium", "high", "xhigh", "max"),
     "codex_cli": ("low", "medium", "high", "xhigh", "max", "ultra"),
     "openai_api": ("standard", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
+    "azure_foundry_api": ("standard", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
     "anthropic_api": ("standard", "low", "medium", "high", "xhigh", "max"),
     "openrouter_api": ("standard", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
     "kompatibel_api": ("standard", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
@@ -48,8 +49,9 @@ def normaliser(motor, modell, innstillinger=None, tenkenivaa=None):
     if motor == 'openrouter_api' and (modell.startswith('openrouter/') or modell.startswith('~') or ':' in modell):
         raise ValueError('Velg en konkret OpenRouter-modell uten automatisk modellruting eller variant-suffiks.')
     nivaa = tenkenivaa if tenkenivaa is not None else valg.get("tenkenivaa", "standard" if motor in API_MOTORER else STANDARD_TENKENIVAA)
-    if nivaa not in TENKENIVAA[motor]:
-        raise ValueError(f"Ugyldig tenkenivå for {motor}. Velg: {', '.join(TENKENIVAA[motor])}.")
+    levels = TENKENIVAA[wire_engine(motor, valg)]
+    if nivaa not in levels:
+        raise ValueError(f"Ugyldig tenkenivå for {motor}. Velg: {', '.join(levels)}.")
     try:
         tidsgrense = float(valg.get("tidsavbrudd_sek", 600))
     except (ValueError, TypeError):

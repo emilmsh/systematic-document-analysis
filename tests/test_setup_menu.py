@@ -27,13 +27,34 @@ def test_dispatch_preserves_arguments_and_exit_status(monkeypatch,args,script,fo
 
 
 def test_menu_reprompts_and_routes_reader_setup(monkeypatch):
-    choices = iter(['bad','3'])
+    choices = iter(['bad','2','1'])
     monkeypatch.setattr(sys.stdin, 'isatty', lambda: True)
     monkeypatch.setattr('builtins.input', lambda _: next(choices))
     calls = []
     monkeypatch.setattr(manage.subprocess, 'run', lambda cmd: calls.append(cmd) or SimpleNamespace(returncode=0))
     assert manage.main([]) == 0
     assert Path(calls[0][-1]).name == 'setup_reader.py'
+
+
+def test_back_returns_to_main_menu_without_running_an_action(monkeypatch, capsys):
+    choices = iter(['2','0','3','0','0'])
+    monkeypatch.setattr(sys.stdin, 'isatty', lambda: True)
+    monkeypatch.setattr('builtins.input', lambda _: next(choices))
+    monkeypatch.setattr(manage.subprocess, 'run', lambda _: pytest.fail('Back must not run setup'))
+    assert manage.main([]) == 0
+    output = capsys.readouterr().out
+    assert output.count('Systematic Document Analysis') == 3
+    assert '0 = Back / Tilbake' in output
+
+
+def test_maintenance_can_repair_ocr_without_reinstalling_plugin(monkeypatch):
+    choices = iter(['3','3'])
+    monkeypatch.setattr(sys.stdin, 'isatty', lambda: True)
+    monkeypatch.setattr('builtins.input', lambda _: next(choices))
+    calls = []
+    monkeypatch.setattr(manage.subprocess, 'run', lambda cmd: calls.append(cmd) or SimpleNamespace(returncode=1))
+    assert manage.main([]) == 1
+    assert calls == [[sys.executable,'-X','utf8',str(manage.ROOT/'setup_ocr.py')]]
 
 
 def test_no_input_and_help_never_launch_setup(monkeypatch):

@@ -62,8 +62,11 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
             assert all(x in plan for x in ("sonnet", "medium", "gpt-5.6-terra", "high", "1200")), plan
             # Planlegging i den felles MCP-flaten krever ingen API-nøkkel eller modellkall.
             for engine, model in [('openai_api','gpt-6-astra'), ('anthropic_api','claude-sonnet-4-6'),
-                                  ('openrouter_api','openai/gpt-6-astra'), ('kompatibel_api','chosen-model')]:
+                                  ('openrouter_api','openai/gpt-6-astra'), ('kompatibel_api','chosen-model'),
+                                  ('azure_foundry_api','my-deployment')]:
                 settings = {'base_url':'https://example.org/v1'} if engine == 'kompatibel_api' else {}
+                if engine == 'azure_foundry_api':
+                    settings = {'base_url': 'https://example.services.ai.azure.com', 'api_format': 'chat_completions'}
                 await call('ny_planversjon', {'analyse_id':aid, 'endringsnotat':'API-plan uten kall',
                                              'motor':engine, 'modell':model, 'tenkenivaa':'high',
                                              'motorinnstillinger_json':json.dumps(settings)})

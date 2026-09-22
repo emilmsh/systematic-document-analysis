@@ -8,14 +8,18 @@ En plugin for Claude Code og Codex for systematisk analyse av dokumenter, regnea
 
 **Du trenger bare å dobbeltklikke `installer.cmd`.** Det installerer pluginen og eventuelt manglende kommandolinjeverktøy (CLI), lar deg velge lesemotor og sjekker abonnementsinnloggingen. Er CLI-et ikke innlogget med abonnement, starter innloggingen, og du fullfører den i nettleseren. Eksisterende abonnementsinnlogging brukes videre. At du er innlogget i skrivebordsappen, er ikke en bekreftelse på at CLI-et er innlogget.
 
-1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Gjeldende utgave er **[0.8.8](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.8)**. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
+1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Gjeldende utgave er **[0.8.9](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.9)**. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
 2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, velg **1 = Installer**, deretter **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor terminalen i Codex.
-3. **Fortsett i samme installasjonsvindu:** velg lesemotor, **1 = Codex / ChatGPT eller 2 = Claude Code**, og fullfør eventuell innlogging med riktig konto i nettleseren. Vent til installasjonsvinduet bekrefter innloggingen. Velg **3 = hopp over** hvis du skal bruke API eller sette opp lesemotoren senere. Valg av lesemotor er uavhengig av appen du valgte i steg 2.
+3. **Fortsett i samme installasjonsvindu:** velg lesemotor, **1 = Codex / ChatGPT, 2 = Claude Code eller 3 = begge**, og fullfør eventuell innlogging med riktig konto i nettleseren. Vent til installasjonsvinduet bekrefter innloggingen. Velg **4 = hopp over** hvis du skal bruke API eller sette opp lesemotoren senere. Valg av lesemotor er uavhengig av appen du valgte i steg 2.
 4. Åpne arbeidsmappen i **Code-fanen** i Claude eller i Codex, start en **ny lokal samtale**, og beskriv oppgaven: **«Bruk Systematic Document Analysis. Jeg vil undersøke hvordan disse årsrapportene omtaler egen bruk av KI. Filene ligger i [mappe].»**
 
 Førstegangsoppsett krever internett. Installasjonsprogrammet ordner Python og installerer den valgte appens kommandolinjeverktøy hvis det mangler; du trenger ikke bruke terminalen selv.
 
 **`installer.cmd reader` er en hjelper for senere bruk**, for eksempel hvis du hoppet over eller avbrøt innloggingen. Du trenger ikke installere pluginen på nytt. For å bytte konto kan du kjøre `installer.cmd reader claude --login` eller `installer.cmd reader codex --login` i en terminal.
+
+Du kan klargjøre og være innlogget i begge lesermotorene samtidig. Hver analyse velger fortsatt én lesermotor uttrykkelig; oppsett av begge aktiverer ikke automatisk bytte mellom dem.
+
+**Azure AI Foundry:** Åpne `installer.cmd` → **Innlogging og innstillinger** → **API-innstillinger**, og fyll inn `AZURE_AI_API_KEY` lokalt. Dette støtter også andre Foundry-modeller enn OpenAI. Oppgi ressursendepunkt, deployment-navn og grensesnitt (`responses`, `chat_completions` eller `anthropic_messages`) i analyseplanen. Modellen må støtte valgt JSON-skjema og innstillinger. Ingen ekstra SDK installeres. Se [Azure-oppsett og avgrensninger](USAGE.md#azure-ai-foundry).
 
 ## Prosjektmappe og resultater
 
@@ -63,13 +67,13 @@ ChatGPT-appen / Codex:
 
 > Installer Systematic Document Analysis for Codex. Utgivelsesside: https://github.com/emilmsh/systematic-document-analysis/releases/latest (privat repo; bruk eksisterende gh-innlogging, eller be meg laste ned ZIP-en hvis du ikke får tilgang). Last ned systematic-document-analysis-windows.zip og SHA256SUMS.txt, verifiser sjekksummen og pakk ut ZIP-en i en mappe under Nedlastinger. Vis meg mappestien, slik at jeg kan dobbeltklikke installer.cmd i Filutforsker og velge Codex. Overlat selve installasjonssteget til meg. Når jeg bekrefter, kjør `codex plugin list` og sjekk at systematic-document-analysis er aktivert. Ikke endre andre plugins, innstillinger eller filer.
 
-Hvis innloggingen ble hoppet over, åpne **installer.cmd**, velg lesermotor og innlogging, deretter ønsket lesemotor. Hjelperen bruker eksisterende abonnementsinnlogging eller starter innlogging ved behov. Start deretter en ny samtale, slik at appen laster pluginen.
+Hvis innloggingen ble hoppet over, åpne **installer.cmd**, velg Innlogging og innstillinger → Lesermotor og innlogging, deretter ønsket lesemotor. Hjelperen bruker eksisterende abonnementsinnlogging eller starter innlogging ved behov. Start deretter en ny samtale, slik at appen laster pluginen.
 
 ### Manuelt
 
 1. Last ned [Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) fra [siste utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest) og pakk den ut.
 2. Dobbeltklikk `installer.cmd` i Filutforsker og velg Claude Code, Codex eller begge. Programmet klargjør Python 3.12 eller nyere, installerer et manglende kommandolinjeverktøy for appen, registrerer pluginen og viser installasjonsmappen.
-3. I samme vindu velger du lesemotor, **1 = Codex / ChatGPT eller 2 = Claude Code**, og fullfører eventuell innlogging i nettleseren. Installeringen sjekker innloggingen før den melder at oppsettet er ferdig. **3 = hopp over** utsetter dette steget eller lar deg bruke API. Start deretter en ny lokal samtale. Første oppstart installerer Python-avhengighetene.
+3. I samme vindu velger du lesemotor, **1 = Codex / ChatGPT, 2 = Claude Code eller 3 = begge**, og fullfører eventuell innlogging i nettleseren. Installeringen sjekker innloggingen før den melder at oppsettet er ferdig. **4 = hopp over** utsetter dette steget eller lar deg bruke API. Start deretter en ny lokal samtale. Første oppstart installerer Python-avhengighetene.
 
 Lesing med abonnementet ditt bruker appens egen CLI. Normalinstallasjonen klargjør valgt CLI og lokal OCR med norsk og engelsk språkstøtte; innloggingen fullfører du selv. PATH håndteres automatisk. Lesesesjonene får filverktøy, parsere, PDF-sidebilder og OCR i en egen arbeidsmappe per kjøring. `installer.cmd reader` og `installer.cmd ocr` brukes ved senere oppsett eller reparasjon. `installer.cmd settings` åpner en lokal fil for valgfrie API-nøkler.
 

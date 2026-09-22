@@ -11,7 +11,7 @@ import httpx
 from jsonschema import Draft202012Validator
 
 from .base import Adapter, AdapterFeil
-from ..api_oppsett import API_MOTORER, API_ENV, api_metadata, local_key
+from ..api_oppsett import API_MOTORER, API_ENV, api_metadata, local_key, azure_base_url, wire_engine
 from ..modell import Motorsvar, Stotte
 
 
@@ -23,12 +23,13 @@ def bygg_request(motor, pakke, modell, valg):
     messages = [{'role': 'system', 'content': pakke.systeminstruks},
                 {'role': 'user', 'content': pakke.brukermelding}]
     body = {'model': modell}
-    if motor == 'openai_api':
+    wire = wire_engine(motor, valg)
+    if wire == 'openai_api':
         body.update(input=messages, store=False, max_output_tokens=maximum,
                     text={'format': {'type': 'json_schema', 'name': 'kildeanalyse', 'strict': True, 'schema': schema}})
         if effort != 'standard':
             body['reasoning'] = {'effort': effort}
-    elif motor == 'anthropic_api':
+    elif wire == 'anthropic_api':
         body.update(system=pakke.systeminstruks, messages=messages[1:], max_tokens=maximum,
                     output_config={'format': {'type': 'json_schema', 'schema': schema}})
         if effort != 'standard':
@@ -49,11 +50,12 @@ def bygg_request(motor, pakke, modell, valg):
     return {'url': api_metadata(motor, valg)['endpoint'], 'body': body}
 
 
-def les_svar(motor, data):
+def les_svar(motor, data, valg=None):
     """Avvis ufullstendige svar, refusals og verktøykall før JSON-validering."""
     if not isinstance(data, dict) or data.get('error'):
         raise ValueError('API-et returnerte en feil eller ukjent svarformat.')
-    if motor == 'openai_api':
+    wire = wire_engine(motor, valg or {})
+    if wire == 'openai_api':
         if data.get('status') != 'completed':
             raise ValueError('API-svaret er ikke fullført (mulig tokengrense eller avvisning).')
         texts = []
@@ -67,7 +69,7 @@ def les_svar(motor, data):
                     raise ValueError('API-svaret inneholder avvisning eller uventet innhold.')
                 texts.append(part['text'])
         text = ''.join(texts)
-    elif motor == 'anthropic_api':
+    elif wire == 'anthropic_api':
         if data.get('stop_reason') != 'end_turn':
             raise ValueError('Claude-svaret er ikke fullført (tokengrense, avvisning eller verktøy).')
         texts = []
@@ -108,6 +110,13 @@ class ApiAdapter(Adapter):
         if self.navn == 'kompatibel_api' and not self.innstillinger.get('base_url'):
             ready = False
             messages.append('Velg base_url og modell eksplisitt i planen.')
+        if self.navn == 'azure_foundry_api':
+            try:
+                azure_base_url(self.innstillinger.get('base_url', ''), self.innstillinger.get('api_format'))
+            except ValueError:
+                ready = False
+                messages.append('Choose an Azure resource base_url, api_format (responses, chat_completions or '
+                                'anthropic_messages), and the deployment name as model in the plan.')
         return Stotte(ready, messages, metadata)
 
     def avbryt(self):
@@ -151,8 +160,10 @@ class ApiAdapter(Adapter):
                 text = text.replace(json.dumps(secret)[1:-1], '[API-NØKKEL SKJULT]')
             return text
         headers = {'Content-Type': 'application/json'}
-        if self.navn == 'anthropic_api':
+        if wire_engine(self.navn, self.innstillinger) == 'anthropic_api':
             headers.update({'x-api-key': key, 'anthropic-version': '2023-06-01'})
+        elif self.navn == 'azure_foundry_api':
+            headers['api-key'] = key
         else:
             headers['Authorization'] = 'Bearer ' + key
         info = {**support.egenskaper, 'modell_onsket': modell,
@@ -175,7 +186,7 @@ class ApiAdapter(Adapter):
             result.forbruk = {'usage': data.get('usage'), 'merknad': 'API-forbruk rapportert av leverandøren; ikke en kontrollert faktura.'} if isinstance(data, dict) else None
             if isinstance(data, dict):
                 info['provider_rapportert'] = data.get('provider') or 'ukjent'
-            answer = les_svar(self.navn, data)
+            answer = les_svar(self.navn, data, self.innstillinger)
             if next(Draft202012Validator(pakke.svarskjema).iter_errors(answer), None):
                 raise ValueError('API-svaret følger ikke det registrerte JSON-skjemaet.')
             result.svar = answer
@@ -208,6 +219,11 @@ class OpenAiApiAdapter(ApiAdapter):
 class AnthropicApiAdapter(ApiAdapter):
     navn = 'anthropic_api'
     beskrivelse = 'Anthropic Messages API, egen API-nøkkel og separat betaling.'
+
+
+class AzureFoundryApiAdapter(ApiAdapter):
+    navn = 'azure_foundry_api'
+    beskrivelse = 'Azure AI Foundry: Responses, Chat Completions or Claude Messages; explicit resource, deployment and API format, separate billing.'
 
 
 class OpenRouterApiAdapter(ApiAdapter):

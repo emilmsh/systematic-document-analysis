@@ -8,18 +8,25 @@ import pytest
 
 from kildeanalyse.adaptere import lag_adapter
 from kildeanalyse.adaptere.api import les_svar
-from kildeanalyse.api_oppsett import API_MOTORER
+from kildeanalyse.api_oppsett import API_MOTORER, AZURE_FORMATS, wire_engine
 from kildeanalyse.modell import Plan, Kriterium
 from kildeanalyse.parametre import normaliser
 from kildeanalyse.prompt import bygg_inputpakke
 
 ANSWER = {'vurderinger':[{'kriterium_id':'k1','svar':'ja','belegg':[], 'kommentar':''}],
           'sider_lest':[1], 'merknader':[]}
+API_CASES = [(engine, None) for engine in API_MOTORER if engine != 'azure_foundry_api'] + [
+    ('azure_foundry_api', fmt) for fmt in AZURE_FORMATS]
 
 
 def package(engine, level='high', **settings):
     if engine == 'kompatibel_api':
         settings.setdefault('base_url', 'https://example.org/v1')
+    if settings.get('api_format') is None:
+        settings.pop('api_format', None)
+    if engine == 'azure_foundry_api':
+        settings.setdefault('base_url', 'https://test-resource.services.ai.azure.com')
+        settings.setdefault('api_format', 'responses')
     model, settings = normaliser(engine, 'chosen-model', settings, level)
     plan = Plan('formål', [Kriterium('k1','navn','spørsmål',['ja'])], motor=engine,
                 modell=model, motorinnstillinger=settings)
@@ -28,7 +35,8 @@ def package(engine, level='high', **settings):
     return bygg_inputpakke(plan, doc, forsok_id='f1', kjoring_id='k1'), settings
 
 
-def response(engine, answer=ANSWER):
+def response(engine, answer=ANSWER, api_format=None):
+    engine = wire_engine(engine, {'api_format': api_format or 'responses'})
     data = {'id':'req-1','model':'reported-model','usage':{'input_tokens':100,'output_tokens':20}}
     text = json.dumps(answer)
     if engine == 'openai_api':
@@ -50,15 +58,15 @@ def transport(monkeypatch):
     return install
 
 
-@pytest.mark.parametrize('engine', API_MOTORER)
-def test_exact_request_and_success(engine, transport, tmp_path):
-    pakke, settings = package(engine)
+@pytest.mark.parametrize('engine,api_format', API_CASES)
+def test_exact_request_and_success(engine, api_format, transport, tmp_path):
+    pakke, settings = package(engine, api_format=api_format)
     observed = []
     def handler(req):
         observed.append(req)
         assert str(req.url) == pakke.api_foresporsel['url']
         assert json.loads(req.content) == pakke.api_foresporsel['body']
-        return httpx.Response(200, json=response(engine), headers={'x-request-id':'trace-1'})
+        return httpx.Response(200, json=response(engine, api_format=api_format), headers={'x-request-id':'trace-1'})
     transport(handler)
     result = lag_adapter(engine, settings).kjor(pakke, 'chosen-model', lambda:False, str(tmp_path))
     assert result.svar == ANSWER and not result.feil
@@ -66,10 +74,17 @@ def test_exact_request_and_success(engine, transport, tmp_path):
     assert result.motorinfo['request_id'] == 'trace-1'
     assert 'fake-secret' not in json.dumps(pakke.til_dict())
     body = pakke.api_foresporsel['body']
-    if engine == 'openai_api':
+    wire = wire_engine(engine, settings)
+    if engine == 'azure_foundry_api':
+        header = 'x-api-key' if api_format == 'anthropic_messages' else 'api-key'
+        assert observed[0].headers[header] == 'fake-secret-for-offline-tests'
+        assert 'authorization' not in observed[0].headers
+        assert result.motorinfo['api_format'] == api_format
+        assert 'tools' not in body
+    if wire == 'openai_api':
         assert body['reasoning'] == {'effort':'high'} and body['store'] is False
         assert body['text']['format']['schema'] == pakke.svarskjema
-    elif engine == 'anthropic_api':
+    elif wire == 'anthropic_api':
         assert body['output_config']['effort'] == 'high' and body['thinking'] == {'type':'adaptive'}
         assert observed[0].headers['anthropic-version'] == '2023-06-01'
     elif engine == 'openrouter_api':
@@ -79,11 +94,11 @@ def test_exact_request_and_success(engine, transport, tmp_path):
         assert body['reasoning_effort'] == 'high'
 
 
-@pytest.mark.parametrize('engine', API_MOTORER)
-def test_standard_omits_effort_and_hash_tracks_options(engine):
-    default, settings = package(engine, 'standard')
-    high, _ = package(engine, 'high')
-    larger, _ = package(engine, 'standard', maks_output_tokens=20000)
+@pytest.mark.parametrize('engine,api_format', API_CASES)
+def test_standard_omits_effort_and_hash_tracks_options(engine, api_format):
+    default, settings = package(engine, 'standard', api_format=api_format)
+    high, _ = package(engine, 'high', api_format=api_format)
+    larger, _ = package(engine, 'standard', maks_output_tokens=20000, api_format=api_format)
     assert len({default.hash(), high.hash(), larger.hash()}) == 3
     body = default.api_foresporsel['body']
     assert 'reasoning' not in body and 'reasoning_effort' not in body
@@ -107,22 +122,23 @@ def test_http_errors_stop_without_retry_and_redact_secrets(status, transport, tm
     assert 'fake-secret' not in json.dumps(result.__dict__)
 
 
-@pytest.mark.parametrize('engine', API_MOTORER)
-def test_truncation_refusal_and_bad_schema(engine, transport, tmp_path):
-    pakke, settings = package(engine)
-    data = response(engine, {'unexpected':'object'})
+@pytest.mark.parametrize('engine,api_format', API_CASES)
+def test_truncation_refusal_and_bad_schema(engine, api_format, transport, tmp_path):
+    pakke, settings = package(engine, api_format=api_format)
+    data = response(engine, {'unexpected':'object'}, api_format=api_format)
     transport(lambda req:httpx.Response(200, json=data))
     result = lag_adapter(engine, settings).kjor(pakke, 'chosen-model', lambda:False, str(tmp_path))
     assert result.svar is None and result.feil and result.raasvar
-    truncated = response(engine)
-    if engine == 'openai_api':
+    truncated = response(engine, api_format=api_format)
+    wire = wire_engine(engine, settings)
+    if wire == 'openai_api':
         truncated['status'] = 'incomplete'
-    elif engine == 'anthropic_api':
+    elif wire == 'anthropic_api':
         truncated['stop_reason'] = 'max_tokens'
     else:
         truncated['choices'][0]['finish_reason'] = 'length'
     with pytest.raises(ValueError):
-        les_svar(engine, truncated)
+        les_svar(engine, truncated, settings)
 
 
 @pytest.mark.parametrize('stop_mode', ['before','during','timeout','network'])
@@ -164,6 +180,61 @@ def test_custom_url_is_explicit_https(url):
         normaliser('kompatibel_api', 'model', {'base_url':url})
 
 
+@pytest.mark.parametrize('fmt,base,path', [
+    ('responses', 'https://demo.openai.azure.com/', '/openai/v1/responses'),
+    ('chat_completions', 'https://demo.services.ai.azure.com/openai/v1/', '/openai/v1/chat/completions'),
+    ('anthropic_messages', 'https://demo.services.ai.azure.com/anthropic', '/anthropic/v1/messages'),
+    ('anthropic_messages', 'https://demo.services.ai.azure.com/anthropic/v1/', '/anthropic/v1/messages'),
+])
+def test_azure_endpoint_and_protocol_are_explicit(fmt, base, path):
+    from urllib.parse import urlsplit
+    pakke, _ = package('azure_foundry_api', api_format=fmt, base_url=base)
+    assert pakke.api_foresporsel['url'] == 'https://' + urlsplit(base).hostname + path
+    changed, _ = package('azure_foundry_api', api_format=fmt, base_url='https://other.services.ai.azure.com')
+    assert changed.hash() != pakke.hash()
+
+
+@pytest.mark.parametrize('base,fmt', [
+    ('https://demo.services.ai.azure.com', None),
+    ('https://demo.services.ai.azure.com', 'automatic'),
+    ('https://demo.services.ai.azure.com', []),
+    ('https://demo.services.ai.azure.com/api/projects/example', 'responses'),
+    ('https://demo.services.ai.azure.com/anthropic', 'responses'),
+    ('https://demo.openai.azure.com', 'anthropic_messages'),
+    ('https://demo.services.ai.azure.com/openai/v1', 'anthropic_messages'),
+    ('https://demo.services.ai.azure.com.evil.example', 'responses'),
+    ('http://demo.services.ai.azure.com', 'chat_completions'),
+    ('https://demo.services.ai.azure.com?key=secret', 'responses'),
+    ('https://user:secret@demo.services.ai.azure.com', 'responses'),
+])
+def test_azure_invalid_destination_or_format_is_rejected(base, fmt):
+    with pytest.raises(ValueError):
+        normaliser('azure_foundry_api', 'deployment', {'base_url': base, 'api_format': fmt})
+
+
+def test_azure_protocol_and_deployment_changes_require_new_input():
+    packages = [package('azure_foundry_api', api_format=fmt)[0] for fmt in AZURE_FORMATS]
+    assert len({p.hash() for p in packages}) == 3
+    with pytest.raises(ValueError):
+        package('azure_foundry_api', 'none', api_format='anthropic_messages')
+    with pytest.raises(ValueError):
+        normaliser('openai_api', 'model', {'api_format': 'chat_completions'})
+
+
+@pytest.mark.parametrize('fmt', AZURE_FORMATS)
+def test_azure_rejection_never_changes_protocol_or_exposes_key(fmt, transport, tmp_path):
+    pakke, settings = package('azure_foundry_api', api_format=fmt)
+    calls = []
+    def handler(req):
+        calls.append(req)
+        return httpx.Response(400, json={'error': 'unsupported schema fake-secret-for-offline-tests'})
+    transport(handler)
+    result = lag_adapter('azure_foundry_api', settings).kjor(pakke, 'chosen-model', lambda: False, str(tmp_path))
+    assert result.feil and result.svar is None and len(calls) == 1
+    assert str(calls[0].url) == pakke.api_foresporsel['url']
+    assert 'fake-secret' not in json.dumps(result.__dict__)
+
+
 def test_model_required_and_missing_key_is_local(monkeypatch):
     for engine, (_, env, _) in API_MOTORER.items():
         monkeypatch.delenv(env, raising=False)
@@ -199,8 +270,8 @@ def test_file_key_authentication_and_response_redaction(transport, tmp_path, mon
     assert local_key('openai_api') == 'private-file-secret'
 
 
-@pytest.mark.parametrize('engine', API_MOTORER)
-def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
+@pytest.mark.parametrize('engine,api_format', API_CASES)
+def test_full_workflow_and_export_with_http_mock(engine, api_format, transport, tmp_path):
     from pathlib import Path
     from kildeanalyse import tjeneste, visning
     from kildeanalyse.lager import Lager, KJ_FULLFORT
@@ -209,13 +280,15 @@ def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
     fix = Path(__file__).parent/'fixtures/syntetisk/fjordblikk_2025.pdf'
     imported = tjeneste.importer_dokumenter(lager, pr['id'], [str(fix)])
     doc = imported['resultater'][0]['dokument']
-    _, settings = package(engine)
+    _, settings = package(engine, api_format=api_format)
     criteria = {'kriterier':[{'id':'k1','spørsmål':'Lokal kontroll','tillatte_svar':['ja']}]}
     created = tjeneste.opprett_analyse(lager, pr['id'], 'API', 'Bestilling', criteria,
         motor=engine, modell='chosen-model', motorinnstillinger=settings, sprak='en')
     aid = created['analyse']['id']
     text = visning.md_plan(tjeneste.vis_plan(lager, aid))
     assert 'separat betaling' in text and '16384' in text
+    if engine == 'azure_foundry_api':
+        assert api_format in text
     kid = tjeneste.legg_til_kjoringer(lager, aid)['nye'][0]['id']
     preview = tjeneste.vis_inputpakke(lager, kid)['pakke']
     answer = dict(ANSWER, sider_lest=list(range(1, doc['antall_sider']+1)))
@@ -225,7 +298,7 @@ def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
     def handler(req):
         requests.append(req)
         assert json.loads(req.content) == preview['api_foresporsel']['body']
-        return httpx.Response(200, json=response(engine, answer))
+        return httpx.Response(200, json=response(engine, answer, api_format=api_format))
     transport(handler)
     # Ingen forespørsler før godkjenning og start.
     assert not requests
@@ -241,6 +314,9 @@ def test_full_workflow_and_export_with_http_mock(engine, transport, tmp_path):
     assert manifest['kjoreparametre']['language'] == 'en'
     assert 'in English' in saved['systeminstruks']
     assert manifest['motorinfo']['harness'].startswith('direct API')
+    if engine == 'azure_foundry_api':
+        assert manifest['motorinfo']['api_format'] == api_format
+        assert manifest['kjoreparametre']['api']['api_format'] == api_format
     import csv
     with (export/'evidence.csv').open(encoding='utf-8-sig', newline='') as source:
         evidence = list(csv.DictReader(source, delimiter=';'))

@@ -8,9 +8,9 @@ A plugin for Claude Code and Codex for systematic analysis of documents, spreads
 
 **You only need to double-click `installer.cmd`.** It installs the plugin and any missing command-line tool (CLI), lets you choose a reader, and checks subscription sign-in. If the CLI is not signed in with a subscription, it starts sign-in for you to complete in your browser. Existing subscription sign-in is reused. Being signed in to the desktop app does not confirm that the CLI is signed in.
 
-1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. The current release is **[0.8.8](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.8)**. Private repository: sign in with access, or use a ZIP shared by a colleague.
+1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. The current release is **[0.8.9](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.9)**. Private repository: sign in with access, or use a ZIP shared by a colleague.
 2. Open the extracted folder in File Explorer, double-click **installer.cmd**, choose **1 = Install**, then **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Codex terminal.
-3. **Continue in the same installer window:** choose your reader, **1 = Codex / ChatGPT or 2 = Claude Code**, and complete any required browser sign-in with the intended account. Wait for the installer to confirm sign-in. Choose **3 = Skip** if you will use an API or set up the reader later. The reader is independent of the app selected in step 2.
+3. **Continue in the same installer window:** choose your reader, **1 = Codex / ChatGPT, 2 = Claude Code or 3 = Both**, and complete any required browser sign-in with the intended account. Wait for the installer to confirm sign-in. Choose **4 = Skip** if you will use an API or set up the reader later. The reader is independent of the app selected in step 2.
 4. Open your working folder in Claude Code's **Code tab** or in Codex, start a **new local conversation**, and describe your task: **“Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in [folder].”**
 
 First-time setup requires internet access. The installer provides Python and installs the selected app's command-line tool if it is missing; you do not need to use the terminal yourself.
@@ -62,13 +62,13 @@ ChatGPT desktop / Codex:
 
 > Install Systematic Document Analysis for Codex. Release page: https://github.com/emilmsh/systematic-document-analysis/releases/latest (private repository; use the existing gh login, or ask me to download the ZIP if you cannot). Download systematic-document-analysis-windows.zip and SHA256SUMS.txt, verify the checksum and extract the ZIP to a folder under my Downloads. Show me the folder path so I can double-click installer.cmd in File Explorer and choose Codex. Leave that installation step to me. When I confirm, run `codex plugin list` and check that systematic-document-analysis is enabled. Do not change other plugins, settings or files.
 
-If sign-in was skipped, open **installer.cmd**, choose Reader sign-in, then choose your reader. The helper reuses existing subscription sign-in or starts sign-in if needed. Then start a new conversation so the app loads the plugin.
+If sign-in was skipped, open **installer.cmd**, choose Sign-in and settings → Reader sign-in, then choose your reader. The helper reuses existing subscription sign-in or starts sign-in if needed. Then start a new conversation so the app loads the plugin.
 
 ### By hand
 
 1. Download the [Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) from the [latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest) and extract it.
 2. Double-click `installer.cmd` in File Explorer, choose Install, then Claude Code, Codex or both. It prepares Python 3.12 or newer, installs a missing host CLI, registers the plugin and reports the installation folder.
-3. In the same window, choose your reader, **1 = Codex / ChatGPT or 2 = Claude Code**, and complete any required browser sign-in. The installer checks sign-in before reporting setup complete. **3 = Skip** postpones this step or lets you use an API. Then start a new local conversation. The first start installs the Python dependencies.
+3. In the same window, choose your reader, **1 = Codex / ChatGPT, 2 = Claude Code or 3 = Both**, and complete any required browser sign-in. The installer checks sign-in before reporting setup complete. **4 = Skip** postpones this step or lets you use an API. Then start a new local conversation. The first start installs the Python dependencies.
 
 Subscription reading uses the app's CLI. Normal installation sets up the selected CLI and local OCR with English/Norwegian language data; you complete the vendor's sign-in yourself. CLI discovery handles stale PATH automatically. Reader sessions get file tools, parsers, PDF page images and OCR in a fresh workspace per call. `installer.cmd reader` and `installer.cmd ocr` remain available for later setup or repair. `installer.cmd settings` opens a local file for optional API keys.
 
@@ -102,7 +102,7 @@ The app you talk to and the model that reads the documents are chosen separately
 
 | Host (conversation) | Reader (reads each document) |
 |---|---|
-| Claude Code, Codex desktop | `claude_cli` (default `sonnet`, high), `codex_cli` (default `gpt-5.6-terra`, high), or `openai_api`, `anthropic_api`, `openrouter_api`, `kompatibel_api` with an explicit model ID |
+| Claude Code, Codex desktop | `claude_cli` (default `sonnet`, high), `codex_cli` (default `gpt-5.6-terra`, high), or `openai_api`, `azure_foundry_api`, `anthropic_api`, `openrouter_api`, `kompatibel_api` with an explicit model ID |
 
 CLI readers use your subscription sign-in and the vendor's agent harness with restricted context and tools. API readers make direct calls and are billed by the provider. The requested model and effort are recorded; whether a provider honoured the effort is only known if it reports it.
 
@@ -127,11 +127,29 @@ CLI readers use your subscription sign-in and the vendor's agent harness with re
 
 ### API keys (optional)
 
-`installer.cmd settings` opens `%LOCALAPPDATA%\systematic-document-analysis\settings\providers.env` in Notepad. Paste a key after `OPENAI_API_KEY=`, `ANTHROPIC_API_KEY=`, `OPENROUTER_API_KEY=` or `SDA_CUSTOM_API_KEY=` and save. The file is plain text outside the project; do not share it, commit it or ask an assistant to read it. Keys are only used to authenticate requests and are excluded from stored inputs and exports. Environment variables with the same names override the file.
+`installer.cmd settings` opens `%LOCALAPPDATA%\systematic-document-analysis\settings\providers.env` in Notepad. Paste a key after `OPENAI_API_KEY=`, `ANTHROPIC_API_KEY=`, `OPENROUTER_API_KEY=`, `AZURE_AI_API_KEY=` or `SDA_CUSTOM_API_KEY=` and save. The file is plain text outside the project; do not share it, commit it or ask an assistant to read it. Keys are only used to authenticate requests and are excluded from stored inputs and exports. Environment variables with the same names override the file.
 
 ### Data
 
 Analysis data is stored in `%LOCALAPPDATA%\systematic-document-analysis` and shared by both apps. `SDA_DATA` selects another directory. Nothing is moved or deleted automatically; `show_setup` displays the directory in use.
+
+## Azure AI Foundry
+
+In **installer.cmd → Sign-in and settings → API settings**, fill `AZURE_AI_API_KEY` locally. Opening settings adds this empty field to older settings files without replacing their existing keys. No Azure SDK or additional installation is needed.
+
+Ask for the **Azure Foundry** reader (`azure_foundry_api`) and provide the resource endpoint and deployment name. These are nonsecret plan settings; the key stays on your computer. Set `api_format` explicitly to match the deployment:
+
+| Deployment interface | `api_format` | Resource base URL |
+| --- | --- | --- |
+| Responses | `responses` | `https://RESOURCE.services.ai.azure.com/openai/v1` or `https://RESOURCE.openai.azure.com/openai/v1` |
+| OpenAI-compatible Chat Completions | `chat_completions` | Same resource URLs as above |
+| Claude Messages | `anthropic_messages` | `https://RESOURCE.services.ai.azure.com/anthropic/v1` |
+
+A bare resource URL is also accepted; the selected format supplies the path. For Claude, `/anthropic` is accepted too. Use the resource endpoint, not a `/api/projects/...` project URL. Use your **deployment name** as the model; it can differ from the catalog model ID.
+
+For example, engine `azure_foundry_api`, model `my-deployment`, and settings `{"base_url":"https://my-resource.services.ai.azure.com", "api_format":"chat_completions"}`. Choose `reasoning_effort="standard"` to omit explicit effort; other levels depend on the deployment. The chosen deployment must accept JSON-schema structured output and the requested parameters. Unsupported calls fail visibly; the plugin does not switch format, retry or drop parameters. The endpoint, format and exact request are included in the approval/audit trail, with no tools or web search enabled.
+
+This supports API-key authentication on the listed public Azure resource domains. Entra ID authentication, sovereign-cloud domains and legacy model-inference endpoints are not implemented. Models that require Entra ID cannot use this key-based reader. Billing belongs to the Azure resource. See Microsoft's [v1 API documentation](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle) and [Claude on Foundry documentation](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/how-to/use-foundry-models-claude).
 
 ## Documentation
 

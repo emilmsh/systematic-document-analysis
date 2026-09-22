@@ -149,9 +149,9 @@ def importer_dokumenter(prosjekt_id: str, stier: list[str], ocr_mode: str = 'aut
 @server.tool(description=(
     "Opprett en analyse med planversjon 1 (utkast). kriteriefil er en sti til en JSON-fil med «kriterier» "
     "(id, navn, spørsmål, tillatte_svar, krever_belegg_ved, regel). motor: «simulert» (ingen modellkall), «claude_cli» "
-    "(Claude-abonnement), «codex_cli» (ChatGPT-innlogging), eller API: «openai_api», «anthropic_api», "
+    "(Claude-abonnement), «codex_cli» (ChatGPT-innlogging), eller API: «openai_api», «azure_foundry_api», «anthropic_api»,  "
     "«openrouter_api», «kompatibel_api». API krever eksplisitt modell-ID og lokal nøkkel; separat betaling. "
-    "API-innstillinger: maks_output_tokens, tidsavbrudd_sek; kompatibel_api krever base_url; OpenRouter har valgfri provider. "
+    "API-innstillinger: maks_output_tokens, tidsavbrudd_sek; kompatibel_api krever base_url; OpenRouter har valgfri provider. Azure Foundry: base_url (resource endpoint), modell=deployment name, api_format=responses/chat_completions/anthropic_messages. "
     "API-tenkenivå standard utelater effort; øvrige nivåer avhenger av modellen. Aldri send nøkkelverdier til verktøyet. Velg motor eksplisitt. "
     "CLI-modell: tomt gir sonnet for Claude og gpt-5.6-terra for Codex. "
     "CLI-tenkenivaa: low, medium, high, xhigh, max (og ultra for Codex); CLI-standard high. Støtte avhenger av valgt modell. "

@@ -47,8 +47,28 @@ def signed_in(name, binary):
     return subscription_confirmed(name, result.returncode, result.stdout, result.stderr)
 
 
+def reader_names(name):
+    if name in ('both', 'begge'):
+        return ('codex', 'claude')
+    if name not in ('codex', 'claude'):
+        raise ValueError('Choose codex, claude or both.')
+    return (name,)
+
+
 def setup(name, *, allow_login=True, force_login=False):
     """Install, reuse subscription sign-in, or log in and verify before reporting success."""
+    readers = reader_names(name)
+    if len(readers) > 1:
+        failures = []
+        for reader in readers:
+            try:
+                setup(reader, allow_login=allow_login, force_login=force_login)
+            except (RuntimeError, OSError, subprocess.SubprocessError) as exc:
+                failures.append(f'{reader}: {exc}')
+                print(f'{reader}: setup incomplete; continuing with the other selected reader.', flush=True)
+        if failures:
+            raise RuntimeError(' '.join(failures) + ' Successful sign-ins are kept.')
+        return
     binary = install(name)
     print(f'{name}: using {binary}', flush=True)
     subprocess.run([binary, '--version'], check=True, env=subscription_env())
@@ -103,22 +123,23 @@ def install(name):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('reader', nargs='?', choices=('codex','claude'))
+    parser.add_argument('reader', nargs='?', choices=('codex','claude','both','begge'))
     parser.add_argument('--login', action='store_true',
                         help='Sign in again, even if already authenticated, to choose an account.')
     args = parser.parse_args()
     force_login = args.login
     if args.reader is None:
-        print('Set up a subscription reader and sign in: 1 = Codex, 2 = Claude Code')
-        args.reader = {'1':'codex','2':'claude'}.get(input('Choose 1 or 2: ').strip())
+        print('Set up subscription reading: 1 = Codex, 2 = Claude Code, 3 = Both / Begge')
+        args.reader = {'1':'codex','2':'claude','3':'both'}.get(input('Choose 1, 2 or 3: ').strip())
         if args.reader is None:
             parser.error('Invalid choice. No installation started.')
         args.login = True
     if args.login:
         setup(args.reader, force_login=force_login)
     else:
-        binary = install(args.reader)
-        subprocess.run([binary, '--version'], check=True)
+        for reader in reader_names(args.reader):
+            binary = install(reader)
+            subprocess.run([binary, '--version'], check=True)
         print(f'To sign in: installer.cmd reader {args.reader} --login')
 
 

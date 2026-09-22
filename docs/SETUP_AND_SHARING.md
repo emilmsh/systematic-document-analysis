@@ -14,7 +14,7 @@ For an existing installation, version checks and source selection happen before 
 
 ## Optional API keys without environment-variable setup
 
-Double-click `installer.cmd` and choose API settings, or run `installer.cmd settings` in a terminal. A prepared file opens in Notepad outside the project, at `%LOCALAPPDATA%/systematic-document-analysis/settings/providers.env`. Fill only the provider you want, save and close. An existing file is preserved. Blank providers stay disabled; CLI subscription reading requires no API key.
+Double-click `installer.cmd` and choose Sign-in and settings → API settings, or run `installer.cmd settings` in a terminal. A prepared file opens in Notepad outside the project, at `%LOCALAPPDATA%/systematic-document-analysis/settings/providers.env`. Fill only the provider you want, save and close. An existing file is preserved. Blank providers stay disabled; CLI subscription reading requires no API key.
 
 The assistant may open the editor but should never read the completed file, print it or ask you to paste its contents into chat. The file is plaintext, not a password vault, and other software running as your user can read it. Keep it outside synced/shared folders, do not commit or share it, and revoke a key with the provider if exposed. Shared templates must always be empty. Environment variables override file values for advanced installations. File edits are picked up on subsequent checks/calls without restarting the app.
 
