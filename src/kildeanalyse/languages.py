@@ -86,7 +86,9 @@ def public_result(value):
     if isinstance(value, dict):
         result = {}
         for k, v in value.items():
-            if k in ('api_foresporsel', 'svarskjema', 'raasvar', 'svar_json', 'forbruk'):
+            if k in ('api_foresporsel', 'svarskjema', 'raasvar', 'svar_json', 'forbruk',
+                     'svarskjema_sendt', 'manifest', 'motorinfo', 'hendelser',
+                     'api_request', 'response_schema'):
                 translated = v
             elif k in ('vurderinger', 'per_kriterium', 'teller', 'motorer') and isinstance(v, dict):
                 translated = {identifier: public_result(item) for identifier, item in v.items()}

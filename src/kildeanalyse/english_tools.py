@@ -95,9 +95,9 @@ def register(server, get_store):
     def resume_runs(analysis_id: str) -> str:
         return call(tjeneste.gjenoppta, analysis_id, i_bakgrunnen=True)
 
-    @server.tool(description='Show progress, errors and review status. If workflow_block is present, clearly report the pause, its reason, existing results and corrective next step. Do not substitute another analysis. Translate technical status codes for the user without changing recorded values.')
-    def show_status(analysis_id: str) -> str:
-        return call(tjeneste.vis_status, analysis_id)
+    @server.tool(description='Show compact progress, errors, non-blocking run_warnings and review status. details=true includes full source and attempt data; use show_run for per-call evidence. Warnings do not stop the queue. If workflow_block is present, report the pause, reason and corrective next step. Translate diagnostics without changing recorded values.')
+    def show_status(analysis_id: str, details: bool = False) -> str:
+        return call(tjeneste.vis_status, analysis_id, details=details)
 
     @server.tool(description='Inspect a run: original answers, source quotes, source locations, attempts, validation, usage and human reviews.')
     def show_run(run_id: str) -> str:

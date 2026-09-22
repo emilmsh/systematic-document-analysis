@@ -48,6 +48,7 @@ def process_cli(monkeypatch, name, payload, *, failure=False, crash=False):
     calls = []
 
     class Process:
+        pid = 23456
         returncode = 1 if failure else 0
 
         def __init__(self, command, **kwargs):

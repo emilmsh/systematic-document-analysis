@@ -144,6 +144,9 @@ def md_status(d: dict[str, Any]) -> str:
     if d.get('run_issues'):
         ut += ['', f"**{len(d['run_issues'])} kjøringer trenger oppfølging.** "
                'Se feil og kontrollmerknader nedenfor. Individuelle feil stopper ikke de øvrige kjøringene.']
+    if d.get('run_warnings'):
+        ut += ['', 'Tekniske advarsler (stopper ikke køen):']
+        ut += [f"- {w['run_id']}, kall {w['call_index']}: {w['code']} — {w['message']}" for w in d['run_warnings']]
     ut += ["", "| Kjøring | Dokument | Status | Forsøk | Motor | Kontroll | Merknad/feil |", "|---|---|---|---|---|---|---|"]
     for r in d["rader"]:
         k, dok, f, ks = r["kjoring"], r["dokument"], r["siste_forsok"], r["kontrollstatus"]

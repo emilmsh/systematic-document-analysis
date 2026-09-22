@@ -66,6 +66,14 @@ def test_translation_preserves_identifiers_wire_payloads_and_quotes():
     assert result['assessments']['navn']['evidence'][0]['quote'] == 'Styret vedtok en policy.'
     assert result['response_schema'] == raw['svarskjema']
     assert result['api_request'] == raw['api_foresporsel']
+    schema = {'properties': {'vurderinger': {'type': 'array'}, 'sider_lest': {'type': 'array'}},
+              'required': ['vurderinger', 'sider_lest'], 'additionalProperties': False}
+    manifest = {'motorinfo': {'svarskjema_sendt': schema}, 'hendelser': [
+        {'type': 'item.completed', 'item': {'vurderinger': ['navn']}}]}
+    nested = public_result({'forsok': [{'manifest': manifest}], 'svarskjema_sendt': schema})
+    assert nested['attempts'][0]['manifest'] == manifest
+    assert nested['svarskjema_sendt'] == schema
+    assert public_result(nested) == nested
     with pytest.raises(ValueError):
         normalize_criteria({'criteria':[], 'kriterier':[]})
 

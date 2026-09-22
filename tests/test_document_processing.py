@@ -97,6 +97,14 @@ def test_complete_chunk_workflow_all_engines(tmp_path, monkeypatch, engine):
     exported = Path(tjeneste.eksporter(store,aid,legacy_format=True)['mappe'])/'forsok'/attempt['id']
     calls = list((exported/'calls').glob('*/input.json'))
     assert len(calls) == len(observed) == planned['processing']['calls']
+    from datetime import datetime
+    from kildeanalyse.call_evidence import call_records
+    evidence = call_records(attempt)
+    assert len(evidence) == len(observed)  # parent does not count synthesis twice
+    assert evidence[-1]['stage'] == 'synthesis'
+    for call in evidence:
+        assert datetime.fromisoformat(call['finished_at']) >= datetime.fromisoformat(call['started_at'])
+        assert call['duration_seconds'] >= 0
     assert json.loads((exported/'input.json').read_text(encoding='utf-8'))['processing']['mode'] == 'chunked'
     final_raw = json.loads((exported/'raasvar.txt').read_text(encoding='utf-8'))
     assert final_raw['sider_lest'] == []  # raw output never rewritten

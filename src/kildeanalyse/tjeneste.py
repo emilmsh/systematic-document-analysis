@@ -22,7 +22,7 @@ from .lager import (
 )
 from .modell import Plan
 from .prompt import bygg_inputpakke
-from .parametre import normaliser
+from .parametre import normaliser, fra_plan
 from .source_formats import SUPPORTED, metadata, annotate_assessments
 
 
@@ -382,17 +382,20 @@ def gjenoppta(lager: Lager, analyse_id: str, i_bakgrunnen: bool = False) -> dict
     return rapport
 
 
-def vis_status(lager: Lager, analyse_id: str) -> dict[str, Any]:
+def vis_status(lager: Lager, analyse_id: str, *, details: bool = True) -> dict[str, Any]:
+    from .call_evidence import call_records, call_warnings
     analyse = lager.analyse(analyse_id)
     from .project_files import write_index
     write_index(lager, analyse['prosjekt_id'])
     koer = Koer(lager)
     kjoringer = lager.kjoringer(analyse_id)
     rader = []
+    warnings = []
     for k in kjoringer:
         dok = lager.dokument(k["dokument_id"])
         forsok = lager.forsok_for_kjoring(k["id"])
         siste = forsok[-1] if forsok else None
+        warnings.extend(call_warnings(call_records(siste, dok['navn'])) if siste else [])
         rader.append({"kjoring": k, "dokument": dok, "antall_forsok": len(forsok), "siste_forsok": siste,
                       "kontrollstatus": _kontrollstatus_sammendrag(lager, siste) if siste else None})
     teller: dict[str, int] = {}
@@ -403,12 +406,28 @@ def vis_status(lager: Lager, analyse_id: str) -> dict[str, Any]:
                          or 'Inspect show_run for validation details.'}
               for row in rader if row['kjoring']['status'] in {KJ_FEILET, KJ_VALIDERINGSFEIL, KJ_ULESELIG, KJ_UAVKLART}]
     t = _traader.get(analyse_id)
-    return {"analyse": analyse, "gjeldende_plan": lager.gjeldende_planversjon(analyse_id), "rader": rader, "teller": teller,
+    result = {"analyse": analyse, "gjeldende_plan": lager.gjeldende_planversjon(analyse_id), "rader": rader, "teller": teller,
             "aktiv_arbeider": koer.aktiv_arbeider(analyse_id), "stopp_forespurt": koer.stopp_forespurt(analyse_id),
             'workflow_block': koer.blokkering(analyse_id),
             'run_issues': issues,
             "bakgrunnstraad_aktiv": bool(t and t.is_alive()), "bakgrunnsresultat": _traadresultat.get(analyse_id),
-            "hendelser": lager.hendelser(analyse_id=analyse_id, antall=15)}
+            "hendelser": lager.hendelser(analyse_id=analyse_id, antall=15), 'run_warnings': warnings}
+    if not details:
+        plan = result['gjeldende_plan']
+        if plan:
+            result['gjeldende_plan'] = {k: plan[k] for k in ('id', 'versjon', 'status', 'godkjent_av', 'godkjent')}
+            result['gjeldende_plan']['reader_settings'] = fra_plan(plan['plan'])
+        for row in rader:
+            row['dokument'] = {k: row['dokument'][k] for k in ('id', 'navn', 'antall_sider', 'lesbarhet')}
+            if row['siste_forsok']:
+                row['siste_forsok'] = {k: row['siste_forsok'].get(k) for k in (
+                    'id', 'status', 'startet', 'avsluttet', 'motor', 'simulert', 'modell_onsket',
+                    'modell_rapportert', 'sesjon_id', 'feil')}
+        result['hendelser'] = [{k: v for k, v in event.items() if k != 'detaljer_json'} for event in result['hendelser']]
+        result['bakgrunnsresultat'] = ({k: v for k, v in result['bakgrunnsresultat'].items()
+                                      if k in ('feil', 'utfall', 'run_issues')} if result['bakgrunnsresultat'] else None)
+    result['detail_level'] = 'full' if details else 'compact'
+    return result
 
 
 # --- kjøring, kontroll -----------------------------------------------------------------
@@ -451,16 +470,20 @@ def _kontrollstatus_sammendrag(lager: Lager, forsok: dict[str, Any]) -> dict[str
 
 
 def vis_kjoring(lager: Lager, kjoring_id: str) -> dict[str, Any]:
+    from .call_evidence import call_records, call_warnings
     kj = lager.kjoring(kjoring_id)
     planrad = lager.planversjon(kj["planversjon_id"])
     dok = lager.dokument(kj["dokument_id"])
     forsok = lager.forsok_for_kjoring(kjoring_id)
     detaljer = []
     for f in forsok:
+        records = call_records(f, dok['navn'])
         detaljer.append({
             "forsok": f, "validering": json.loads(f["validering_json"]) if f.get("validering_json") else None,
             "vurderinger": annotate_assessments(dok, gjeldende_vurderinger(lager, f, planrad["plan"])) if f.get("svar_json") else None,
             "kontroller": lager.kontroller(f["id"]), "manifest": json.loads(f["manifest_json"]) if f.get("manifest_json") else None,
+            'model_calls': records,
+            'run_warnings': call_warnings(records),
         })
     return {"kjoring": kj, "dokument": dok, "planversjon": planrad, "forsok": detaljer,
             "hendelser": lager.hendelser(kjoring_id=kjoring_id, antall=20)}

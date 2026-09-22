@@ -47,8 +47,8 @@ def test_visible_workflow_workbook_and_portable_snapshot(tmp_path, language):
     assert (docdir/'analyse.json').is_file()
     assert (docdir/'modellkall'/f'{run["id"]}.f1'/'input.json').is_file()
     book = load_workbook(out['workbook'])
-    assert book.sheetnames == (['Oversikt','Resultater','Belegg','Kontroll','Kjøringer'] if language == 'nb' else
-                               ['Overview','Results','Evidence','Review','Runs'])
+    assert book.sheetnames == (['Oversikt','Resultater','Belegg','Kontroll','Kjøringer','Modellkall'] if language == 'nb' else
+                               ['Overview','Results','Evidence','Review','Runs','Model calls'])
     results = book.worksheets[1]
     assert results.max_row == 4 and results.freeze_panes == 'A2'
     assert all(results.cell(row, 7).value == 'ikke kontrollert' for row in range(2,5))

@@ -10,6 +10,7 @@ import json
 import hashlib
 from pathlib import Path
 from time import monotonic
+from datetime import datetime, timezone
 
 from jsonschema import Draft202012Validator
 from .modell import Side, Motorsvar
@@ -196,7 +197,10 @@ def execute(plan, document, full, adapter, stop, directory):
         path = Path(directory)/'calls'/f'{len(calls)+1:04d}-{stage}'
         path.mkdir(parents=True)
         (path/'input.json').write_text(json.dumps(package.til_dict(), ensure_ascii=False, indent=2), encoding='utf-8')
-        if stopped():
+        call_started = datetime.now(timezone.utc).isoformat()
+        call_clock = monotonic()
+        dispatched = not stopped()
+        if not dispatched:
             reply = Motorsvar('',None,feil='Stopped or document timeout reached.',avbrutt=True)
         else:
             try:
@@ -204,7 +208,10 @@ def execute(plan, document, full, adapter, stop, directory):
             except Exception as exc:
                 reply = Motorsvar('',None,feil=f'{type(exc).__name__}: {exc}')
         (path/'raasvar.txt').write_text(reply.raasvar or '',encoding='utf-8')
-        record = {'stage':stage,'input_hash':package.hash(),'input_bytes':size(package),**asdict(reply)}
+        record = {'stage':stage,'input_hash':package.hash(),'input_bytes':size(package),**asdict(reply),
+                  'dispatched':dispatched, 'started_at':call_started,
+                  'finished_at':datetime.now(timezone.utc).isoformat(),
+                  'duration_seconds':round(monotonic()-call_clock, 3)}
         (path/'manifest.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
         calls.append(record)
         return reply

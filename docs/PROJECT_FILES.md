@@ -34,8 +34,14 @@ an1-20260921-120000-<unique-id>/
     modellkall/
 ```
 
-The five workbook sheets contain overview, results with comments and status, verbatim evidence
-with source locations, actual human review history, and attempts including failures.
+The six workbook sheets contain overview, results with comments and status, verbatim evidence
+with source locations, actual human review history, attempts including failures, and **Model calls**
+(`Modellkall` in Norwegian). The last sheet lists each recorded reader call, including separate
+extraction and synthesis calls, across all attempts. It includes session/request IDs, CLI version,
+requested/reported model and effort, timestamps, duration, exit/HTTP status, token usage and
+diagnostics, with relative links to the exact input, raw reply and manifest. Chunk parents do not
+count synthesis twice. Unavailable telemetry is explicitly marked **Not reported**. Historical
+timestamps are not inferred; older manifests and raw files are never rewritten.
 Header language follows the current plan; quotes and answer labels stay unchanged.
 Source strings are written as text, never executable Excel formulas. Strings exceeding Excel
 cell limits or containing XML-incompatible characters are preserved in linked text files.
@@ -46,6 +52,18 @@ instructions, raw replies and metadata per attempt and extraction/synthesis call
 attempts remain recorded. Internal schema names remain stable for compatibility.
 Source copies are included by default. Use `include_sources=false` to omit them; a missing
 requested source stops the export.
+
+`show_status` returns compact progress by default. Use `show_status(details=true)` for the previous
+full payload or `show_run` for a selected run's `model_calls` and immutable raw manifest. The legacy
+Python service and Norwegian Markdown status retain their existing detailed behavior.
+`run_warnings` exposes reader stderr diagnostics even on successful calls. Warnings do not block
+the queue or change result validation. Status covers the latest attempts; exports retain all attempts.
+Complete recorded diagnostics remain in the manifests; status snippets are bounded and indicate truncation.
+
+Recorded reader attempts may be simulated, failed or stopped before dispatch. Session IDs, raw events
+and exit status are local execution evidence, not independent vendor attestations. Requested model
+settings do not prove the actual model, reported token usage is not an invoice, and available file
+tools do not prove the reader used them.
 
 Move the entire snapshot together to preserve relative links. Every export has a timestamp
 and unique suffix, so existing files and user edits are not overwritten. Failed exports are

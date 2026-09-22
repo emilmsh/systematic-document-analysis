@@ -55,6 +55,7 @@ def test_parametre_sendes_til_prosess(adapter, tmp_path, monkeypatch):
                {'type':'item.completed','item':{'type':'agent_message','text':'{"vurderinger":[]}'}},
                {'type':'turn.completed'}]))
     class Process:
+        pid = 34567
         returncode = 0
         def __init__(self, args, **kwargs):
             calls.append((args, kwargs))

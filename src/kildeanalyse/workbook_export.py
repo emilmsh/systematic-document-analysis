@@ -11,11 +11,12 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+from .call_evidence import reported
 
 
 def write_workbook(directory: Path, analysis: dict, versions: list[dict], runs: list[dict],
                    attempts: list[dict], reviews: list[dict], language: str,
-                   include_sources: bool, document_folder: str) -> tuple[str, list[str]]:
+                   include_sources: bool, document_folder: str, *, calls: list[dict] | None = None) -> tuple[str, list[str]]:
     nb = language == 'nb'
     choose = lambda no, en: no if nb else en
     book = Workbook()
@@ -23,6 +24,8 @@ def write_workbook(directory: Path, analysis: dict, versions: list[dict], runs: 
     notices = []
     overview_name = choose('Oversikt', 'Overview')
     documentation = directory / document_folder
+    calls = calls or []
+    not_reported = choose('Ikke rapportert', 'Not reported')
 
     def sheet(name, headers, rows, widths=None):
         if len(rows) > 1048575:
@@ -88,6 +91,8 @@ def write_workbook(directory: Path, analysis: dict, versions: list[dict], runs: 
         [choose('Bestilt tenkenivå', 'Requested reasoning effort'), plan.motorinnstillinger.get('tenkenivaa', '')],
         [choose('Språk', 'Language'), plan.sprak],
         [choose('Dokumentkjøringer', 'Document runs'), len(runs)],
+        [choose('Registrerte lesekall', 'Recorded reader calls'), len(calls)],
+        [choose('Tekniske advarsler', 'Technical warnings'), sum(len(c['warnings']) for c in calls)],
         [choose('Kontroll', 'Review'), choose('Automatisk validering er ikke menneskelig kontroll. Excel-endringer føres ikke tilbake.',
                                              'Automatic validation is not human review. Excel edits do not write back.')],
         [choose('Dokumentasjon', 'Documentation'), f'{document_folder}/analyse.json'],
@@ -107,10 +112,12 @@ def write_workbook(directory: Path, analysis: dict, versions: list[dict], runs: 
         warnings = [w.get('melding', '') for w in validation.get('advarsler', [])]
         source = run.get('source_metadata', {})
         warnings += source.get('ocr', {}).get('warnings', [])
+        warnings += [f"{w['code']} (call {c['call_index']}): {w['message']}"
+                     for c in calls if c['attempt_id'] == attempt.get('id') for w in c['warnings']]
         assessment = run.get('vurderinger') or {}
         if not assessment:
             results.append([doc['navn'], '', '', '', kj['status'], '', '', kj['planversjon_id'], kj['id'],
-                            attempt.get('feil') or kj.get('merknad') or ''])
+                            '\n'.join(filter(None, [attempt.get('feil') or kj.get('merknad'), *warnings]))])
         for kid, value in assessment.items():
             errors = '; '.join(str(e) for e in value.get('valideringsfeil', []))
             results.append([doc['navn'], kid, value['svar'], value.get('kommentar', ''), kj['status'],
@@ -148,7 +155,39 @@ def write_workbook(directory: Path, analysis: dict, versions: list[dict], runs: 
     sheet(choose('Kjøringer','Runs'),
           ['Forsøk','Kjøring','Status','Startet','Avsluttet','Lesemotor','Simulert','Bestilt modell','Rapportert modell','Bestilt tenkenivå','Feil'] if nb else
           ['Attempt','Run','Status','Started','Finished','Reader','Simulated','Requested model','Reported model','Requested effort','Error'],
-          [[r.get(k, '') for k in attempt_keys] for r in attempts], {11:80})
+          [[(reported(r.get(k)) or not_reported) if k == 'modell_rapportert' else r.get(k, '')
+            for k in attempt_keys] for r in attempts], {11:80})
+    call_keys = ['document_name','attempt_id','call_index','stage','status','reader','simulated',
+                 'session_id','cli_version','requested_model','reported_model','requested_effort','reported_effort',
+                 'started_at','finished_at','duration_seconds','exit_code','input_tokens','output_tokens',
+                 'cached_input_tokens','process_id','request_id','http_status']
+    call_rows = []
+    for c in calls:
+        row = [not_reported if c.get(k) is None else c[k] for k in call_keys]
+        row += ['\n'.join(f"{w['code']}: {w['message']}" for w in c['warnings']), c.get('error') or '']
+        row += [''] * 3  # portable artifact links are added below, only when files exist
+        call_rows.append(row)
+    call_sheet = sheet(choose('Modellkall','Model calls'),
+          (['Dokument','Forsøk','Kall','Trinn','Status','Lesemotor','Simulert','Sesjons-ID','CLI-versjon',
+            'Bestilt modell','Rapportert modell','Bestilt tenkenivå','Rapportert tenkenivå','Startet','Avsluttet',
+            'Varighet (sek.)','Returkode','Inputtokens','Outputtokens','Cachetokens','Prosess-ID','Request-ID',
+            'HTTP-status','Advarsler','Feil','Input','Råsvar','Manifest'] if nb else
+           ['Document','Attempt','Call','Stage','Status','Reader','Simulated','Session ID','CLI version',
+            'Requested model','Reported model','Requested effort','Reported effort','Started','Finished',
+            'Duration (sec.)','Exit code','Input tokens','Output tokens','Cached tokens','Process ID','Request ID',
+            'HTTP status','Warnings','Error','Input','Raw reply','Manifest']),
+          call_rows, {1:32, 3:10, 8:42, 14:36, 15:36, 24:80, 25:65})
+    for row, call in enumerate(calls, 2):
+        artifact = Path(document_folder)/'modellkall'/call['attempt_id']/call['artifact_subdirectory']
+        for col, name in ((26,'input.json'), (27,'raasvar.txt'), (28,'manifest.json')):
+            path = artifact/name
+            cell = call_sheet.cell(row,col)
+            if (directory/path).is_file():
+                cell.value = name
+                cell.hyperlink = quote(path.as_posix())
+                cell.font = Font(color='0563C1', underline='single')
+            else:
+                cell.value = choose('Ikke tilgjengelig','Not available')
     if notices:
         book[overview_name].append([choose('Tekstvedlegg','Text attachments'), ', '.join(notices)])
     filename = choose('Resultater.xlsx', 'Results.xlsx')

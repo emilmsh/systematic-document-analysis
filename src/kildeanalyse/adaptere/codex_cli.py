@@ -217,7 +217,7 @@ class CodexCliAdapter(Adapter):
             result.svar = None
             result.avbrutt = avbrutt
             result.feil = ('Avbrutt av bruker.' if avbrutt else f'Tidsavbrudd etter {timeout:g} sekunder.') + ' CLI-prosessen er avsluttet; leverandørens behandling kan ha fortsatt.'
-        result.motorinfo = {'kommando': args, 'cwd': str(cwd), 'cli_versjon': self._versjon,
+        result.motorinfo = {'kommando': args, 'cwd': str(cwd), 'cli_versjon': self._versjon, 'pid': proc.pid,
                             'modell_onsket': modell, 'tenkenivaa_onsket': nivaa, 'tenkenivaa_rapportert': 'ukjent',
                             'modell_rapportert': 'ukjent (ikke eksponert i JSONL)',
                             'returkode': proc.returncode, 'varighet_sek': round(time.monotonic()-start, 2),

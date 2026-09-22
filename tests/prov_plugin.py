@@ -81,6 +81,12 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
             imported = json.loads(await call('import_documents', {'project_id':'pr2' if expected_project else 'pr1', 'paths':[str(source_file)]}))
             assert imported['results'][0]['document']['source_metadata']['format'] == 'txt', imported
             runs = json.loads(await call('add_runs', {'analysis_id':aid}))
+            compact = json.loads(await call('show_status', {'analysis_id':aid}))
+            detailed = json.loads(await call('show_status', {'analysis_id':aid, 'details':True}))
+            assert compact['detail_level'] == 'compact' and detailed['detail_level'] == 'full'
+            assert compact['teller'] == detailed['teller'] and compact['run_warnings'] == []
+            assert 'sider' not in compact['rader'][0]['document']
+            assert 'sider' in detailed['rader'][0]['document']
             preview = json.loads(await call('show_input_package', {'run_id':runs['new'][0]['id']}))
             assert preview['package']['source_units'][0]['location'] == 'Line 1', preview
             exported = json.loads(await call('export_results', {'analysis_id':aid}))

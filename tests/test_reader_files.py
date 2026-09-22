@@ -129,6 +129,7 @@ def test_cli_file_tools_preserve_context_isolation_and_audit(package, tmp_path, 
     raw = '\n'.join(json.dumps(event) for event in events).encode()
     class Process:
         returncode = 0
+        pid = 12345
         def __init__(self, command, **kwargs):
             commands.append((command, kwargs))
             self.stdin, self.stdout, self.stderr = io.BytesIO(), io.BytesIO(raw), io.BytesIO()

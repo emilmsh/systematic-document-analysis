@@ -205,6 +205,7 @@ class ClaudeCliAdapter(Adapter):
             kommando, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=str(cwd), env=self._env(),
         )
         self._prosess = proc
+        motorinfo['pid'] = proc.pid
         ut: dict[str, bytes] = {"stdout": b"", "stderr": b""}
 
         def les(navn: str) -> None:

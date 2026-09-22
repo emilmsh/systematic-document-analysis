@@ -20,6 +20,7 @@ from .lager import FS_FULLFORT, FS_VALIDERINGSFEIL, KONTROLL_GODKJENT, KONTROLL_
 from .prompt import bygg_systeminstruks
 from .parametre import fra_plan
 from .source_formats import location, metadata, annotate_assessments
+from .call_evidence import call_records, call_warnings
 
 
 def _skriv_csv(sti: Path, rader: list[dict[str, Any]], felter: list[str]) -> None:
@@ -50,6 +51,7 @@ def _legacy_export(lager: Lager, analyse_id: str, *, med_kilder: bool = False,
                 alle_kriterier.append(k.id)
 
     resultatrader, beleggrader, forsokrader, kontrollrader, json_kjoringer = [], [], [], [], []
+    model_calls = []
     teller: dict[str, int] = {}
     kontrollert_totalt = vurderinger_totalt = 0
     motorer: set[str] = set()
@@ -107,6 +109,7 @@ def _legacy_export(lager: Lager, analyse_id: str, *, med_kilder: bool = False,
                     })
         resultatrader.append(rad)
         for f in forsok:
+            model_calls.extend(call_records(f, dok['navn']))
             forsokrader.append({k: f.get(k) for k in ("id", "kjoring_id", "nr", "status", "startet", "avsluttet", "motor", "simulert",
                                                      "modell_onsket", "modell_rapportert", "sesjon_id", "input_hash", "feil")}
                                | {"tenkenivaa_onsket": parametre["tenkenivaa"]} | api_felter)
@@ -154,7 +157,8 @@ def _legacy_export(lager: Lager, analyse_id: str, *, med_kilder: bool = False,
         "app_versjon": VERSJON, "eksportert": datetime.now().astimezone().isoformat(timespec="seconds"), "analyse": analyse,
         "prosjekt": prosjekt, "planversjoner": [{k: v[k] for k in ("id", "versjon", "status", "opprettet", "godkjent_av", "godkjent",
                                                                   "endringsnotat", "oppgavetekst")} | {"plan": v["plan"].til_dict()} for v in versjoner],
-        "kjoringer": json_kjoringer,
+        "kjoringer": json_kjoringer, 'model_calls': model_calls,
+        'run_warnings': call_warnings(model_calls),
     }, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
     # plan.md
@@ -255,7 +259,7 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = True,
         if (stage/'kilder').exists():
             (stage/'kilder').rename(stage/source_folder)
         workbook, notices = write_workbook(stage, analysis, versions, data['kjoringer'], attempts,
-                                           reviews, language, med_kilder, documentation)
+                                           reviews, language, med_kilder, documentation, calls=data['model_calls'])
         (stage/'plan.md').unlink()
         (stage/'Plan.md').write_text(plan_text(analysis, versions, language), encoding='utf-8')
         csv_names = ['resultater','belegg','forsok','kontroll'] if nb else ['results','evidence','attempts','reviews']
@@ -280,8 +284,12 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = True,
                  f'- [{"Fullstendig kontrollspor" if nb else "Full audit data"}]({documentation}/analyse.json)', '',
                  f'{"Status" if nb else "Status"}: {json.dumps(result["teller"], ensure_ascii=False)}',
                  f'{"Menneskelig kontroll" if nb else "Human review"}: {result["kontrollert_av_totalt"]}', '',
-                 ('Arbeidsboken samler oversikt, svar og begrunnelser, belegg, kontrollhistorikk og kjøringer.' if nb else
-                  'The workbook contains overview, answers and comments, evidence, review history and runs.'), '',
+                 ('Arbeidsboken samler oversikt, svar og begrunnelser, belegg, kontrollhistorikk, kjøringer og modellkall.' if nb else
+                  'The workbook contains overview, answers and comments, evidence, review history, runs and model calls.'), '',
+                 (f'Tekniske advarsler: {len(data["run_warnings"])}. Se Modellkall; advarsler stopper ikke køen.' if nb else
+                  f'Technical warnings: {len(data["run_warnings"])}. See Model calls; warnings do not stop the queue.'), '',
+                 ('Modellkall viser registrerte leseforsøk, også simulerte eller mislykkede. Manglende telemetri er ikke bevis på utført leverandørkall. Tokenbruk er ikke en faktura.' if nb else
+                  'Model calls lists recorded reader attempts, including simulated or failed ones. Missing telemetry is not evidence of provider execution. Token usage is not an invoice.'), '',
                  ('Automatisk validering er ikke menneskelig kontroll. Endringer i Excel føres ikke tilbake til pluginen.' if nb else
                   'Automatic validation is not human review. Excel edits do not write back to the plugin.'), '',
                  ('Blandede versjoner kan påvirke sammenlignbarheten; se Planversjon i arbeidsboken.' if nb else

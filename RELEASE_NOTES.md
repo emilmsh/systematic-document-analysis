@@ -1,3 +1,11 @@
+# 0.8.11 — Visible call evidence and compact status
+
+- Preserve raw manifests, CLI events and response schemas unchanged in the English tool interface. In particular, `show_run` no longer translates schema property names while leaving `required` names unchanged.
+- Show non-blocking `run_warnings` for CLI diagnostics, including warnings from successful calls. Keep queue failure and authentication rules unchanged; warnings do not stop independent work.
+- Add per-call evidence to `show_run`, exported audit JSON and the new Model calls / Modellkall workbook sheet: extraction/synthesis stages, session IDs, CLI version, requested/reported settings, timestamps, duration, process/exit/HTTP information, token usage and links to exact inputs, raw replies and manifests. Preserve historical records and explicitly mark unreported telemetry.
+- Make `show_status` compact by default. Set `details=true` for full source/attempt data; legacy Python and Norwegian Markdown status remain compatible.
+- No new dependencies, database migration, automatic retries, provider fallbacks or changes to approved analysis settings.
+
 # 0.8.10 — Return to the setup menu
 
 - After each interactive installer action, choose Return to start menu or Exit. Perform several setup or maintenance tasks in the same window, including after an incomplete action.
