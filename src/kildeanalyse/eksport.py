@@ -284,8 +284,10 @@ def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = True,
                  f'- [{"Fullstendig kontrollspor" if nb else "Full audit data"}]({documentation}/analyse.json)', '',
                  f'{"Status" if nb else "Status"}: {json.dumps(result["teller"], ensure_ascii=False)}',
                  f'{"Menneskelig kontroll" if nb else "Human review"}: {result["kontrollert_av_totalt"]}', '',
-                 ('Arbeidsboken samler oversikt, svar og begrunnelser, belegg, kontrollhistorikk, kjøringer og modellkall.' if nb else
-                  'The workbook contains overview, answers and comments, evidence, review history, runs and model calls.'), '',
+                 ('Arbeidsboken har fire ark: Oversikt, Resultater med sitater og kildeplasseringer, Kjøringer med kontrollhistorikk, og Modellkall.' if nb else
+                  'The workbook has four sheets: Overview, Results with quotations and source locations, Runs with review history, and Model calls.'), '',
+                 ('Sitater og kildeplasseringer står i samme rekkefølge, atskilt med blanklinjer. Kjøringer viser én rad per forsøk og kontrollhendelse; gjentatt forsøks-ID betyr ikke en ny kjøring.' if nb else
+                  'Quotes and source locations appear in matching order, separated by blank lines. Runs has one row per attempt and review event; a repeated attempt ID is not a new run.'), '',
                  (f'Tekniske advarsler: {len(data["run_warnings"])}. Se Modellkall; advarsler stopper ikke køen.' if nb else
                   f'Technical warnings: {len(data["run_warnings"])}. See Model calls; warnings do not stop the queue.'), '',
                  ('Modellkall viser registrerte leseforsøk, også simulerte eller mislykkede. Manglende telemetri er ikke bevis på utført leverandørkall. Tokenbruk er ikke en faktura.' if nb else

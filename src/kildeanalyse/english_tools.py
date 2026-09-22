@@ -118,6 +118,6 @@ def register(server, get_store):
         return call(tjeneste.registrer_kontroll, attempt_id, reviewer, actions[action], reason,
                     kriterium_id=criterion_id, nytt_svar=new_answer, nytt_belegg=evidence)
 
-    @server.tool(description='Export a new snapshot in the visible project directory: one XLSX workbook (overview, results, evidence, review and runs), one plan and start file in the plan language, optional source copies and full JSON/raw audit history under Documentation. include_csv adds tables in one language. legacy_format requests the old bilingual CSV layout. Returns entrypoint and workbook paths. Excel edits do not write back or count as human review.')
+    @server.tool(description='Export a new snapshot in the visible project directory: one XLSX workbook with four sheets (overview, results with quotes/source locations, runs with human review history, and model calls), one plan and start file in the plan language, optional source copies and full JSON/raw audit history under Documentation. include_csv adds tables in one language. legacy_format requests the old bilingual CSV layout. Returns entrypoint and workbook paths. Excel edits do not write back or count as human review.')
     def export_results(analysis_id: str, include_sources: bool = True, include_csv: bool = False, legacy_format: bool = False) -> str:
         return call(tjeneste.eksporter, analysis_id, include_sources, include_csv=include_csv, legacy_format=legacy_format)

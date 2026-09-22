@@ -307,7 +307,7 @@ def registrer_kontroll(forsok_id: str, ansvarlig: str, handling: str, begrunnels
         return _feil(e)
 
 
-@server.tool(description="Eksporter et nytt øyeblikksbilde i prosjektmappen: Excel med fem ark, én plan/startfil, kilder og komplett kontrollspor. med_csv gir ekstra tabeller; gammelt_format gir tidligere tospråklig CSV-eksport. Excel-endringer registreres ikke som menneskelig kontroll.")
+@server.tool(description="Eksporter et nytt øyeblikksbilde i prosjektmappen: Excel med fire ark (oversikt, resultater med sitater/kildeplasseringer, kjøringer med kontrollhistorikk, modellkall), én plan/startfil, kilder og komplett kontrollspor. med_csv gir ekstra tabeller; gammelt_format gir tidligere tospråklig CSV-eksport. Excel-endringer registreres ikke som menneskelig kontroll.")
 def eksporter(analyse_id: str, med_kilder: bool = True, med_csv: bool = False, gammelt_format: bool = False) -> str:
     try:
         return visning.md_eksport(tjeneste.eksporter(_lager(), analyse_id, med_kilder, include_csv=med_csv, legacy_format=gammelt_format))

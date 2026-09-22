@@ -36,6 +36,11 @@ def call_records(attempt: dict, document_name: str = '') -> list[dict]:
         if diagnostic:
             code = 'CLI_MODEL_CACHE' if 'supports_parallel_tool_calls' in diagnostic and 'cache' in diagnostic else 'CLI_STDERR'
             warnings.append({'code': code, 'message': diagnostic[:800], 'truncated': len(diagnostic) > 800})
+        model_evidence = motor.get('reported_model_evidence') or {}
+        if model_evidence.get('status') == 'ambiguous':
+            warnings.append({'code': 'CLI_MODEL_AMBIGUOUS', 'message':
+                'Multiple models were reported; no single reader model could be identified. '
+                'See reported_model_evidence and the preserved raw reply.', 'truncated': False})
         # Structured fields only; never infer a model/effort from the request.
         rows.append({
             'run_id': attempt.get('kjoring_id'), 'attempt_id': attempt['id'],

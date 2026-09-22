@@ -73,6 +73,35 @@ def result_events(stdout):
     return results[0], events
 
 
+def reported_model(result: dict, events: list[dict]) -> tuple[str | None, dict]:
+    """Identify the reader from its own messages, not the order of usage keys.
+
+    Usage can include helper models. A single usage entry remains useful for
+    legacy JSON output, but neither the requested model nor init configuration
+    proves which model answered. Preserve ambiguity instead of guessing.
+    """
+    def valid(value):
+        return isinstance(value, str) and bool(value.strip()) and not value.startswith('<')
+
+    models = []
+    for event in events:
+        if event.get('type') != 'assistant' or event.get('parent_tool_use_id') is not None:
+            continue
+        message = event.get('message')
+        model = message.get('model') if isinstance(message, dict) else None
+        if valid(model) and model not in models:
+            models.append(model)
+    if models:
+        source = 'assistant_messages'
+    else:
+        usage = result.get('modelUsage')
+        models = [model for model in usage if valid(model)] if isinstance(usage, dict) else []
+        source = 'modelUsage'
+    model = models[0] if len(models) == 1 else None
+    return model, {'source': source, 'models': models,
+                   'status': 'identified' if model else 'ambiguous' if models else 'unreported'}
+
+
 class ClaudeCliAdapter(Adapter):
     navn = "claude_cli"
     simulert = False
@@ -259,7 +288,8 @@ class ClaudeCliAdapter(Adapter):
         except ValueError:
             return Motorsvar(raasvar=stdout + ("\n--- stderr ---\n" + stderr if stderr.strip() else ""), svar=None,
                              feil=f"CLI-en ga ikke gyldig JSON (returkode {proc.returncode}).", motorinfo=motorinfo)
-        modell_rapportert = next(iter((d.get("modelUsage") or {}).keys()), None)
+        modell_rapportert, model_evidence = reported_model(d, tool_events)
+        motorinfo['reported_model_evidence'] = model_evidence
         forbruk = {
             "usage": d.get("usage"), "modelUsage": d.get("modelUsage"), "total_cost_usd_listepris": d.get("total_cost_usd"),
             "merknad": "Listepris beregnet av CLI. Faktisk belastning mot abonnementskvoten er ukjent.",

@@ -104,7 +104,7 @@ def write_workbook(directory: Path, analysis: dict, versions: list[dict], runs: 
                     choose('SIMULERT', 'SIMULATED') if kinds == {True} else
                     choose('Blandet: simulert og ekte', 'Mixed: simulated and real') if len(kinds)>1 else
                     choose('Ekte modellkall', 'Real model calls') if kinds else choose('Ikke startet', 'Not started')])
-    results, evidence = [], []
+    results = []
     for run in runs:
         doc, kj = run['dokument'], run['kjoring']
         attempt = run.get('gjeldende_forsok') or {}
@@ -116,47 +116,58 @@ def write_workbook(directory: Path, analysis: dict, versions: list[dict], runs: 
                      for c in calls if c['attempt_id'] == attempt.get('id') for w in c['warnings']]
         assessment = run.get('vurderinger') or {}
         if not assessment:
-            results.append([doc['navn'], '', '', '', kj['status'], '', '', kj['planversjon_id'], kj['id'],
-                            '\n'.join(filter(None, [attempt.get('feil') or kj.get('merknad'), *warnings]))])
+            results.append([doc['navn'], '', '', '', '', '', '', '', kj['status'],
+                            '\n'.join(filter(None, [attempt.get('feil') or kj.get('merknad'), *warnings])),
+                            kj['planversjon_id'], kj['id'], attempt.get('id', ''), ''])
         for kid, value in assessment.items():
             errors = '; '.join(str(e) for e in value.get('valideringsfeil', []))
-            results.append([doc['navn'], kid, value['svar'], value.get('kommentar', ''), kj['status'],
+            quotes = '\n\n'.join(item.get('sitat', '') for item in value['belegg'])
+            locations = '\n\n'.join(item.get('source', {}).get('location', str(item.get('side', '')))
+                                     for item in value['belegg'])
+            results.append([doc['navn'], kid, value['svar'], quotes, locations, value.get('kommentar', ''),
+                            value['kontrollstatus'],
                             'ok' if value.get('validering_gyldig') else errors or choose('Feil', 'Invalid'),
-                            value['kontrollstatus'], kj['planversjon_id'], kj['id'], '\n'.join(warnings)])
-            for item in value['belegg']:
-                evidence.append([doc['navn'], kid, value['svar'], item.get('sitat', ''),
-                                 item.get('source', {}).get('location', str(item.get('side', ''))),
-                                 item.get('side'), kj['id'], attempt.get('id', ''), value.get('kilde', '')])
+                            kj['status'], '\n'.join(warnings), kj['planversjon_id'], kj['id'],
+                            attempt.get('id', ''), value.get('kilde', '')])
     sheet(overview_name, [choose('Felt', 'Field'), choose('Verdi', 'Value')], summary, {1:30, 2:100})
-    sheet(choose('Resultater', 'Results'),
-          ['Dokument','Kriterium','Svar','Begrunnelse','Kjøringsstatus','Validering','Menneskelig kontroll','Planversjon','Kjøring','Merknader'] if nb else
-          ['Document','Criterion','Answer','Comment','Run status','Validation','Human review','Plan version','Run','Notes'],
-          results, {1:32, 4:80, 10:80})
-    ev = sheet(choose('Belegg', 'Evidence'),
-               ['Dokument','Kriterium','Svar','Sitat','Kildeplassering','Kildeenhet','Kjøring','Forsøk','Svargrunnlag'] if nb else
-               ['Document','Criterion','Answer','Quote','Source location','Source unit','Run','Attempt','Answer source'],
-               evidence, {1:32, 4:100, 5:35})
+    result_sheet = sheet(choose('Resultater', 'Results'),
+          ['Dokument','Kriterium','Svar','Sitater','Kildeplasseringer','Begrunnelse','Menneskelig kontroll',
+           'Validering','Kjøringsstatus','Merknader','Planversjon','Kjøring','Forsøk','Svargrunnlag'] if nb else
+          ['Document','Criterion','Answer','Quotes','Source locations','Comment','Human review',
+           'Validation','Run status','Notes','Plan version','Run','Attempt','Answer source'],
+          results, {1:32, 4:85, 5:35, 6:75, 10:75})
     source_folder = choose('Kilder', 'Sources')
     if include_sources:
         # Use run IDs, not filenames, to disambiguate sources with the same name.
         docs_by_run = {r['kjoring']['id']:r['dokument'] for r in runs}
-        for row in range(2, ev.max_row+1):
-            doc = docs_by_run[ev.cell(row,7).value]
+        for row in range(2, result_sheet.max_row+1):
+            doc = docs_by_run[result_sheet.cell(row,12).value]
             filename = f'{doc["id"]}_{doc["navn"]}'
             if (directory/source_folder/filename).is_file():
-                ev.cell(row,1).hyperlink = quote(f'{source_folder}/{filename}')
-                ev.cell(row,1).font = Font(color='0563C1', underline='single')
-    review_keys = ['tid','ansvarlig','handling','kriterium_id','begrunnelse','forsok_id','opprinnelig','nytt']
-    sheet(choose('Kontroll','Review'),
-          ['Tid','Ansvarlig','Handling','Kriterium','Begrunnelse','Forsøk','Opprinnelig','Nytt'] if nb else
-          ['Time','Reviewer','Action','Criterion','Reason','Attempt','Original','New'],
-          [[r.get(k, '') for k in review_keys] for r in reviews], {5:75,7:65,8:65})
+                result_sheet.cell(row,1).hyperlink = quote(f'{source_folder}/{filename}')
+                result_sheet.cell(row,1).font = Font(color='0563C1', underline='single')
+    review_keys = ['tid','ansvarlig','handling','kriterium_id','begrunnelse','opprinnelig','nytt']
+    reviews_by_attempt = {}
+    for review in reviews:
+        reviews_by_attempt.setdefault(review['forsok_id'], []).append(review)
     attempt_keys = ['id','kjoring_id','status','startet','avsluttet','motor','simulert','modell_onsket','modell_rapportert','tenkenivaa_onsket','feil']
+    attempt_rows = []
+    for attempt in attempts:
+        base = [(reported(attempt.get(k)) or not_reported) if k == 'modell_rapportert' else attempt.get(k, '')
+                for k in attempt_keys]
+        history = reviews_by_attempt.get(attempt['id'])
+        if history:
+            attempt_rows.extend(base + [review.get(k, '') for k in review_keys] for review in history)
+        else:
+            attempt_rows.append(base + ['', '', choose('Ikke kontrollert', 'Not reviewed'), '', '', '', ''])
     sheet(choose('Kjøringer','Runs'),
-          ['Forsøk','Kjøring','Status','Startet','Avsluttet','Lesemotor','Simulert','Bestilt modell','Rapportert modell','Bestilt tenkenivå','Feil'] if nb else
-          ['Attempt','Run','Status','Started','Finished','Reader','Simulated','Requested model','Reported model','Requested effort','Error'],
-          [[(reported(r.get(k)) or not_reported) if k == 'modell_rapportert' else r.get(k, '')
-            for k in attempt_keys] for r in attempts], {11:80})
+          ['Forsøk','Kjøring','Status','Startet','Avsluttet','Lesemotor','Simulert','Bestilt modell','Rapportert modell',
+           'Bestilt tenkenivå','Feil','Kontrolltid','Kontrollert av','Kontrollhandling','Kontrollkriterium',
+           'Kontrollbegrunnelse','Opprinnelig vurdering','Ny vurdering'] if nb else
+          ['Attempt','Run','Status','Started','Finished','Reader','Simulated','Requested model','Reported model',
+           'Requested effort','Error','Review time','Reviewer','Review action','Review criterion',
+           'Review reason','Original assessment','New assessment'],
+          attempt_rows, {11:80, 12:30, 16:75, 17:65, 18:65})
     call_keys = ['document_name','attempt_id','call_index','stage','status','reader','simulated',
                  'session_id','cli_version','requested_model','reported_model','requested_effort','reported_effort',
                  'started_at','finished_at','duration_seconds','exit_code','input_tokens','output_tokens',

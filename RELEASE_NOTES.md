@@ -1,3 +1,9 @@
+# 0.8.12 — Accurate Claude model reporting and consolidated results
+
+- Identify the Claude reader from its own assistant messages instead of the first `modelUsage` entry, which may describe a helper model. Preserve all raw events and usage. Legacy JSON results identify a model only when usage is unambiguous; ambiguous telemetry is shown as unreported with a non-blocking diagnostic. Requested model and effort are unchanged.
+- Consolidate Excel exports into four sheets. Results includes verbatim quotations and matching source locations beside each answer. Runs includes all human review events beside their attempts and explicitly marks attempts without review. Plan approval remains separate from result review.
+- Preserve previous exports, recorded attempts, raw replies and JSON/CSV audit formats. Historical model fields are not silently rewritten. No new dependencies, database migration or inference calls are needed to apply these changes.
+
 # 0.8.11 — Visible call evidence and compact status
 
 - Preserve raw manifests, CLI events and response schemas unchanged in the English tool interface. In particular, `show_run` no longer translates schema property names while leaving `required` names unchanged.

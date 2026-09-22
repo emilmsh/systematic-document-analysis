@@ -47,14 +47,15 @@ def test_visible_workflow_workbook_and_portable_snapshot(tmp_path, language):
     assert (docdir/'analyse.json').is_file()
     assert (docdir/'modellkall'/f'{run["id"]}.f1'/'input.json').is_file()
     book = load_workbook(out['workbook'])
-    assert book.sheetnames == (['Oversikt','Resultater','Belegg','Kontroll','Kjøringer','Modellkall'] if language == 'nb' else
-                               ['Overview','Results','Evidence','Review','Runs','Model calls'])
+    assert book.sheetnames == (['Oversikt','Resultater','Kjøringer','Modellkall'] if language == 'nb' else
+                               ['Overview','Results','Runs','Model calls'])
     results = book.worksheets[1]
     assert results.max_row == 4 and results.freeze_panes == 'A2'
     assert all(results.cell(row, 7).value == 'ikke kontrollert' for row in range(2,5))
     assert any(cell.value == 'SIMULERT' or cell.value == 'SIMULATED' for row in book.worksheets[0] for cell in row)
-    evidence = book.worksheets[2]
-    link = evidence['A2'].hyperlink.target
+    assert results['D2'].value and results['E2'].value
+    assert book.worksheets[2]['N2'].value == ('Ikke kontrollert' if language == 'nb' else 'Not reviewed')
+    link = results['A2'].hyperlink.target
     assert not Path(link).is_absolute()
     assert (directory/unquote(link)).is_file()
     book.close()
@@ -107,7 +108,7 @@ def test_failed_run_is_visible_and_failed_export_does_not_publish(tmp_path, monk
     tjeneste.start(store, aid)
     out = tjeneste.eksporter(store, aid, med_kilder=False)
     book = load_workbook(out['workbook'])
-    assert book['Resultater']['E2'].value == 'feilet'
+    assert book['Resultater']['I2'].value == 'feilet'
     assert book['Resultater']['C2'].value is None
     assert book['Resultater']['J2'].value
     book.close()
@@ -139,7 +140,7 @@ def test_workbook_text_never_becomes_formula_and_overflow_is_preserved(tmp_path)
     book = load_workbook(directory/name)
     assert book['Resultater']['C2'].data_type == 's'
     assert book['Resultater']['C2'].value.startswith('=HYPERLINK')
-    text_link = book['Belegg']['D2'].hyperlink.target
+    text_link = book['Resultater']['D2'].hyperlink.target
     assert (directory/unquote(text_link)).read_text(encoding='utf-8') == long_quote
     assert notices
     book.close()
@@ -154,8 +155,56 @@ def test_actual_human_review_is_exported_without_losing_raw_answer(tmp_path):
     tjeneste.registrer_kontroll(store, attempt['id'], 'Testperson', 'godkjent', 'Kontrollert mot kilden')
     out = tjeneste.eksporter(store, aid)
     book = load_workbook(out['workbook'])
-    assert book['Kontroll']['B2'].value == 'Testperson'
+    assert book['Kjøringer']['M2'].value == 'Testperson'
     assert book['Resultater']['G2'].value == 'godkjent'
     book.close()
     path = Path(out['mappe'])/'Dokumentasjon'/'modellkall'/attempt['id']/'raasvar.txt'
     assert path.read_text(encoding='utf-8') == raw
+
+
+@pytest.mark.parametrize('language', ['nb', 'en'])
+def test_consolidation_preserves_all_quotes_locations_and_review_events(tmp_path, language):
+    store = Lager(tmp_path/'data')
+    _, aid, run = setup(store, tmp_path, language)
+    tjeneste.start(store, aid)
+    attempt = store.forsok_for_kjoring(run['id'])[0]
+    tjeneste.registrer_kontroll(store, attempt['id'], 'First reviewer', 'godkjent', 'First review')
+    tjeneste.registrer_kontroll(store, attempt['id'], 'Second reviewer', 'avvist', 'Needs correction')
+    out = tjeneste.eksporter(store, aid)
+    directory = Path(out['mappe'])
+    audit = json.loads((directory/('Dokumentasjon' if language == 'nb' else 'Documentation')/'analyse.json').read_text(encoding='utf-8'))
+    book = load_workbook(out['workbook'])
+    results = book['Resultater' if language == 'nb' else 'Results']
+    for row in results.iter_rows(min_row=2):
+        value = audit['kjoringer'][0]['vurderinger'][row[1].value]
+        assert (row[3].value or '') == '\n\n'.join(e['sitat'] for e in value['belegg'])
+        assert (row[4].value or '') == '\n\n'.join(e.get('source', {}).get('location', str(e['side'])) for e in value['belegg'])
+    history = book['Kjøringer' if language == 'nb' else 'Runs']
+    assert history.max_row == 3
+    assert [history.cell(i, 1).value for i in (2, 3)] == [attempt['id'], attempt['id']]
+    assert [history.cell(i, 13).value for i in (2, 3)] == ['First reviewer', 'Second reviewer']
+    assert [history.cell(i, 14).value for i in (2, 3)] == ['godkjent', 'avvist']
+    assert [history.cell(i, 16).value for i in (2, 3)] == ['First review', 'Needs correction']
+    assert all(history.cell(i, 12).value for i in (2, 3))
+    book.close()
+
+
+def test_multiple_quotes_keep_matching_locations_in_one_result_row(tmp_path):
+    from kildeanalyse.workbook_export import write_workbook
+    store = Lager(tmp_path/'data')
+    _, aid, _ = setup(store, tmp_path)
+    tjeneste.start(store, aid)
+    out = tjeneste.eksporter(store, aid)
+    directory = Path(out['mappe'])
+    data = json.loads((directory/'Dokumentasjon'/'analyse.json').read_text(encoding='utf-8'))
+    first = next(iter(data['kjoringer'][0]['vurderinger'].values()))
+    first['belegg'] = [
+        {'sitat': 'First complete sentence.', 'side': 2, 'source': {'location': 'Line 3'}},
+        {'sitat': 'Second complete sentence.', 'side': 4, 'source': {'location': 'Line 6'}},
+    ]
+    name, _ = write_workbook(directory, store.analyse(aid), store.planversjoner(aid), data['kjoringer'], [], [], 'nb', True, 'Dokumentasjon')
+    book = load_workbook(directory/name)
+    assert book['Resultater']['D2'].value == 'First complete sentence.\n\nSecond complete sentence.'
+    assert book['Resultater']['E2'].value == 'Line 3\n\nLine 6'
+    assert book['Resultater'].max_row == 4  # one assessment row, not one row per quote
+    book.close()

@@ -34,9 +34,14 @@ an1-20260921-120000-<unique-id>/
     modellkall/
 ```
 
-The six workbook sheets contain overview, results with comments and status, verbatim evidence
-with source locations, actual human review history, attempts including failures, and **Model calls**
-(`Modellkall` in Norwegian). The last sheet lists each recorded reader call, including separate
+The four workbook sheets are **Overview**, **Results**, **Runs** and **Model calls**
+(`Oversikt`, `Resultater`, `Kjøringer`, `Modellkall` in Norwegian). Results keeps each answer,
+comment and status beside its verbatim quotes and source locations. Multiple quotes and locations
+appear in matching order, separated by blank lines. Document names link to included source copies.
+Runs includes failures and actual human review history: one row per attempt and review event.
+An attempt without a review is explicitly marked Not reviewed. Multiple review events repeat
+the attempt ID; they are not additional attempts. Plan approval is not result review.
+The last sheet lists each recorded reader call, including separate
 extraction and synthesis calls, across all attempts. It includes session/request IDs, CLI version,
 requested/reported model and effort, timestamps, duration, exit/HTTP status, token usage and
 diagnostics, with relative links to the exact input, raw reply and manifest. Chunk parents do not
@@ -64,6 +69,12 @@ Recorded reader attempts may be simulated, failed or stopped before dispatch. Se
 and exit status are local execution evidence, not independent vendor attestations. Requested model
 settings do not prove the actual model, reported token usage is not an invoice, and available file
 tools do not prove the reader used them.
+
+For new Claude CLI attempts, the reported model comes from top-level assistant message metadata.
+Helper models in `modelUsage` do not override the reader. Legacy JSON output can identify a model
+only when usage names exactly one model. Multiple reader models or ambiguous usage leave the
+model unreported with a diagnostic. Raw usage and events remain unchanged, including historical
+attempts recorded by older versions.
 
 Move the entire snapshot together to preserve relative links. Every export has a timestamp
 and unique suffix, so existing files and user edits are not overwritten. Failed exports are
