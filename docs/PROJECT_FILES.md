@@ -13,7 +13,7 @@ or data stores from claiming the same folder.
 ## Before execution
 
 Open `START_HERE.md` in the project folder for plans, input previews, exports and run status.
-Draft and approved plans are saved under `plans/`, with `Plan.md` and a criteria copy.
+Draft and approved plans are saved under `plans/`, with `Plan.md` and `task.json` (or a legacy criteria copy).
 `show_input_package` saves the exact returned package under `previews/`.
 `inspect_source(export_markdown=true)` puts the extraction inspection copy there too.
 These are generated reading copies. Substantive changes must go through a new plan version;
@@ -21,7 +21,28 @@ editing a copy does not change the approved plan or historical inputs.
 
 ## After execution
 
-`export_results` creates a new snapshot under the project's `exports/` directory:
+`export_results` creates a new snapshot under the project's `exports/` directory. General tasks have no fixed workbook:
+
+```text
+an1-<timestamp>-<unique-id>/
+  START_HERE.md               # START_HER.md for Norwegian
+  Plan.md
+  results/
+    kj1.md                    # actual readable deliverable plus provenance
+    kj1.json                  # result in its task-defined structure
+  sources/                    # optional preserved originals
+  audit/
+    analysis.json
+    kj1.json                  # all attempts, reviews, validation, source units
+    attempts/
+      kj1.f1/                 # exact input, raw response, manifest, subcalls
+```
+
+Every file, including failed or unstarted runs, has a visible status entry. The reading copy exposes the result itself; JSON preserves its exact shape. Export changes do not modify original results. Later tables/reports should retain run, attempt and plan references. See [task contracts and validation](TASKS.md).
+
+## Legacy criteria export
+
+Analyses using a criteria file keep their existing workbook snapshot:
 
 ```text
 an1-20260921-120000-<unique-id>/

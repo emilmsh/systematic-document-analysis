@@ -13,6 +13,9 @@ from .modell import HELTALL, Inputpakke, Plan, Side
 
 
 def bygg_systeminstruks(plan: Plan) -> str:
+    if plan.is_task:
+        from .task_contract import instruction
+        return instruction(plan)
     if plan.sprak == 'en':
         from .languages import english_instruction
         return english_instruction(plan)
@@ -72,7 +75,7 @@ def bygg_brukermelding(dokument: dict[str, Any], sider: list[Side]) -> str:
                  json.dumps(metadata(dokument), ensure_ascii=False), '=== SOURCE START ===']
         for s in sider:
             parts += [f'[Source unit {s.nr}] ' + json.dumps(s.source, ensure_ascii=False), s.tekst]
-        return '\n'.join(parts + ['=== SOURCE END ===', 'Apply the agreed criteria and return JSON.'])
+        return '\n'.join(parts + ['=== SOURCE END ===', 'Execute the agreed task and return JSON.'])
     deler = [
         f"Dokument: {dokument['navn']} (dokument-ID {dokument['id']}, SHA-256 {dokument['sha256'][:12]}…, "
         f"{dokument['antall_sider']} fysiske sider). Sidene nedenfor er alt du skal lese.",
@@ -86,11 +89,14 @@ def bygg_brukermelding(dokument: dict[str, Any], sider: list[Side]) -> str:
         if 'character_range' in s.source:
             deler.append('Fragment character range (zero-based, end-exclusive): ' + str(s.source['character_range']))
         deler.append(s.tekst.strip() if s.tekst.strip() else "(ingen tekst kunne trekkes ut fra denne siden)")
-    deler += ["=== DOKUMENT SLUTT ===", "", "Vurder dokumentet etter kriteriene i instruksen og svar med JSON."]
+    deler += ["=== DOKUMENT SLUTT ===", "", "Utfør oppgaven i instruksen og svar med JSON."]
     return "\n".join(deler)
 
 
 def bygg_svarskjema(plan: Plan) -> dict[str, Any]:
+    if plan.is_task:
+        from .task_contract import schema
+        return schema(plan)
     return {
         "type": "object",
         "properties": {

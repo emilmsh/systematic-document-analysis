@@ -119,6 +119,10 @@ class SimulertAdapter(Adapter):
         )
 
     def _lag_svar(self, pakke: Inputpakke, scenario: str | None) -> dict[str, Any]:
+        if 'result' in pakke.svarskjema['properties']:
+            return {'result': 'SIMULATED: no model performed this task. Source: ' + pakke.dokument_navn,
+                    'source_units_read': [s.nr for s in pakke.sider],
+                    'limitations': ['SIMULATED fixture only; no substantive task result.']}
         if 'findings' in pakke.svarskjema['properties']:
             findings = []
             for criterion in self.innstillinger.get('kriterier', []):

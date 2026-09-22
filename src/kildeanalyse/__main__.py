@@ -22,8 +22,12 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("prosjektmappe", help="velg synlig prosjektmappe"); s.add_argument("prosjekt_id"); s.add_argument("mappe")
     s = sub.add_parser("importer", help="importer støttede filer eller mapper"); s.add_argument("prosjekt_id"); s.add_argument("stier", nargs="+")
     s = sub.add_parser("analyse", help="opprett analyse med planversjon 1")
-    for a in ("prosjekt_id", "navn", "oppgavetekst", "kriteriefil"):
+    for a in ("prosjekt_id", "navn", "oppgavetekst"):
         s.add_argument(a)
+    s.add_argument('kriteriefil', nargs='?', help='Valgfri eldre kriteriefil; uten denne brukes oppgaven direkte.')
+    s.add_argument('--task-instructions', default=None)
+    s.add_argument('--output-schema', help='JSON Schema as JSON text, describing result only.')
+    s.add_argument('--quote-checks', help='Optional exact quote checks as a JSON list.')
     s.add_argument("--formaal", default=""); s.add_argument("--motor", required=True); s.add_argument("--modell", default="")
     s.add_argument("--tenkenivaa", default=None, help="low, medium, high, xhigh, max; også ultra for Codex")
     s.add_argument("--tilleggsinstruks", default=""); s.add_argument("--tillat-sider-uten-tekst", action="store_true")
@@ -69,7 +73,9 @@ def _utfor(lager: Lager, a: argparse.Namespace) -> str:
         r = tjeneste.opprett_analyse(lager, a.prosjekt_id, a.navn, a.oppgavetekst, a.kriteriefil, formaal=a.formaal, motor=a.motor,
                                      modell=a.modell, tilleggsinstruks=a.tilleggsinstruks, tillat_sider_uten_tekst=a.tillat_sider_uten_tekst,
                                      motorinnstillinger=json.loads(a.motorinnstillinger) if a.motorinnstillinger else None,
-                                     tenkenivaa=a.tenkenivaa)
+                                     tenkenivaa=a.tenkenivaa, task_instructions=a.task_instructions,
+                                     output_schema=json.loads(a.output_schema) if a.output_schema else None,
+                                     quote_checks=json.loads(a.quote_checks) if a.quote_checks else None)
         return f"Analyse {r['analyse']['id']} opprettet med planversjon {r['planversjon']['id']} (utkast)."
     if k == "plan":
         return visning.md_plan(tjeneste.vis_plan(lager, a.analyse_id))

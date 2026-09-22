@@ -1,6 +1,6 @@
 # Systematic Document Analysis
 
-En plugin for Claude Code og Codex for systematisk analyse av dokumenter, regneark og tekstfiler etter avtalte kriterier. Den behandler én fil om gangen og tar vare på hva modellen fikk, hva den svarte, hvilke sitater den bygde på og hvordan et menneske kontrollerte resultatet.
+En kontrollert for-løkke over filer i Claude Code eller Codex: én standardisert oppgave, én uavhengig CLI/API-arbeider per fil, og et etterprøvbart spor fra resultat til kilde, instruks, innstillinger og råsvar. Oppgaven bestemmer leveransen. Se [oppgaver, resultater og validering](TASKS.md).
 
 [English](USAGE.md) · [Start her](../README.md) · [Installasjon og oppdateringer](UPDATES.md)
 
@@ -8,7 +8,7 @@ En plugin for Claude Code og Codex for systematisk analyse av dokumenter, regnea
 
 **Du trenger bare å dobbeltklikke `installer.cmd`.** Det installerer pluginen og eventuelt manglende kommandolinjeverktøy (CLI), lar deg velge lesemotor og sjekker abonnementsinnloggingen. Er CLI-et ikke innlogget med abonnement, starter innloggingen, og du fullfører den i nettleseren. Eksisterende abonnementsinnlogging brukes videre. At du er innlogget i skrivebordsappen, er ikke en bekreftelse på at CLI-et er innlogget.
 
-1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Gjeldende utgave er **[0.8.11](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.11)**. Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
+1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Se [siste publiserte utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest). Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
 2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, velg **1 = Installer**, deretter **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor terminalen i Codex.
 3. **Fortsett i samme installasjonsvindu:** velg lesemotor, **1 = Codex / ChatGPT, 2 = Claude Code eller 3 = begge**, og fullfør eventuell innlogging med riktig konto i nettleseren. Vent til installasjonsvinduet bekrefter innloggingen. Velg **4 = hopp over** hvis du skal bruke API eller sette opp lesemotoren senere. Valg av lesemotor er uavhengig av appen du valgte i steg 2.
 4. Åpne arbeidsmappen i **Code-fanen** i Claude eller i Codex, start en **ny lokal samtale**, og beskriv oppgaven: **«Bruk Systematic Document Analysis. Jeg vil undersøke hvordan disse årsrapportene omtaler egen bruk av KI. Filene ligger i [mappe].»**
@@ -24,23 +24,23 @@ Du kan klargjøre og være innlogget i begge lesermotorene samtidig. Hver analys
 ## Prosjektmappe og resultater
 
 Velg en synlig prosjektmappe i samtalen. Planer og inputforhåndsvisninger lagres der før kjøring.
-Hver eksport får en ny mappe med én Excel-arbeidsbok, én plan, én startfil, kildekopier og et eget
-område for kontrollsporet. CSV er valgfritt. Begynn i `START_HERE.md` i prosjektmappen.
-Excel-endringer endrer ikke registrerte resultater eller menneskelig kontroll.
+Hver eksport får en ny mappe med lesbare resultater og JSON per fil, plan, startfil, kildekopier og
+kontrollspor. Videre presentasjon velger dere i samtalen. Eldre kriteriebaserte analyser beholder Excel-eksporten.
+Begynn i `START_HERE.md` i prosjektmappen. Redigering av eksport registrerer ikke menneskelig kontroll.
 Se [Prosjektfiler og eksportformater](PROJECT_FILES.md).
 
 ## Hvorfor
 
-En samtaleassistent kan lese én rapport og svare på spørsmål om den. Det holder ikke når de samme spørsmålene skal besvares for førti årsrapporter, en bunke tilbud eller en mappe regneark, og svarene skal brukes senere. Da må du vite at alle dokumentene ble lest med samme instruks, modell og innstillinger, at hvert svar er knyttet til et sitat du kan slå opp, og at noen faktisk har kontrollert resultatet. Det gir ikke en vanlig samtale. Det gjør denne pluginen, uten at du forlater appen du allerede bruker.
+Når samme oppgave gjentas over førti rapporter, tilbud eller regneark, trenger du å kunne spore resultatet tilbake til instruks, kilde og innstillinger. Pluginen holder kjøringene atskilt og registrerer både feil og resultater. Den skiller faktisk menneskelig kontroll fra automatiske sjekker, mens samtalen blir i appen du bruker.
 
 ## Hva den gjør
 
 - **Leser filer fra en mappe du velger.** PDF, DOCX, XLSX, CSV/TSV, TXT og Markdown. Skannede PDF-er kan OCR-behandles lokalt. Store filer leses i avgrensede deler før funnene settes sammen i ett ekstra kall, og alle kallene lagres.
-- **Bruker kriterier du definerer.** En liten JSON-fil lister spørsmålene, tillatte svar og tolkningsregler. Assistenten hjelper deg å skrive den i samtalen.
+- **Gjentar oppgaven du definerer.** En vanlig instruks er nok; et egendefinert resultatskjema og relevante kontroller er valgfrie. Assistenten hjelper deg å gjøre oppgaven repeterbar.
 - **Kjører ett dokument per forsøk med faste innstillinger.** Planen lagrer lesemotor, modell, tenkenivå, språk og instruks. Assistenten kan inspisere kildetekst under forberedelsen; en navngitt person godkjenner planen før lesemotoren starter. Endringer gir en ny versjon; tidligere forsøk står urørt.
-- **Lagrer beleggene.** For hvert forsøk: nøyaktig input, råsvar, ordrette sitater med plassering (PDF-side, Word-blokk, ark og celleområde, tekstlinje eller CSV-rad) og automatiske kontroller av svaretiketter, sitater og dekning.
+- **Lagrer kontrollsporet.** Hvert forsøk bevarer eksakt input, råsvar og resultatene av avtalte kontroller. Kildeenheter har PDF-side, Word-blokk, ark/celle, tekstlinje eller CSV-post. Ordrett sitatkontroll er valgfri for generelle oppgaver.
 - **Registrerer menneskelig kontroll.** En person godkjenner, korrigerer eller avviser hver vurdering med begrunnelse. Automatiske kontroller registreres aldri som menneskelig kontroll.
-- **Eksporterer til Excel.** Resultater, belegg, forsøk og kontroller samles i én arbeidsbok, med kontrollsporet i en egen mappe. CSV kan velges ved behov.
+- **Leverer faktiske resultater per fil.** Lesbar tekst og JSON bevarer innholdet, med kontrollspor ved siden av. Tabeller, rapporter og videre analyser kan lages etterpå med referanser tilbake til kjøringene.
 
 Samtalen foregår i Claude Code eller Codex. Pluginen legger til bokføringen og den repeterbare lesingen; assistenten hjelper fortsatt med spørsmålet, kriteriene og vanskelige filer.
 
@@ -83,7 +83,7 @@ Kjør `installer.cmd update` fra den installerte mappen for å se etter en nyere
 
 ## Bruk
 
-**Kontroller forutsetningene før oppstart.** Tilgjengelige verktøy, innlogging til lesemotoren, spesifiserte kriterier og svaralternativer, dokumentutvalg og en godkjent plan må være på plass. Manglende felles forutsetninger blokkerer oppstart, med årsaken i `show_status`. Rett eller avklar problemet, kontroller på nytt og be uttrykkelig om å fortsette. Planendringer krever ny godkjenning.
+**Kontroller forutsetningene før oppstart.** Verktøy, innlogging til lesemotoren, en repeterbar oppgave, filutvalg og godkjent plan må være på plass. Manglende felles forutsetninger blokkerer oppstart med synlig årsak. Eksisterende gyldig autorisasjon brukes videre; vesentlige endringer må godkjennes for den nye planen.
 
 **Problemer i én kjøring stopper ikke de andre.** Uleselige kilder, tidsavbrudd, leserfeil og mangelfulle svar eller belegg registreres til oppfølging. De øvrige kjøringene får fullføre før dere gjennomgår problemene samlet. Resultater og tilgjengelige råsvar bevares; feilede eller uavklarte forsøk kjøres ikke automatisk på nytt og fremstilles ikke som vellykkede. Feil i felles infrastruktur eller bekreftet bortfall av lesertilgang kan fortsatt blokkere nye avhengige kall.
 
@@ -95,11 +95,11 @@ Tillatte svar som «uklart» eller «ikke omtalt» er gyldige funn når kravene 
 
 > Bruk Systematic Document Analysis. Jeg vil undersøke hvordan disse årsrapportene omtaler egen bruk av KI. Filene ligger i dokumenter-mappen.
 
-Du trenger ikke ferdige kriterier eller tekniske innstillinger. Assistenten er instruert til å avklare hva du ønsker å finne ut, inspisere filene, foreslå spørsmål og svaralternativer og spørre om valg som faktisk påvirker analysen. Den skal skille dine krav fra egne forslag og si fra om manglende eller ustøttede kilder. Dere kan utvikle problemstillingen sammen og eventuelt prøve et lite, avtalt utvalg først.
+Du trenger ikke ferdig skjema eller tekniske innstillinger. Assistenten hjelper deg å formulere én repeterbar instruks, inspiserer filene og foreslår en nyttig leveranse og relevante kontroller. Den spør om vesentlige valg og skiller dine krav fra egne forslag. En liten pilot er valgfri.
 
-Før lesemotoren starter, får du en kort plan med dokumentutvalg, kriterier, håndtering av usikkerhet, lesemotor/modell og plassering av resultatene. Detaljert plan og nøyaktig input er tilgjengelig for inspeksjon. Du godkjenner den konkrete planen og oppgir ansvarlig person. Assistenten foreslår normalt appens abonnementsbaserte lesemotor, samtalens språk, en ny analyseundermappe og Excel-resultater; du kan endre valgene. Kontroller planen: veiledning i samtalen reduserer unødige feil, men garanterer ikke at assistenten har forstått alt.
+Før kjøring får du en kort plan med oppgave, filutvalg, leveranse, kontroller, usikkerhet, lesemotor/modell og resultatmappe. Du kan inspisere detaljert plan og eksakt input. Godkjenn den konkrete planen og oppgi ansvarlig person. Standardforslaget er tilgjengelig CLI-leser, samtalens språk, en ny prosjektundermappe og lesbare Markdown-resultater. Et egendefinert JSON-skjema kan brukes når strukturert innhold er nyttig.
 
-Dokumentene kjøres deretter ett om gangen. Du kan stoppe, gjenoppta og se enkeltforsøk, registrere faktisk menneskelig kontroll og eksportere. Endrede kriterier krever en ny planversjon og godkjenning.
+Filene kjøres uavhengig, med map–reduce for store input. Du kan stoppe, gjenoppta, se enkeltforsøk, registrere faktisk menneskelig kontroll og eksportere. Endret oppgave, resultatskjema eller kjøreinnstilling gir ny planversjon. Etterpå kan dere lage tabeller, rapporter og videre analyser i samtalen og beholde referanser til opprinnelige kjøringer.
 
 Vert og lesemotor velges uavhengig: Claude Code eller Codex som samtaleapp; `claude_cli` (standard `sonnet`, high), `codex_cli` (standard `gpt-5.6-terra`, high) eller en API-motor med eksplisitt modell-ID som leser. CLI-motorene bruker abonnementsinnloggingen din; API-motorer faktureres av leverandøren. Ønsket modell og tenkenivå lagres; om leverandøren faktisk fulgte tenkenivået, vet vi bare når den rapporterer det.
 

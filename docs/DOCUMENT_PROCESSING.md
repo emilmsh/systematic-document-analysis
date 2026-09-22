@@ -95,13 +95,13 @@ For a larger source:
    range, retaining its original ID and up to 200 characters of overlap. No text is
    silently dropped. Instructions/metadata too large for the budget cause an error.
 2. Each fresh reader call extracts relevant quotations, qualifications and findings
-   for every criterion. It makes no final whole-document classification. All units
+   for the task (or each criterion in legacy plans). It makes no final whole-document conclusion. All units
    in every chunk must be acknowledged; quotations must occur in that chunk.
-3. One synthesis call applies the criteria to all checked findings. It must preserve
-   contradictions and avoid double counting overlaps. Final evidence must be among
-   the checked quotations for that criterion and pass the usual source validation.
+3. One synthesis call applies the task to all checked findings using the task's result contract. It must preserve
+   contradictions and avoid double counting overlaps. Declared final quotations must be among
+   checked intermediate evidence and pass source validation. Legacy criteria retain per-criterion checks.
 
-One source file still produces one run and one final assessment per criterion.
+One source file still produces one run and one final task result.
 `show_plan` shows expected call counts; `show_input_package` shows exact extraction
 requests, fragment ranges and the synthesis instruction before approval. The exact
 synthesis request necessarily depends on intermediate answers; it is saved before
@@ -121,13 +121,13 @@ The local checks establish orchestration and validation, not model accuracy.
 
 ## Inspect the audit trail
 
-Start with the exported `plan-summary.md`, `results.csv` and `evidence.csv`.
-`forsok/<attempt>/input.json` describes the source inventory and planned calls;
+Start with the export's start file and its linked per-file results (or the workbook for legacy criteria).
+The attempt's `input.json` describes the source inventory and planned calls;
 it explicitly marks a chunked source as not sent in one request. Under
-`forsok/<attempt>/calls/`, each stage retains its exact `input.json`, raw answer and
+the attempt's `calls/` directory, each stage retains its exact `input.json`, raw answer and
 manifest with parameters, request hash, reported model and usage. The final stored
 coverage is aggregated from extraction calls; the raw synthesis answer retains an
-empty `sider_lest` because synthesis reads findings rather than the original source.
+empty `source_units_read` (`sider_lest` for legacy criteria) because synthesis reads findings rather than the original source.
 
 OCR implementation follows [Tesseract's CLI](https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html)
 and [PDFium rendering](https://pypdfium2.readthedocs.io/en/stable/python_api.html).

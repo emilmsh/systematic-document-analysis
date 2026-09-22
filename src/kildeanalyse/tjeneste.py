@@ -165,23 +165,35 @@ def _les_kriteriefil(kriteriefil: str | dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def opprett_analyse(lager: Lager, prosjekt_id: str, navn: str, oppgavetekst: str, kriteriefil: str | dict[str, Any], *,
+def opprett_analyse(lager: Lager, prosjekt_id: str, navn: str, oppgavetekst: str, kriteriefil: str | dict[str, Any] | None = None, *,
                     formaal: str = "", motor: str = "simulert", modell: str = "", tilleggsinstruks: str = "",
                     tillat_sider_uten_tekst: bool = False, motorinnstillinger: dict[str, Any] | None = None,
-                    tenkenivaa: str | None = None, sprak: str = 'nb') -> dict[str, Any]:
+                    tenkenivaa: str | None = None, sprak: str = 'nb', task_instructions: str | None = None,
+                    output_schema: dict | None = None, quote_checks: list[dict] | None = None) -> dict[str, Any]:
     lager.prosjekt(prosjekt_id)
     if motor not in ADAPTERE:
         raise TjenesteFeil(f"Ukjent motor «{motor}». Tilgjengelige: {', '.join(ADAPTERE)}.")
     from .languages import language_code
     sprak = language_code(sprak)
-    data = _les_kriteriefil(kriteriefil)
+    if kriteriefil is not None and (task_instructions is not None or output_schema is not None or quote_checks is not None):
+        raise TjenesteFeil('Choose task instructions or legacy criteria; do not combine them.')
+    data = _les_kriteriefil(kriteriefil) if kriteriefil is not None else None
     try:
         modell, motorinnstillinger = normaliser(motor, modell, motorinnstillinger, tenkenivaa)
     except ValueError as e:
         raise TjenesteFeil(str(e)) from e
-    plan = Plan.fra_kriteriefil(data, formaal=formaal or oppgavetekst, motor=motor, modell=modell,
-                                motorinnstillinger=motorinnstillinger, tilleggsinstruks=tilleggsinstruks,
-                                tillat_sider_uten_tekst=tillat_sider_uten_tekst, sprak=sprak)
+    common = dict(formaal=formaal or oppgavetekst, motor=motor, modell=modell,
+                  motorinnstillinger=motorinnstillinger, tilleggsinstruks=tilleggsinstruks,
+                  tillat_sider_uten_tekst=tillat_sider_uten_tekst, sprak=sprak)
+    if data is None:
+        plan = Plan(**common, task_instructions=task_instructions if task_instructions is not None else oppgavetekst,
+                    output_schema=output_schema, quote_checks=quote_checks or [])
+        from .task_contract import problem
+        issue = problem(plan)
+        if issue:
+            raise TjenesteFeil(issue)
+    else:
+        plan = Plan.fra_kriteriefil(data, **common)
     analyse = lager.opprett_analyse(prosjekt_id, navn.strip() or "Analyse")
     versjon = lager.opprett_planversjon(analyse["id"], oppgavetekst, plan, endringsnotat="Første versjon")
     lager.logg("analyse_opprettet", analyse_id=analyse["id"], planversjon_id=versjon["id"])
@@ -193,19 +205,20 @@ def vis_plan(lager: Lager, analyse_id: str) -> dict[str, Any]:
     analyse = lager.analyse(analyse_id)
     versjoner = lager.planversjoner(analyse_id)
     gjeldende = lager.gjeldende_planversjon(analyse_id)
+    latest = versjoner[-1] if versjoner else None
     from .chunking import prepare
     processing = []
-    if gjeldende:
+    if latest:
         for document in lager.dokumenter(analyse['prosjekt_id']):
             try:
-                package = bygg_inputpakke(gjeldende['plan'], document, forsok_id='preview', kjoring_id='preview')
-                _, summary = prepare(gjeldende['plan'], document, package)
+                package = bygg_inputpakke(latest['plan'], document, forsok_id='preview', kjoring_id='preview')
+                _, summary = prepare(latest['plan'], document, package)
                 processing.append({'document_id':document['id'], **summary})
             except ValueError as exc:
                 processing.append({'document_id':document['id'], 'error':str(exc)})
     from .project_files import save_plan
     return {**save_plan(lager, analyse_id), "analyse": analyse, "prosjekt": lager.prosjekt(analyse["prosjekt_id"]), "versjoner": versjoner, "gjeldende": gjeldende,
-            "kjoringer": lager.kjoringer(analyse_id), 'document_processing':processing,
+            "kjoringer": lager.kjoringer(analyse_id), 'latest': latest, 'document_processing':processing,
             'source_profiles':[{'id':d['id'], 'name':d['navn'], 'unit_count':d['antall_sider'], **metadata(d)}
                                for d in lager.dokumenter(analyse['prosjekt_id'])]}
 
@@ -241,13 +254,33 @@ def ny_planversjon(lager: Lager, analyse_id: str, endringsnotat: str, *, oppgave
                    kriteriefil: str | dict[str, Any] | None = None, motor: str | None = None, modell: str | None = None,
                    tilleggsinstruks: str | None = None, tillat_sider_uten_tekst: bool | None = None,
                    motorinnstillinger: dict[str, Any] | None = None, tenkenivaa: str | None = None,
-                   sprak: str | None = None) -> dict[str, Any]:
+                   sprak: str | None = None, task_instructions: str | None = None,
+                   output_schema: dict | None = None, quote_checks: list[dict] | None = None,
+                   reset_output_schema: bool = False) -> dict[str, Any]:
     if not endringsnotat.strip():
         raise TjenesteFeil("En ny planversjon krever et endringsnotat som forklarer hva som er endret og hvorfor.")
-    gjeldende = lager.gjeldende_planversjon(analyse_id)
+    versions = lager.planversjoner(analyse_id)
+    gjeldende = versions[-1] if versions else None
     if gjeldende is None:
         raise TjenesteFeil("Analysen har ingen planversjon.")
     d = gjeldende["plan"].til_dict()
+    if kriteriefil is not None and (task_instructions is not None or output_schema is not None or quote_checks is not None or reset_output_schema):
+        raise TjenesteFeil('Choose task instructions or legacy criteria; do not combine them.')
+    if task_instructions is not None:
+        if not task_instructions.strip():
+            raise TjenesteFeil('A repeatable task instruction is required.')
+        d.update(task_instructions=task_instructions, kriterier=[], kriteriesett_navn='',
+                 kriteriesett_versjon='', kriteriesett_merknad='', leseregel_ikke_omtalt='')
+    if reset_output_schema and output_schema is not None:
+        raise TjenesteFeil('Use output_schema or reset_output_schema, not both.')
+    if reset_output_schema:
+        d['output_schema'] = None
+    elif output_schema is not None:
+        d['output_schema'] = output_schema
+    if quote_checks is not None:
+        d['quote_checks'] = quote_checks
+    if not d['task_instructions'] and (output_schema is not None or quote_checks is not None or reset_output_schema):
+        raise TjenesteFeil('Result contracts require task_instructions.')
     if sprak is not None:
         from .languages import language_code
         d['sprak'] = language_code(sprak)
@@ -256,6 +289,7 @@ def ny_planversjon(lager: Lager, analyse_id: str, endringsnotat: str, *, oppgave
         d["modell"] = ""
         d["motorinnstillinger"] = {}
     if kriteriefil is not None:
+        d.update(task_instructions='', output_schema=None, quote_checks=[])
         data = _les_kriteriefil(kriteriefil)
         ny = Plan.fra_kriteriefil(data, formaal=d["formaal"], motor=d["motor"], modell=d["modell"],
                                   motorinnstillinger=d["motorinnstillinger"], tilleggsinstruks=d["tilleggsinstruks"],
@@ -275,8 +309,14 @@ def ny_planversjon(lager: Lager, analyse_id: str, endringsnotat: str, *, oppgave
         d["modell"], d["motorinnstillinger"] = normaliser(d["motor"], d["modell"], d["motorinnstillinger"], tenkenivaa)
     except ValueError as e:
         raise TjenesteFeil(str(e)) from e
+    plan = Plan.fra_dict(d)
+    if plan.is_task:
+        from .task_contract import problem
+        issue = problem(plan)
+        if issue:
+            raise TjenesteFeil(issue)
     versjon = lager.opprett_planversjon(analyse_id, oppgavetekst if oppgavetekst is not None else gjeldende["oppgavetekst"],
-                                        Plan.fra_dict(d), endringsnotat=endringsnotat.strip())
+                                        plan, endringsnotat=endringsnotat.strip())
     aktive = [k["id"] for k in lager.kjoringer(analyse_id) if k["status"] == KJ_AKTIV]
     lager.logg("planversjon_utkast", analyse_id=analyse_id, planversjon_id=versjon["id"], endringsnotat=endringsnotat)
     from .project_files import save_plan
@@ -287,7 +327,8 @@ def ny_planversjon(lager: Lager, analyse_id: str, endringsnotat: str, *, oppgave
 
 def legg_til_kjoringer(lager: Lager, analyse_id: str, dokument_ider: list[str] | None = None) -> dict[str, Any]:
     analyse = lager.analyse(analyse_id)
-    planrad = lager.gjeldende_planversjon(analyse_id)
+    versions = lager.planversjoner(analyse_id)
+    planrad = versions[-1] if versions else None
     if planrad is None:
         raise TjenesteFeil("Analysen har ingen planversjon.")
     dokumenter = lager.dokumenter(analyse["prosjekt_id"])
@@ -462,6 +503,11 @@ def _kontrollstatus_sammendrag(lager: Lager, forsok: dict[str, Any]) -> dict[str
     if forsok["status"] not in (FS_FULLFORT, FS_VALIDERINGSFEIL):
         return {"kontrollert": 0, "totalt": 0, "status": "ikke kontrollerbar"}
     planrad = lager.planversjon(lager.kjoring(forsok["kjoring_id"])["planversjon_id"])
+    if planrad['plan'].is_task:
+        from .task_results import current
+        status = current(lager, forsok)['review_status']
+        return {'kontrollert': int(status in (KONTROLL_GODKJENT, KONTROLL_RETTET)),
+                'avvist': int(status == KONTROLL_AVVIST), 'totalt': 1, 'status': status}
     vurd = gjeldende_vurderinger(lager, forsok, planrad["plan"])
     kontrollert = sum(1 for v in vurd.values() if v["kontrollstatus"] in (KONTROLL_GODKJENT, KONTROLL_RETTET))
     avvist = sum(1 for v in vurd.values() if v["kontrollstatus"] == KONTROLL_AVVIST)
@@ -485,6 +531,10 @@ def vis_kjoring(lager: Lager, kjoring_id: str) -> dict[str, Any]:
             'model_calls': records,
             'run_warnings': call_warnings(records),
         })
+        if planrad['plan'].is_task:
+            from .task_results import current
+            detaljer[-1].pop('vurderinger')
+            detaljer[-1].update(current(lager, f))
     return {"kjoring": kj, "dokument": dok, "planversjon": planrad, "forsok": detaljer,
             "hendelser": lager.hendelser(kjoring_id=kjoring_id, antall=20)}
 
@@ -509,7 +559,8 @@ def nytt_forsok(lager: Lager, kjoring_id: str, begrunnelse: str) -> dict[str, An
 
 def registrer_kontroll(lager: Lager, forsok_id: str, ansvarlig: str, handling: str, begrunnelse: str, *,
                        kriterium_id: str | None = None, nytt_svar: str | None = None,
-                       nytt_belegg: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+                       nytt_belegg: list[dict[str, Any]] | None = None,
+                       replacement_response: dict | None = None) -> dict[str, Any]:
     if not ansvarlig.strip():
         raise TjenesteFeil("Kontroll krever navn på ansvarlig.")
     if not begrunnelse.strip():
@@ -524,6 +575,13 @@ def registrer_kontroll(lager: Lager, forsok_id: str, ansvarlig: str, handling: s
         raise TjenesteFeil(f"Forsøk {forsok_id} er ikke kjøringens gjeldende forsøk ({kj['gjeldende_forsok_id']}).")
     planrad = lager.planversjon(kj["planversjon_id"])
     plan = planrad["plan"]
+    if plan.is_task:
+        if kriterium_id is not None or nytt_svar is not None or nytt_belegg is not None:
+            raise TjenesteFeil('Task results use whole-result review; corrections use replacement_response.')
+        from .task_results import review
+        return review(lager, forsok, plan, ansvarlig, handling, begrunnelse, replacement_response)
+    if replacement_response is not None:
+        raise TjenesteFeil('replacement_response applies only to task results.')
     vurd = gjeldende_vurderinger(lager, forsok, plan)
     if kriterium_id is not None and kriterium_id not in vurd:
         raise TjenesteFeil(f"Ukjent kriterium «{kriterium_id}». Kriterier: {', '.join(vurd)}.")

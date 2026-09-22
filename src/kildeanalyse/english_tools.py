@@ -47,16 +47,19 @@ def register(server, get_store):
     def inspect_source(document_id: str, unit_ids: list[int] | None = None, maximum_units: int = 10, export_markdown: bool = False) -> str:
         return call(tjeneste.inspect_source, document_id, unit_ids, maximum_units, export_markdown)
 
-    @server.tool(description='Create a draft analysis. language=en or nb controls reader commentary; quotes and answer labels remain verbatim. criteria_file accepts English or Norwegian fields. Explicit engine: codex_cli, claude_cli, openai_api, azure_foundry_api, anthropic_api, openrouter_api, kompatibel_api; simulert only on request. API requires model ID and local key, with separate billing. Never pass keys in settings. API settings: max_output_tokens, timeout_seconds, base_url for compatible API, provider for OpenRouter. Azure Foundry requires base_url (resource endpoint), deployment name as model and explicit api_format: responses, chat_completions or anthropic_messages. Reasoning effort standard omits API effort; other levels depend on model.')
-    def create_analysis(project_id: str, name: str, request: str, criteria_file: str,
-                        engine: str, model: str = '', language: str = 'en', reasoning_effort: str = '',
+    @server.tool(description='Create a draft repeatable per-file task. Without criteria_file, request is the task instruction unless task_instructions expands it. Default result is readable Markdown; optional output_schema describes result inside the execution envelope. Inline closed JSON objects need all properties required. Optional quote_checks: [{path: JSON Pointer to an array in result, quote_field: field name, unit_field: field name}] checks exact source substrings. No task-type profile or workbook is required. criteria_file is the mutually exclusive legacy classification option. language=en/nb. Explicit engine: codex_cli, claude_cli, openai_api, azure_foundry_api, anthropic_api, openrouter_api, kompatibel_api; simulert only on request. APIs require model and local credentials, with separate billing; never pass keys in settings. Azure also needs base_url and api_format. Large files use task-aware map-reduce by default.')
+    def create_analysis(project_id: str, name: str, request: str, criteria_file: str | None = None,
+                        engine: str = '', model: str = '', language: str = 'en', reasoning_effort: str = '',
                         engine_settings: dict | None = None, purpose: str = '',
-                        additional_instructions: str = '', allow_pages_without_text: bool = False) -> str:
+                        additional_instructions: str = '', allow_pages_without_text: bool = False,
+                        task_instructions: str | None = None, output_schema: dict | None = None,
+                        quote_checks: list[dict] | None = None) -> str:
         return call(tjeneste.opprett_analyse, project_id, name, request, criteria_file, motor=engine,
                     modell=model, sprak=language, tenkenivaa=reasoning_effort or None, motorinnstillinger=engine_settings,
-                    formaal=purpose, tilleggsinstruks=additional_instructions, tillat_sider_uten_tekst=allow_pages_without_text)
+                    formaal=purpose, tilleggsinstruks=additional_instructions, tillat_sider_uten_tekst=allow_pages_without_text,
+                    task_instructions=task_instructions, output_schema=output_schema, quote_checks=quote_checks)
 
-    @server.tool(description='Show all plan versions, language, model, effort, engine settings and runs. Summarize the goal, selected files/exclusions, criteria, uncertainty handling, reader/settings/recipient, output and material limits in ordinary language before approval; link the detailed plan and input preview.')
+    @server.tool(description='Show plan versions, task/result contract, language, reader settings and runs. Summarize the task, selected files/exclusions, expected deliverable and checks, reader/recipient and material limits before approval; link the saved plan and input preview.')
     def show_plan(analysis_id: str) -> str:
         return call(tjeneste.vis_plan, analysis_id)
 
@@ -68,16 +71,20 @@ def register(server, get_store):
     def approve_plan(analysis_id: str, approved_by: str, plan_version_id: str | None = None) -> str:
         return call(tjeneste.godkjenn_plan, analysis_id, approved_by, plan_version_id)
 
-    @server.tool(description='Create a new draft plan version, preserving earlier attempts. Language changes require a new version too. Changing engines resets engine-specific settings. Keys must never be supplied.')
+    @server.tool(description='Create a draft plan version, preserving earlier attempts. Change task_instructions, output_schema or quote_checks as needed. reset_output_schema=true returns to Markdown; quote_checks=[] clears quote checks. criteria_file switches to legacy classification. Language/reader changes are versioned too; changing engines resets engine-specific settings. Never supply keys.')
     def new_plan_version(analysis_id: str, change_note: str, request: str | None = None,
                          criteria_file: str | None = None, engine: str | None = None, model: str | None = None,
                          language: str | None = None, reasoning_effort: str | None = None,
                          engine_settings: dict | None = None, purpose: str | None = None,
-                         additional_instructions: str | None = None, allow_pages_without_text: bool | None = None) -> str:
+                         additional_instructions: str | None = None, allow_pages_without_text: bool | None = None,
+                         task_instructions: str | None = None, output_schema: dict | None = None,
+                         quote_checks: list[dict] | None = None, reset_output_schema: bool = False) -> str:
         return call(tjeneste.ny_planversjon, analysis_id, change_note, oppgavetekst=request,
                     kriteriefil=criteria_file, motor=engine, modell=model, sprak=language,
                     tenkenivaa=reasoning_effort, motorinnstillinger=engine_settings, formaal=purpose,
-                    tilleggsinstruks=additional_instructions, tillat_sider_uten_tekst=allow_pages_without_text)
+                    tilleggsinstruks=additional_instructions, tillat_sider_uten_tekst=allow_pages_without_text,
+                    task_instructions=task_instructions, output_schema=output_schema, quote_checks=quote_checks,
+                    reset_output_schema=reset_output_schema)
 
     @server.tool(description='Add one planned run per selected document. Omitting document_ids selects ALL project documents, including earlier imports: use explicit IDs for an agreed subset or pilot. This makes no model calls.')
     def add_runs(analysis_id: str, document_ids: list[str] | None = None) -> str:
@@ -99,7 +106,7 @@ def register(server, get_store):
     def show_status(analysis_id: str, details: bool = False) -> str:
         return call(tjeneste.vis_status, analysis_id, details=details)
 
-    @server.tool(description='Inspect a run: original answers, source quotes, source locations, attempts, validation, usage and human reviews.')
+    @server.tool(description='Inspect a run: actual task result and response, original raw answers, attempts, validation scope, model calls, usage and human reviews. User-defined result keys are preserved. Legacy plans expose assessments.')
     def show_run(run_id: str) -> str:
         return call(tjeneste.vis_kjoring, run_id)
 
@@ -107,17 +114,18 @@ def register(server, get_store):
     def retry_run(run_id: str, reason: str) -> str:
         return call(tjeneste.nytt_forsok, run_id, reason)
 
-    @server.tool(description='Record an actual human review: approved, corrected or rejected. Never claim human review on the user’s behalf. Corrections require criterion_id, new_answer and evidence as [{page: source_unit_id, quote: text}] where required.')
+    @server.tool(description='Record actual human review: approved, corrected or rejected. For general tasks review the whole result; corrections require replacement_response containing result, source_units_read and limitations. The replacement is validated and the original retained. Legacy corrections use criterion_id, new_answer and new_evidence [{page: source_unit_id, quote: text}]. Never invent human review.')
     def record_review(attempt_id: str, reviewer: str, action: str, reason: str,
                       criterion_id: str | None = None, new_answer: str | None = None,
-                      new_evidence: list[dict] | None = None) -> str:
+                      new_evidence: list[dict] | None = None, replacement_response: dict | None = None) -> str:
         actions = {'approved':'godkjent', 'corrected':'rettet', 'rejected':'avvist'}
         if action not in actions:
             return json.dumps({'error':'Choose approved, corrected or rejected.'})
         evidence = None if new_evidence is None else [{'side':b.get('page'), 'sitat':b.get('quote')} for b in new_evidence]
         return call(tjeneste.registrer_kontroll, attempt_id, reviewer, actions[action], reason,
-                    kriterium_id=criterion_id, nytt_svar=new_answer, nytt_belegg=evidence)
+                    kriterium_id=criterion_id, nytt_svar=new_answer, nytt_belegg=evidence,
+                    replacement_response=replacement_response)
 
-    @server.tool(description='Export a new snapshot in the visible project directory: one XLSX workbook with four sheets (overview, results with quotes/source locations, runs with human review history, and model calls), one plan and start file in the plan language, optional source copies and full JSON/raw audit history under Documentation. include_csv adds tables in one language. legacy_format requests the old bilingual CSV layout. Returns entrypoint and workbook paths. Excel edits do not write back or count as human review.')
+    @server.tool(description='Export a portable snapshot in the project directory. General tasks: actual results as Markdown and original-shape JSON per file, plan, optional sources and full audit/attempt history. Returns entrypoint and results_directory; no imposed workbook columns. The host may derive a suitable presentation with run/attempt provenance. Criteria plans retain Excel export; include_csv and legacy_format apply only there. Export edits neither write back nor count as human review.')
     def export_results(analysis_id: str, include_sources: bool = True, include_csv: bool = False, legacy_format: bool = False) -> str:
         return call(tjeneste.eksporter, analysis_id, include_sources, include_csv=include_csv, legacy_format=legacy_format)

@@ -16,6 +16,9 @@ MIN_SITATLENGDE = 10
 
 
 def valider(plan: Plan, dokument: dict[str, Any], svar: Any, sider_sendt: list[int]) -> dict[str, Any]:
+    if plan.is_task:
+        from .task_contract import validate
+        return validate(plan, dokument, svar, sider_sendt)
     feil: list[dict[str, Any]] = []
     advarsler: list[dict[str, Any]] = []
     if metadata(dokument)['format'] != 'pdf':

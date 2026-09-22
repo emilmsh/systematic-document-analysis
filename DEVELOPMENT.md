@@ -8,7 +8,9 @@ Development continues in Claude Code after 0.8.2. Start with the [handover](docs
 
 The product is a working plugin for users' own documents. Simulation, synthetic fixtures and example reports are optional. The conversation stays in Codex or Claude Code. Both hosts use the same local MCP service; readers are independent CLI or API adapters. Do not introduce a second chat UI.
 
-The authoritative flow is project → imported document → versioned plan → run → attempt → review → export. Plans contain the original request, criteria, reader, model, effort, settings and language. Plan changes create new versions. Preserve source copies, exact inputs, raw answers and corrections. Never register machine validation as human review.
+The authoritative flow is project → imported document → versioned plan → run → attempt → review → export. Plans contain the original request, task instruction, optional result contract/checks, reader, model, effort, settings and language. General tasks are the default; legacy criteria remain supported. Plan changes create new versions. Preserve source copies, exact inputs, raw answers and corrections. Never register machine validation as human review.
+
+The product boundary is one standardized task independently repeated over a file list. The task determines the deliverable; no task-type registry or fixed workbook is required. Large files use task-aware map–reduce with preserved intermediate calls. The host prepares the task and can derive presentation/synthesis afterward. See [core design](docs/CORE_REDESIGN.md) and [task contracts](docs/TASKS.md).
 
 CLI readers use subscription sign-in and the vendor's harness. API readers use separate provider credentials and billing. No automatic retry, engine switch or paid fallback. Never accept secrets as plan/settings arguments. Provider bodies are previewed and hashed without authentication headers. Known key echoes are masked before storage.
 
@@ -25,6 +27,8 @@ CLI readers use subscription sign-in and the vendor's harness. API readers use s
 ## Contributor map
 
 `modell.py` describes persistent plans; `tjeneste.py` implements operations; `kjoring.py` owns the queue; `lager.py` owns SQLite. `prompt.py` creates inputs; `validering.py` checks evidence; `adaptere/` implements readers. `languages.py` and `english_tools.py` provide the English boundary. `eksport.py` and `english_export.py` write audit and reading copies.
+
+`task_contract.py` defines the small execution envelope, principles and optional declared checks; `task_results.py` handles arbitrary results/reviews; `task_export.py` preserves and presents those results without a classification table. `chunking.py` shares bounded map–reduce orchestration between general and legacy plans. The source-of-truth plan remains in the store; task.json is a reading copy.
 
 Write new documentation and public interfaces in English. Use `README.no.md` and `START_HER.md` for Norwegian onboarding. Avoid mechanical renaming of storage fields or old code identifiers: preserve compatibility and keep migration work separate from behavioural changes.
 

@@ -81,8 +81,11 @@ def plan_text(analysis: dict, versions: list[dict], language: str) -> str:
                   f'### {"Bestilling" if nb else "Request"}', '', version['oppgavetekst'], '',
                   f'### {"Leserinnstillinger" if nb else "Reader settings"}', '', '```json',
                   json.dumps(fra_plan(plan), ensure_ascii=False, indent=2), '```', '',
-                  f'### {"Instruks og kriterier" if nb else "Instructions and criteria"}', '',
+                  f'### {"Instruks" if nb else "Instructions"}', '',
                   '~~~~text', bygg_systeminstruks(plan), '~~~~', '']
+        if plan.is_task:
+            from .task_contract import schema
+            lines += ['### Result contract', '', '```json', json.dumps(schema(plan), ensure_ascii=False, indent=2), '```', '']
     return '\n'.join(lines)
 
 
@@ -90,13 +93,20 @@ def save_plan(store, analysis_id: str) -> dict:
     analysis = store.analyse(analysis_id)
     project_id = analysis['prosjekt_id']
     root = root_for(store, project_id)
-    version = store.gjeldende_planversjon(analysis_id)
+    version = store.planversjoner(analysis_id)[-1]
     directory = root / 'plans' / f'{version["id"]}-{version["status"]}'
     directory.mkdir(parents=True, exist_ok=True)
     # Separate draft/approved/version paths preserve earlier inspection copies.
     path = directory / 'Plan.md'
     if not path.exists():
         path.write_text(plan_text(analysis, [version], version['plan'].sprak), encoding='utf-8')
+    if version['plan'].is_task:
+        contract = directory / 'task.json'
+        if not contract.exists():
+            contract.write_text(json.dumps({k: getattr(version['plan'], k) for k in
+                ('task_instructions', 'output_schema', 'quote_checks')}, ensure_ascii=False, indent=2), encoding='utf-8')
+        write_index(store, project_id)
+        return {'project_directory': str(root), 'plan_path': str(path), 'task_path': str(contract)}
     criteria = directory / 'criteria.json'
     if not criteria.exists():
         criteria.write_text(json.dumps({'name':version['plan'].kriteriesett_navn,
@@ -131,10 +141,10 @@ def write_index(store, project_id: str) -> None:
     language = store.gjeldende_planversjon(analyses[-1]['id'])['plan'].sprak if analyses and store.gjeldende_planversjon(analyses[-1]['id']) else 'nb'
     nb = language == 'nb'
     lines = [f'# {project["navn"]}', '',
-             ('Start med planen før kjøring og Excel-arbeidsboken etter eksport. Denne oversikten oppdateres av pluginen.' if nb else
-              'Start with the plan before execution and the Excel workbook after export. The plugin updates this index.'), '',
-             ('Eksporter er øyeblikksbilder. Excel-endringer blir ikke automatisk registrert som menneskelig kontroll.' if nb else
-              'Exports are snapshots. Excel edits are not automatically recorded as human reviews.'), '']
+             ('Start med planen før kjøring og resultatene etter eksport. Denne oversikten oppdateres av pluginen.' if nb else
+              'Start with the plan before execution and the results after export. The plugin updates this index.'), '',
+             ('Eksporter er øyeblikksbilder. Redigeringer blir ikke automatisk registrert som menneskelig kontroll.' if nb else
+              'Exports are snapshots. Edits are not automatically recorded as human reviews.'), '']
     for analysis in analyses:
         runs = store.kjoringer(analysis['id'])
         counts = {status:sum(r['status'] == status for r in runs) for status in sorted({r['status'] for r in runs})}

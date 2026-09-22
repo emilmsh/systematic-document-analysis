@@ -91,6 +91,27 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
             assert preview['package']['source_units'][0]['location'] == 'Line 1', preview
             exported = json.loads(await call('export_results', {'analysis_id':aid}))
             assert (Path(exported['directory'])/'Plan.md').is_file() and Path(exported['workbook']).is_file(), exported
+            # General tasks have no criteria prerequisite and expose their actual deliverable.
+            generic = json.loads(await call('create_analysis', {
+                'project_id': 'pr2' if expected_project else 'pr1', 'name': 'Generic task smoke test',
+                'request': 'Produce a readable summary of each file.', 'engine': 'simulert'}))
+            task_id = generic['analysis']['id']
+            task_runs = json.loads(await call('add_runs', {'analysis_id': task_id}))
+            task_run = task_runs['new'][0]['id']
+            task_input = json.loads(await call('show_input_package', {'run_id': task_run}))
+            assert 'result' in task_input['package']['response_schema']['properties']
+            assert 'vurderinger' not in task_input['package']['response_schema']['properties']
+            await call('approve_plan', {'analysis_id': task_id, 'approved_by': 'Automated fixture only'})
+            await call('start_runs', {'analysis_id': task_id})
+            for _ in range(100):
+                task_detail = json.loads(await call('show_run', {'run_id': task_run}))
+                if task_detail['attempts'] and task_detail['attempts'][-1]['attempts']['status'] != 'aktiv':
+                    break
+                await asyncio.sleep(0.1)
+            assert 'SIMULATED' in task_detail['attempts'][-1]['result'], task_detail
+            task_export = json.loads(await call('export_results', {'analysis_id': task_id}))
+            assert Path(task_export['entrypoint']).is_file() and 'workbook' not in task_export
+            assert (Path(task_export['results_directory']) / f'{task_run}.json').is_file()
 
 
 async def main(plugin_root: Path | None = None) -> None:

@@ -6,6 +6,9 @@ from .modell import Plan
 def plan_problem(plan: Plan) -> str | None:
     if not plan.formaal.strip():
         return 'The analysis purpose is missing.'
+    if plan.is_task:
+        from .task_contract import problem
+        return problem(plan)
     if not plan.kriterier:
         return 'At least one criterion is required.'
     ids = [criterion.id.strip() for criterion in plan.kriterier]

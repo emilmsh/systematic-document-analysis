@@ -1,6 +1,6 @@
 # Systematic Document Analysis
 
-A plugin for Claude Code and Codex for systematic analysis of documents, spreadsheets and text files against agreed criteria. It processes one file at a time and keeps a record of what the model was given, what it answered, which passages it cited and how a person checked the result.
+A controlled for-loop over files in Claude Code or Codex: one agreed task, one independent CLI/API worker per file, and an audit trail from result back to source, instruction, settings and raw response. The task determines the deliverable. See [task contracts and examples](TASKS.md).
 
 [Norsk](USAGE.no.md) · [Start here](../README.md) · [Installation and updates](UPDATES.md)
 
@@ -8,7 +8,7 @@ A plugin for Claude Code and Codex for systematic analysis of documents, spreads
 
 **You only need to double-click `installer.cmd`.** It installs the plugin and any missing command-line tool (CLI), lets you choose a reader, and checks subscription sign-in. If the CLI is not signed in with a subscription, it starts sign-in for you to complete in your browser. Existing subscription sign-in is reused. Being signed in to the desktop app does not confirm that the CLI is signed in.
 
-1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. The current release is **[0.8.11](https://github.com/emilmsh/systematic-document-analysis/releases/tag/v0.8.11)**. Private repository: sign in with access, or use a ZIP shared by a colleague.
+1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. See the [latest published release](https://github.com/emilmsh/systematic-document-analysis/releases/latest). Private repository: sign in with access, or use a ZIP shared by a colleague.
 2. Open the extracted folder in File Explorer, double-click **installer.cmd**, choose **1 = Install**, then **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Codex terminal.
 3. **Continue in the same installer window:** choose your reader, **1 = Codex / ChatGPT, 2 = Claude Code or 3 = Both**, and complete any required browser sign-in with the intended account. Wait for the installer to confirm sign-in. Choose **4 = Skip** if you will use an API or set up the reader later. The reader is independent of the app selected in step 2.
 4. Open your working folder in Claude Code's **Code tab** or in Codex, start a **new local conversation**, and describe your task: **“Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in [folder].”**
@@ -20,22 +20,23 @@ First-time setup requires internet access. The installer provides Python and ins
 ## Project folder and results
 
 Choose a visible project folder in the conversation. Plans and input previews are saved there
-before execution; results arrive in a new snapshot with one Excel workbook, a plan, a start
-file, source copies and a separate audit folder. CSV is optional. Start in `START_HERE.md`.
-Excel edits do not update recorded results. See [Project files and exports](PROJECT_FILES.md).
+before execution; results arrive in a new snapshot with readable and JSON results per file,
+a plan, a start file, source copies and a separate audit folder. Start in `START_HERE.md`.
+Choose later presentation with your assistant. Legacy criteria analyses retain their workbook.
+Export edits do not update recorded results. See [Project files and exports](PROJECT_FILES.md).
 
 ## Why use it
 
-A chat assistant can read one report and answer questions about it. It is less useful when the same questions must be answered for forty reports, a stack of tender offers or a folder of workbooks, and the answers will be used later. Then you need to know that every document was read with the same instructions, model and settings, that each answer is tied to a quotation you can look up, and that someone has actually checked the result. Ordinary conversations do not give you that. This plugin does, without leaving the app you already work in.
+When one task is repeated across forty reports, offers or workbooks, you need to trace each result to the instruction, source and settings that produced it. The plugin keeps those runs separate and records both errors and results. It also distinguishes actual human review from automated checks, while the conversation stays in your existing app.
 
 ## What it does
 
 - **Reads files from a folder you choose.** PDF, DOCX, XLSX, CSV/TSV, TXT and Markdown. Scanned PDFs can be OCR-processed locally. Large files are read in bounded pieces and the findings are then combined in one further call, with every call recorded.
-- **Applies criteria you define.** A small JSON file lists the questions, the allowed answers and interpretation rules. The assistant helps you write it in conversation; you do not need to write JSON yourself.
+- **Repeats the task you define.** A plain instruction is enough; task-defined result schemas and relevant checks are optional. The assistant helps make the instruction repeatable.
 - **Runs one document per attempt with fixed settings.** The plan records reader, model, reasoning effort, language and instructions. The assistant can inspect source text during preparation; a named person approves the plan before the reader runs. Changing it creates a new version; earlier attempts are untouched.
-- **Stores the evidence.** For every attempt: the exact input, the raw answer, verbatim quotations with their location (PDF page, Word block, sheet and cell range, text line or CSV record), and automatic checks of answer labels, quotations and coverage.
+- **Stores execution evidence.** Every attempt retains exact input, raw answer, declared checks and their outcomes. Source units have PDF page, Word block, sheet/cell, text line or CSV record locations. Exact-quote checks are optional for general tasks.
 - **Records human review.** A person approves, corrects or rejects each assessment with a reason. Automatic checks are never recorded as human review.
-- **Exports to Excel.** One workbook for results, evidence, attempts and reviews, with a separate full audit trail. CSV is optional.
+- **Delivers results per file.** Readable content and JSON preserve the result, alongside a full audit trail. Choose later presentation freely. Legacy criteria analyses retain Excel/CSV exports.
 
 The conversation stays in Claude Code or Codex. The plugin adds the record keeping and the repeatable reading; the assistant still helps you think about the question, the criteria and problem files.
 
@@ -78,7 +79,7 @@ Run `installer.cmd update` from the installed folder to check for a newer releas
 
 ## Using it
 
-**Check the prerequisites before starting.** Available tools, reader sign-in, specified criteria and answer options, source selection and an approved plan must be in place. Missing shared prerequisites block startup, with the reason in `show_status`. Correct or clarify the issue, recheck and explicitly ask to continue. Plan changes require renewed approval.
+**Check the prerequisites before starting.** Available tools, reader sign-in, a repeatable task, source selection and an approved plan must be in place. Missing shared prerequisites block startup, with the reason in `show_status`. Correct or clarify the issue and recheck. Reuse existing authorization when applicable. Material plan changes require authorization for the changed plan.
 
 **Individual run problems do not stop the other runs.** Unreadable sources, timeouts, call errors and failed answer/evidence checks are recorded for follow-up. The other runs finish before you review the issues together. Results and available raw evidence are preserved; failed or uncertain attempts are not retried automatically or presented as successful. Shared infrastructure failure or verified loss of reader access can still block new dependent calls.
 
@@ -90,11 +91,11 @@ Open an ordinary project folder in the app and put your own source files in a `d
 
 > Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in the documents folder.
 
-You do not need ready-made criteria or technical settings. The assistant is instructed to clarify what you want to learn, inspect the files, propose questions and answer options, and ask about choices that materially affect the analysis. It should distinguish your requirements from its suggestions and flag missing or unsupported sources. You can refine the question together and optionally try a small agreed pilot.
+You do not need a schema or technical settings. The assistant helps turn your intent into one repeatable instruction, inspects the files and proposes a useful deliverable and checks. It asks about consequential choices, distinguishes your requirements from suggestions and flags missing/unsupported sources. A small agreed pilot is optional.
 
-Before the reader starts, you receive a short plan covering the file selection, criteria, uncertain evidence, reader/model and result location. The detailed plan and exact input remain available to inspect. You approve the concrete plan and identify the responsible person. The assistant normally proposes the host's subscription reader, your conversation language, a new analysis subfolder and Excel results; you can change these choices. Inspect the plan: conversational guidance reduces avoidable mistakes but does not guarantee the assistant has understood everything.
+Before the reader starts, you receive a short plan covering the task, file selection, deliverable/checks, uncertainty, reader/model and result location. The detailed plan and exact input remain available to inspect. Approve the concrete plan and identify the responsible person. The defaults are the available host CLI reader, your conversation language, a new project subfolder and readable Markdown results. An optional task-defined JSON schema supports structured work. These are proposals you can change.
 
-Runs then execute one document at a time. You can stop, resume and inspect individual attempts, record actual human review, and export. Changed criteria require a new plan version and approval.
+Runs execute independently per file, using map–reduce for large inputs. You can stop, resume, inspect attempts, record actual human review, and export. Changed tasks/contracts/settings require a new plan version. Afterward, use the host flexibly for tables, reports or further analysis while preserving originating run/attempt references.
 
 ### Hosts and readers
 
@@ -106,7 +107,9 @@ The app you talk to and the model that reads the documents are chosen separately
 
 CLI readers use your subscription sign-in and the vendor's agent harness with restricted context and tools. API readers make direct calls and are billed by the provider. The requested model and effort are recorded; whether a provider honoured the effort is only known if it reports it.
 
-### Criteria file
+### Optional legacy criteria file
+
+Use this for categorical coding only. General tasks use instructions and an optional [result contract](TASKS.md), without a criteria file.
 
 ```json
 {

@@ -65,7 +65,7 @@ class Plan:
     """Innholdet i én planversjon. Lagres som JSON i planversjon.plan_json."""
 
     formaal: str
-    kriterier: list[Kriterium]
+    kriterier: list[Kriterium] = field(default_factory=list)
     kriteriesett_navn: str = ""
     kriteriesett_versjon: str = ""
     kriteriesett_merknad: str = ""
@@ -77,6 +77,13 @@ class Plan:
     motorinnstillinger: dict[str, Any] = field(default_factory=dict)
     tilleggsinstruks: str = ""
     sprak: str = "nb"
+    task_instructions: str = ""
+    output_schema: dict[str, Any] | None = None
+    quote_checks: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def is_task(self) -> bool:
+        return bool(self.task_instructions)
 
     @classmethod
     def fra_kriteriefil(
@@ -110,7 +117,7 @@ class Plan:
     @classmethod
     def fra_dict(cls, d: dict[str, Any]) -> "Plan":
         d = dict(d)
-        d["kriterier"] = [Kriterium.fra_dict(k) for k in d["kriterier"]]
+        d["kriterier"] = [Kriterium.fra_dict(k) for k in d.get("kriterier", [])]
         return cls(**d)
 
     def til_dict(self) -> dict[str, Any]:

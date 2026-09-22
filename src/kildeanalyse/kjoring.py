@@ -334,6 +334,8 @@ class Koer:
             validering = valider(plan, dok, svar.svar, [s.nr for s in pakke.sider])
             if input_data['processing']['mode'] == 'chunked':
                 validering['lesedekning']['basis'] = 'Aggregate of all extraction calls; synthesis read findings, not the full source.'
+                if plan.is_task:
+                    validering['checks']['coverage_basis'] = 'aggregate_map_self_reports; synthesis_read_findings'
                 validering['advarsler'].append({'type':'chunked_reading', 'melding':'The final answer synthesizes extracted findings. Inspect calls/ for omissions, conflicts and evidence.'})
             if dok.get('source_metadata', {}).get('ocr', {}).get('pages'):
                 validering['advarsler'].append({'type':'ocr', 'melding':'Quotes were checked against OCR text. Verify important evidence against original page images.'})

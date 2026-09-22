@@ -1,15 +1,15 @@
 {
   "name": "systematic-document-analysis-local",
-  "description": "Systematic Document Analysis: auditable document reading in English and Norwegian.",
+  "description": "A controlled for-loop over files with independent CLI/API workers and an audit trail.",
   "owner": {
     "name": "Emil Mathias Strøm Halseth"
   },
   "plugins": [
     {
       "name": "systematic-document-analysis",
-      "description": "Systematic Document Analysis: auditable document reading in English and Norwegian.",
+      "description": "Repeat one task independently per file, with traceable inputs and task-defined results.",
       "source": "./",
-      "version": "0.8.12"
+      "version": "0.9.0"
     }
   ]
 }

@@ -219,6 +219,11 @@ def _legacy_export(lager: Lager, analyse_id: str, *, med_kilder: bool = False,
 def eksporter(lager: Lager, analyse_id: str, *, med_kilder: bool = True,
               include_csv: bool = False, legacy_format: bool = False) -> dict[str, Any]:
     """Publish a complete, unique snapshot; never overwrite an edited workbook."""
+    if any(v['plan'].is_task for v in lager.planversjoner(analyse_id)):
+        if legacy_format or include_csv:
+            raise ValueError('Task results have no fixed CSV/workbook columns. Export the result snapshot, then derive a task-appropriate table with run/attempt provenance.')
+        from .task_export import export
+        return export(lager, analyse_id, med_kilder)
     from .project_files import root_for, plan_text, write_index
     from .workbook_export import write_workbook
     analysis = lager.analyse(analyse_id)

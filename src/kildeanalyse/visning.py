@@ -75,10 +75,16 @@ def md_plan(d: dict[str, Any]) -> str:
                f"- Tenkenivå: **{fra_plan(p)['tenkenivaa']}**. Tidsgrense per dokument: {fra_plan(p)['tidsavbrudd_sek']:g} sekunder.",
                '- Dokumentbehandling: ' + json.dumps(fra_plan(p)['document_processing'], ensure_ascii=False),
                f"- Analyseenhet: {p.analyseenhet}. Sider uten tekst: {'tillatt (lesedekning merkes)' if p.tillat_sider_uten_tekst else 'stopper kjøringen'}.",
-               f"- Kriteriesett: {p.kriteriesett_navn} {p.kriteriesett_versjon}. {p.kriteriesett_merknad}", "",
-               "**Bestilling (oppgavetekst):**", "", v["oppgavetekst"], "", f"**Formål:** {p.formaal}", "",
-               "| ID | Navn | Spørsmål | Tillatte svar | Belegg kreves ved | Regel |", "|---|---|---|---|---|---|"]
-        ut += [f"| {k.id} | {k.navn} | {k.sporsmal} | {', '.join(k.tillatte_svar)} | {', '.join(k.krever_belegg_ved)} | {k.regel} |" for k in p.kriterier]
+               "**Bestilling (oppgavetekst):**", "", v["oppgavetekst"], "", f"**Formål:** {p.formaal}", ""]
+        if p.is_task:
+            from .task_contract import schema
+            ut += ['**Oppgave:**', '', p.task_instructions, '', '**Resultatkontrakt:**', '',
+                   '```json', json.dumps(schema(p), ensure_ascii=False, indent=2), '```', '',
+                   'Sitatkontroller: ' + json.dumps(p.quote_checks, ensure_ascii=False)]
+        else:
+            ut += [f"- Kriteriesett: {p.kriteriesett_navn} {p.kriteriesett_versjon}. {p.kriteriesett_merknad}", "",
+                   "| ID | Navn | Spørsmål | Tillatte svar | Belegg kreves ved | Regel |", "|---|---|---|---|---|---|"]
+            ut += [f"| {k.id} | {k.navn} | {k.sporsmal} | {', '.join(k.tillatte_svar)} | {', '.join(k.krever_belegg_ved)} | {k.regel} |" for k in p.kriterier]
         if p.tilleggsinstruks:
             ut += ["", f"**Tilleggsinstruks:** {p.tilleggsinstruks}"]
         if p.motor in API_MOTORER:
@@ -92,7 +98,7 @@ def md_plan(d: dict[str, Any]) -> str:
                 ut.append(f"- API-format: `{api['api_format']}`. Modellnavnet viser valgt Azure-deployment.")
         ut.append("")
     ut += ['', '## Kilder og felles struktur', '',
-           'Kontroller at filene kan vurderes med samme kriterier. Ulik struktur eller utelatt innhold kan begrense sammenlignbarheten.',
+           'Kontroller at oppgaven kan gjentas over filene. Ulik struktur eller utelatt innhold kan begrense sammenlignbarheten.',
            '```json', json.dumps(d.get('source_profiles', []), ensure_ascii=False, indent=2), '```']
     kj = d["kjoringer"]
     ut += ['', '## Dokumentbehandling og antall kall', '', '```json',
@@ -186,7 +192,10 @@ def md_kjoring(d: dict[str, Any]) -> str:
                       + (" (fullstendig)" if ld["fullstendig"] else " (UFULLSTENDIG)"))
             for a in val.get("advarsler", []):
                 ut.append(f"  - Advarsel: {a['melding']}")
-        if fd["vurderinger"]:
+        if 'result' in fd:
+            from .task_export import readable
+            ut += ['', readable(fd['result']), '', f"Kontroll: {fd['review_status']}"]
+        if fd.get("vurderinger"):
             ut += ["", "| Kriterium | Svar | Kilde | Validering | Kontroll | Belegg (kildeplassering: sitat) |", "|---|---|---|---|---|---|"]
             for kid, v in fd["vurderinger"].items():
                 belegg = "<br>".join(f"{location(dok, b.get('side'))['location']}: «{str(b.get('sitat', ''))[:160]}»" for b in v["belegg"]) or "–"
@@ -224,6 +233,8 @@ def md_startrapport(d: dict[str, Any]) -> str:
 
 
 def md_eksport(d: dict[str, Any]) -> str:
+    if d.get('format') == 'task_results':
+        return f"# Eksport ferdig\n\nStart her: {d['entrypoint']}\n\nResultater per fil: {d['results_directory']}\n\nKjøringer: {d['antall_kjoringer']}."
     return "\n".join([f"# Eksport ferdig", "", f"- Mappe: `{d['mappe']}`", f"- Filer: {', '.join(d['filer'])}",
                       f"- Kjøringer: {d['antall_kjoringer']} ({', '.join(f'{k}: {v}' for k, v in sorted(d['teller'].items()))})",
                       f"- Kontrollerte vurderinger: {d['kontrollert_av_totalt']}",
