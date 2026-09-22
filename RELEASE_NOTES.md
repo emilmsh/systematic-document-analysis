@@ -1,3 +1,8 @@
+# 0.8.10 — Return to the setup menu
+
+- After each interactive installer action, choose Return to start menu or Exit. Perform several setup or maintenance tasks in the same window, including after an incomplete action.
+- Direct commands still run once and preserve their exit status. An earlier failure remains reflected in the interactive session exit status even if a later action succeeds.
+
 # 0.8.9 — Simpler setup and Azure Foundry
 
 - Reduce the setup menu to Install, Sign-in and settings, and Update or repair, with Back available in submenus. Existing direct commands remain available.

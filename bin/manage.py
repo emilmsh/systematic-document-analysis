@@ -69,6 +69,19 @@ def menu_action():
             return action
 
 
+def run_action(args):
+    args = list(args)
+    if args[0] in ACTIONS:
+        script, flags = ACTIONS[args.pop(0)]
+    else:
+        # Preserve direct installer flags/host syntax used by older instructions.
+        script, flags = ACTIONS['install']
+    if script in ('setup_ocr.py', 'configure_keys.py') and args:
+        print('This action takes no additional arguments.', file=sys.stderr)
+        return 2
+    return subprocess.run([sys.executable, '-X', 'utf8', str(ROOT/script), *args, *flags]).returncode
+
+
 def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
     if args == ['--help'] or args == ['-h']:
@@ -79,19 +92,23 @@ def main(argv=None):
             if not sys.stdin.isatty():
                 print('Choose an action or host. Use installer.cmd --help.', file=sys.stderr)
                 return 2
-            action = menu_action()
-            if action is None:
-                return 0
-            args = [action]
-        if args[0] in ACTIONS:
-            script, flags = ACTIONS[args.pop(0)]
-        else:
-            # Preserve direct installer flags/host syntax used by older instructions.
-            script, flags = ACTIONS['install']
-        if script in ('setup_ocr.py', 'configure_keys.py') and args:
-            print('This action takes no additional arguments.', file=sys.stderr)
-            return 2
-        return subprocess.run([sys.executable, '-X', 'utf8', str(ROOT/script), *args, *flags]).returncode
+            result = 0
+            while True:
+                action = menu_action()
+                if action is None:
+                    return result
+                try:
+                    status = run_action([action])
+                except OSError as exc:
+                    print(f'Could not start action / Kunne ikke starte handlingen: {exc}', file=sys.stderr)
+                    status = 1
+                # Keep failures visible even if another action succeeds later.
+                result = result or status
+                title = ('Action finished / Handlingen er ferdig' if status == 0 else
+                         f'Action incomplete / Handlingen ble ikke fullført (exit code {status})')
+                if choose(title, [('menu', 'Return to start menu / Tilbake til startmenyen')]) is None:
+                    return result
+        return run_action(args)
     except (OSError, KeyboardInterrupt, EOFError) as exc:
         print(f'Setup stopped: {exc or "cancelled"}', file=sys.stderr)
         return 1

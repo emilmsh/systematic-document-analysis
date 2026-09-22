@@ -27,7 +27,7 @@ def test_dispatch_preserves_arguments_and_exit_status(monkeypatch,args,script,fo
 
 
 def test_menu_reprompts_and_routes_reader_setup(monkeypatch):
-    choices = iter(['bad','2','1'])
+    choices = iter(['bad','2','1','0'])
     monkeypatch.setattr(sys.stdin, 'isatty', lambda: True)
     monkeypatch.setattr('builtins.input', lambda _: next(choices))
     calls = []
@@ -48,13 +48,27 @@ def test_back_returns_to_main_menu_without_running_an_action(monkeypatch, capsys
 
 
 def test_maintenance_can_repair_ocr_without_reinstalling_plugin(monkeypatch):
-    choices = iter(['3','3'])
+    choices = iter(['3','3','0'])
     monkeypatch.setattr(sys.stdin, 'isatty', lambda: True)
     monkeypatch.setattr('builtins.input', lambda _: next(choices))
     calls = []
     monkeypatch.setattr(manage.subprocess, 'run', lambda cmd: calls.append(cmd) or SimpleNamespace(returncode=1))
     assert manage.main([]) == 1
     assert calls == [[sys.executable,'-X','utf8',str(manage.ROOT/'setup_ocr.py')]]
+
+
+@pytest.mark.parametrize('first_status', [0, 7])
+def test_return_to_start_runs_another_action_and_preserves_failures(monkeypatch, first_status):
+    choices = iter(['2','1','1','2','2','1','0'])
+    monkeypatch.setattr(sys.stdin, 'isatty', lambda: True)
+    monkeypatch.setattr('builtins.input', lambda _: next(choices))
+    calls = []
+    def run(cmd):
+        calls.append(cmd)
+        return SimpleNamespace(returncode=first_status if len(calls) == 1 else 0)
+    monkeypatch.setattr(manage.subprocess, 'run', run)
+    assert manage.main([]) == first_status
+    assert [Path(cmd[-1]).name for cmd in calls] == ['setup_reader.py', 'configure_keys.py']
 
 
 def test_no_input_and_help_never_launch_setup(monkeypatch):
