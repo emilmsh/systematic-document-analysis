@@ -25,9 +25,9 @@ Du kan klargjøre og være innlogget i begge lesermotorene samtidig. Hver analys
 
 Velg en synlig prosjektmappe i samtalen. Planer og inputforhåndsvisninger lagres der før kjøring.
 Hver eksport får en ny mappe med **Resultater.xlsx**, en kort startfil og **Dokumentasjon.zip**.
-Hovedarket har én rad per kjøring og resultatvariabler i kolonnene. Nested objekter blir kolonner;
-gjentatte verdier samles i hovedraden og kan få koblede detaljfaner. Feil, variabelforklaringer og
-kjøringsinformasjon har egne faner. Arkivet samler plan, originale JSON-resultater, råsvar,
+Hovedarket har én rad per dokument som standard og resultatvariabler i kolonnene. Nested objekter blir kolonner;
+gjentatte verdier har detaljfaner. Feil vises ved behov i en egen fane. Variabeldefinisjoner og
+full kjøringshistorikk ligger i arkivet. Arkivet samler plan, originale JSON-resultater, råsvar,
 historiske forsøk og eventuelle kildekopier. Du trenger ikke åpne JSON for å bruke resultatene.
 Begynn i `START_HERE.md` i prosjektmappen. Redigering av eksport registrerer ikke menneskelig kontroll.
 Se [Prosjektfiler og eksportformater](PROJECT_FILES.md).
@@ -43,7 +43,7 @@ Når samme oppgave gjentas over førti rapporter, tilbud eller regneark, trenger
 - **Kjører ett dokument per forsøk med faste innstillinger.** Planen lagrer lesemotor, modell, tenkenivå, språk og instruks. Assistenten kan inspisere kildetekst under forberedelsen; en navngitt person godkjenner planen før lesemotoren starter. Endringer gir en ny versjon; tidligere forsøk står urørt.
 - **Lagrer kontrollsporet.** Hvert forsøk bevarer eksakt input, råsvar og resultatene av avtalte kontroller. Kildeenheter har PDF-side, Word-blokk, ark/celle, tekstlinje eller CSV-post. Ordrett sitatkontroll er valgfri for generelle oppgaver.
 - **Registrerer menneskelig kontroll.** En person godkjenner, korrigerer eller avviser hver vurdering med begrunnelse. Automatiske kontroller registreres aldri som menneskelig kontroll.
-- **Leverer et datasett automatisk.** Regnearket har én rad per kjøring og variabler som passer oppgaven, for eksempel entiteter, temaer, skårer, beregninger eller tekstutdrag. Feil og øvrig informasjon vises separat. Kontrollsporet er samlet i ett arkiv.
+- **Leverer et datasett automatisk.** Regnearket har én rad per dokument som standard og variabler som passer oppgaven, for eksempel entiteter, temaer, skårer, beregninger eller tekstutdrag. Feil og øvrig informasjon vises separat. Kontrollsporet er samlet i ett arkiv.
 
 Samtalen foregår i Claude Code eller Codex. Pluginen legger til bokføringen og den repeterbare lesingen; assistenten hjelper fortsatt med spørsmålet, kriteriene og vanskelige filer.
 
@@ -100,7 +100,7 @@ Tillatte svar som «uklart» eller «ikke omtalt» er gyldige funn når kravene 
 
 Du trenger ikke ferdig skjema eller tekniske innstillinger. Assistenten hjelper deg å formulere én repeterbar instruks, inspiserer filene og foreslår en nyttig leveranse og relevante kontroller. Den spør om vesentlige valg og skiller dine krav fra egne forslag. En liten pilot er valgfri.
 
-Før kjøring foreslår assistenten oppgave, filutvalg, resultatvariabler med forklaringer, kontroller, usikkerhet, lesemotor/modell og resultatmappe. Du kan inspisere detaljert plan og eksakt input. Godkjenn den konkrete planen og oppgi ansvarlig person. Standardleveransen er et regneark med én rad per kjøring. Skårskalaer, måleenheter og håndtering av manglende verdier avklares før kjøring. Rene tekstoppgaver og gamle ustrukturerte resultater får en tekstkolonne; eksporten finner ikke på nye analysevariabler i etterkant.
+Før kjøring foreslår assistenten oppgave, filutvalg, resultatvariabler med forklaringer, kontroller, usikkerhet, lesemotor/modell og resultatmappe. Du kan inspisere detaljert plan og eksakt input. Godkjenn den konkrete planen og oppgi ansvarlig person. Standardleveransen er et regneark med én rad per dokument som standard. Skårskalaer, måleenheter og håndtering av manglende verdier avklares før kjøring. Rene tekstoppgaver og gamle ustrukturerte resultater får en tekstkolonne; eksporten finner ikke på nye analysevariabler i etterkant.
 
 Filene kjøres uavhengig med én ny arbeider per forsøk. Store CLI-input leses med filverktøy; for store API-input gir en tydelig feil. Du kan stoppe, gjenoppta, se enkeltforsøk, registrere faktisk menneskelig kontroll og eksportere. Endret oppgave, resultatskjema eller kjøreinnstilling gir ny planversjon. Etterpå kan dere lage tabeller, rapporter og videre analyser i samtalen og beholde referanser til opprinnelige kjøringer.
 
@@ -119,3 +119,5 @@ Valgfrie API-nøkler legges i filen `installer.cmd settings` åpner, utenfor pro
 Se også den [engelske veiledningen](USAGE.md). Utviklingsmateriale ligger i [repoen](https://github.com/emilmsh/systematic-document-analysis).
 
 Skapt og utviklet av Emil Mathias Strøm Halseth, med utviklingshjelp fra OpenAI Codex og Anthropic Claude Code.
+
+Avklar leveranseformat, radenhet, kolonner og plassering før kjøring. Gjenbruk brukerens eksplisitte ønsker. Standard er nyeste planlagte kjøring per dokument, også ved feil; eldre vellykkede resultater brukes ikke automatisk. `row_scope="runs"` viser historikken eksplisitt. Ved lang Excel-sti kan `output_directory` velge en kortere eksportmappe uten å flytte prosjektet.

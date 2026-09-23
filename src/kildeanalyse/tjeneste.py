@@ -501,9 +501,9 @@ def registrer_kontroll(lager: Lager, forsok_id: str, ansvarlig: str, handling: s
     return review(lager, forsok, plan, ansvarlig, handling, begrunnelse, replacement_response)
 
 
-def eksporter(lager, analyse_id, med_kilder=True, *, include_csv=False, list_layout='sheets'):
+def eksporter(lager, analyse_id, med_kilder=True, *, include_csv=False, list_layout='sheets', row_scope='documents', output_directory=None):
     from .task_export import export
-    return export(lager, analyse_id, med_kilder, include_csv=include_csv, list_layout=list_layout)
+    return export(lager, analyse_id, med_kilder, include_csv=include_csv, list_layout=list_layout, row_scope=row_scope, output_directory=output_directory)
 
 
 __all__ = [n for n in dir() if not n.startswith("_")]

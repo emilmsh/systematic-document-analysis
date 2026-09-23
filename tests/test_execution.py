@@ -90,7 +90,7 @@ def test_copy_and_complete_export_with_paths_over_260_characters(tmp_path, monke
     store, aid, runs, _ = fixture(tmp_path, monkeypatch)
     tjeneste.godkjenn_plan(store, aid, 'Test fixture')
     tjeneste.start(store, aid)
-    output = tjeneste.eksporter(store, aid)
+    output = tjeneste.eksporter(store, aid, output_directory=str(visible))
     assert load_workbook(native_path(output['workbook']))['Results'].max_row == 3
     with zipfile.ZipFile(native_path(output['documentation_archive'])) as archive:
         assert any(len(str(Path(output['mappe']) / n)) > 260 for n in archive.namelist())
@@ -100,3 +100,38 @@ def test_copy_and_complete_export_with_paths_over_260_characters(tmp_path, monke
             assert archive.read(source) == Path(doc['lagret_kopi']).read_bytes()
             attempt = store.forsok_for_kjoring(run['id'])[0]
             assert archive.read(f'audit/attempts/{attempt["id"]}/raasvar.txt').decode('utf-8') == attempt['raasvar']
+
+
+@pytest.mark.parametrize('engine', ['openai_api', 'anthropic_api', 'openrouter_api',
+                                   'kompatibel_api', 'azure_foundry_api'])
+def test_oversized_api_file_is_visible_in_status_and_workbook_and_next_file_runs(tmp_path, monkeypatch, engine):
+    store, aid, initial, sent = fixture(tmp_path, monkeypatch, engine=engine, large=True)
+    project_id = store.analyse(aid)['prosjekt_id']
+    small = tmp_path/'small.txt'
+    small.write_text('A small source with enough text to read.', encoding='utf-8')
+    imported = tjeneste.importer_dokumenter(store, project_id, [str(small)])
+    small_id = imported['resultater'][0]['dokument']['id']
+    tjeneste.ny_planversjon(store, aid, 'Small input budget', motorinnstillinger={'input_budget_bytes':8000})
+    runs = tjeneste.legg_til_kjoringer(store, aid, [initial[0]['dokument_id'], small_id])['nye']
+    tjeneste.godkjenn_plan(store, aid, 'Test fixture')
+    report = tjeneste.start(store, aid, kjoring_ider=[r['id'] for r in runs])
+    failed, successful = runs
+    assert report['workflow_block'] is None
+    assert len(sent) == 1 and sent[0].dokument_id == small_id  # no dispatch for the oversized file
+    assert store.kjoring(failed['id'])['status'] == 'feilet'
+    assert store.kjoring(successful['id'])['status'] == 'fullført'
+    assert not store.forsok_for_kjoring(failed['id'])
+    status = tjeneste.vis_status(store, aid, details=False)
+    issue, = status['run_issues']
+    assert issue['run_id'] == failed['id'] and 'input_budget_bytes' in issue['reason']
+    output = tjeneste.eksporter(store, aid)
+    book = load_workbook(output['workbook'])
+    def records(sheet):
+        values = list(book[sheet].values)
+        return [dict(zip(values[0], row)) for row in values[1:]]
+    row = next(r for r in records('Results') if r['Run'] == failed['id'])
+    assert all(value is None for key, value in row.items() if key not in ('Run', 'Document', 'Status', 'Human review'))
+    assert 'feilet' in row['Status']
+    assert any(r['Run'] == failed['id'] and 'input_budget_bytes' in r['Message']
+               for r in records('Errors and notes'))
+    book.close()

@@ -123,6 +123,6 @@ def register(server, get_store):
         return call(tjeneste.registrer_kontroll, attempt_id, reviewer, actions[action], reason,
                     replacement_response=replacement_response)
 
-    @server.tool(description='Export a readable workbook and documentation ZIP. One main row per run. Nested records default to detail sheets; list_layout=inline also shows numbered lists in the main row. include_csv adds data tables inside the ZIP.')
-    def export_results(analysis_id: str, include_sources: bool = True, include_csv: bool = False, list_layout: str = 'sheets') -> str:
-        return call(tjeneste.eksporter, analysis_id, include_sources, include_csv=include_csv, list_layout=list_layout)
+    @server.tool(description='Export a readable workbook and documentation ZIP. Default: one row per document, using its newest planned run (no fallback on failure). row_scope=runs includes history. output_directory selects a shorter export parent when needed. Nested records default to detail sheets; list_layout=inline also shows numbered lists in the main row. include_csv adds data tables inside the ZIP.')
+    def export_results(analysis_id: str, include_sources: bool = True, include_csv: bool = False, list_layout: str = 'sheets', row_scope: str = 'documents', output_directory: str | None = None) -> str:
+        return call(tjeneste.eksporter, analysis_id, include_sources, include_csv=include_csv, list_layout=list_layout, row_scope=row_scope, output_directory=output_directory)

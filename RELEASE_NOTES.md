@@ -1,3 +1,12 @@
+# 0.10.6 — Agree the deliverable and export by document
+
+- Agree format, row unit, columns, repeated excerpts and destination before reader execution; reuse explicit user choices.
+- Default to the newest planned run per document, including failures and pending runs. Never silently fall back to an older success. `row_scope="runs"` retains the full historical workbook.
+- Share columns and detail sheets across identical schemas; preserve different definitions separately. Omit empty detail, overview, telemetry and variable tabs from the reader workbook. Keep original results, definitions and all attempts in the documentation ZIP.
+- Show document names and status in the main sheet; retain notes and source/record references. Fit headers and reduce minimum row height.
+- Use short unique export folders, check Windows Excel path length before writing, and support an explicit `output_directory` without moving the project.
+- No new model calls, changes to source documents, or rewriting of recorded results.
+
 # 0.10.5 — Codex output schema and shell-policy failures
 
 - Remove unsupported `uniqueItems` from the schema sent to Codex CLI while keeping the original schema and its post-run validation unchanged.

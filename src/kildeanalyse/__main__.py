@@ -46,6 +46,8 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("eksporter", help="eksporter resultatpakke"); s.add_argument("analyse_id")
     s.add_argument("--med-kilder", action=argparse.BooleanOptionalAction, default=True)
     s.add_argument("--med-csv", action="store_true"); s.add_argument("--list-layout", choices=("sheets", "inline"), default="sheets")
+    s.add_argument("--row-scope", choices=("documents", "runs"), default="documents")
+    s.add_argument("--output-directory", help="Short absolute directory for this export only.")
     args = p.parse_args(argv)
     lager = Lager(datamappe())
     try:
@@ -102,7 +104,7 @@ def _utfor(lager: Lager, a: argparse.Namespace) -> str:
         return json.dumps(tjeneste.registrer_kontroll(lager, a.forsok_id, a.ansvarlig, a.handling, a.begrunnelse,
             replacement_response=json.loads(a.replacement_response) if a.replacement_response else None), ensure_ascii=False)
     if k == "eksporter":
-        return visning.md_eksport(tjeneste.eksporter(lager, a.analyse_id, a.med_kilder, include_csv=a.med_csv, list_layout=a.list_layout))
+        return visning.md_eksport(tjeneste.eksporter(lager, a.analyse_id, a.med_kilder, include_csv=a.med_csv, list_layout=a.list_layout, row_scope=a.row_scope, output_directory=a.output_directory))
     raise TjenesteFeil(f"Ukjent kommando {k}")
 
 

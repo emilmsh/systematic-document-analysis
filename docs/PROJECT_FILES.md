@@ -24,15 +24,15 @@ editing a copy does not change the approved plan or historical inputs.
 `export_results` creates a new snapshot under the project's `exports/` directory. Tasks deliver a workbook by default, with task-specific variables:
 
 ```text
-an1-<timestamp>-<unique-id>/
+an1-<unique-id>/
   START_HERE.md               # START_HER.md for Norwegian
   Results.xlsx               # Resultater.xlsx for Norwegian
   Documentation.zip          # Dokumentasjon.zip for Norwegian
 ```
 
-The first sheet has **exactly one row per run**, with the run ID, document and generated variables. Nested objects become columns. Repeated records default to detail sheets linked by run and parent IDs, with counts in the main row. Set `list_layout="inline"` to additionally display numbered lists in main cells. Independent lists never multiply the main rows or create a Cartesian product. Errors, run information and variable definitions live in separate sheets. Long text uses a linked sheet inside the same workbook.
+The first sheet has **exactly one row per document by default**, with the run ID, document and generated variables. Nested objects become columns. Repeated records default to detail sheets linked by run and parent IDs, with counts in the main row. Set `list_layout="inline"` to additionally display numbered lists in main cells. Independent lists never multiply the main rows or create a Cartesian product. Errors have a sheet only when relevant; run history and variable definitions remain in the ZIP. Long text uses a linked sheet inside the same workbook.
 
-Failed, unstarted and rejected runs retain their row with blank result variables; their status and reasons are in auxiliary sheets. Prose-only results remain a text variable; export does not invent new findings. Plan approval and automatic validation do not count as human result review.
+Failed, unstarted and rejected runs retain their row with blank result variables; their status is visible in the main sheet and reasons appear in the notes sheet. Prose-only results remain a text variable; export does not invent new findings. Plan approval and automatic validation do not count as human result review.
 
 The ZIP preserves `Plan.md`, original-shape JSON and readable results in `results/`, optional originals in `sources/`, and all attempts, reviews, validation, exact inputs and raw responses in `audit/`. Extract it only when this detail is needed. `include_csv=true` adds the main dataset and detail tables in `datasets/` inside the ZIP. CSV retains raw values, so use the workbook for safe Excel viewing. Export edits do not modify original results. See [task contracts and validation](TASKS.md).
 
@@ -43,3 +43,9 @@ The ZIP preserves `Plan.md`, original-shape JSON and readable results in `result
 Every export is staged and published with a unique name. Failed exports leave no completed snapshot; existing exports and user edits remain untouched. Move all three deliverable files together. Windows export paths use extended-path filesystem operations without requiring a registry setting.
 
 CLI equivalents include `sda eksporter an1`, `--med-csv`, `--list-layout inline`, and `--no-med-kilder`. Editing Excel does not update the authoritative analysis or count as human review; use `record_review` for actual decisions.
+
+## Delivery selection and Excel paths
+
+Agree the format, row unit, fields and repeated-record layout before reader execution; retain that agreement in the plan purpose. The default `row_scope="documents"` chooses the newest planned run per document by plan version, creation time and numeric run ID. A failed or pending latest run stays visible and is never replaced by an older success. Identical output schemas share columns; different definitions stay separate. Empty detail sheets are omitted. The reader workbook omits overview, telemetry and variable-dictionary tabs; definitions and full history remain in the ZIP. `row_scope="runs"` explicitly requests the full historical workbook.
+
+Exports use short unique folder names. On Windows the complete XLSX path is checked against a conservative 218-character compatibility budget before files are written. `output_directory` (CLI: `--output-directory`) chooses an absolute parent for this export without moving the project or previous exports. A longer path requires a shorter destination, even if Python can write it.

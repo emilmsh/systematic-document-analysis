@@ -44,8 +44,8 @@ def test_object_variables_keep_types_and_one_row_per_run(tmp_path, monkeypatch):
         [{'entity': 'A', 'metrics': {'score': 0, 'count': 0, 'positive': False}},
          {'entity': 'B', 'metrics': {'score': None, 'count': 3, 'positive': True}}])
     preview = tjeneste.vis_plan(store, aid)['dataset_preview']
-    assert preview['structured'] and 'One row per run' in preview['row_unit']
-    out = tjeneste.eksporter(store, aid, include_csv=True)
+    assert preview['structured'] and 'One row per document' in preview['row_unit']
+    out = tjeneste.eksporter(store, aid, row_scope='runs', include_csv=True)
     book = load_workbook(out['workbook'])
     result = rows(book['Results'])
     assert len(result) == len(store.kjoringer(aid))  # Includes earlier unstarted plan-version runs.
@@ -71,14 +71,14 @@ def test_nested_arrays_never_multiply_main_rows_or_cross_join(tmp_path, monkeypa
     store, aid, runs = execute(tmp_path, monkeypatch, schema,
         [{'score': 2.5, 'entities': [{'name':'X','mentions':[1,2]}, {'name':'Y','mentions':[3]}], 'topics':['a','b','c']},
          {'score': 0, 'entities':[], 'topics':[]}], limitations=['Limited evidence.'])
-    out = tjeneste.eksporter(store, aid)
+    out = tjeneste.eksporter(store, aid, row_scope='runs')
     book = load_workbook(out['workbook'])
     assert book['Results'].max_row - 1 == len(store.kjoringer(aid))
     details = {s['sheet']:s['rows'] for s in out['datasets'][1:]}
     assert sorted(details.values()) == [2,3,3]
     assert not any(c.value == '1. X\n\n2. Y' for row in book['Results'] for c in row)
     assert not any('entities.name' in str(c.value) for c in book['Results'][1])
-    inline = load_workbook(tjeneste.eksporter(store, aid, list_layout='inline')['workbook'])
+    inline = load_workbook(tjeneste.eksporter(store, aid, row_scope='runs', list_layout='inline')['workbook'])
     assert any(c.value == '1. X\n\n2. Y' for row in inline['Results'] for c in row)
     assert len(rows(book['entities'])) == 2
     assert len(rows(book['entities.mentions'])) == 3
@@ -94,7 +94,7 @@ def test_root_list_quotes_have_main_row_and_source_located_detail(tmp_path, monk
     store, aid, runs, _ = fixture(tmp_path, monkeypatch, structured=True)
     tjeneste.godkjenn_plan(store, aid, 'Test fixture')
     tjeneste.start(store, aid)
-    out = tjeneste.eksporter(store, aid)
+    out = tjeneste.eksporter(store, aid, row_scope='runs')
     book = load_workbook(out['workbook'])
     assert book['Results'].max_row == 3
     assert len(rows(book['Findings'])) == 2
@@ -109,7 +109,7 @@ def test_failure_and_rejection_retain_blank_main_rows(tmp_path, monkeypatch):
     tjeneste.start(store, aid)
     attempt = store.forsok_for_kjoring(runs[1]['id'])[0]
     tjeneste.registrer_kontroll(store, attempt['id'], 'Test reviewer', 'avvist', 'Fixture rejection')
-    out = tjeneste.eksporter(store, aid)
+    out = tjeneste.eksporter(store, aid, row_scope='runs')
     book = load_workbook(out['workbook'])
     assert len(rows(book['Results'])) == 2
     assert all(r['Result'] is None for r in rows(book['Results']))
@@ -125,7 +125,7 @@ def test_formula_like_and_long_values_survive_inside_workbook(tmp_path, monkeypa
     store, aid, runs = execute(tmp_path, monkeypatch, schema,
         [{'text': '=HYPERLINK("https://invalid.example")', 'identifier': 12345678901234567890},
          {'text': long, 'identifier': 0}])
-    out = tjeneste.eksporter(store, aid)
+    out = tjeneste.eksporter(store, aid, row_scope='runs')
     book = load_workbook(out['workbook'])
     cell = next(c for row in book['Results'] for c in row if isinstance(c.value,str) and c.value.startswith('=HYPERLINK'))
     assert cell.data_type == 's'
@@ -141,14 +141,14 @@ def test_workbook_failure_does_not_publish_snapshot(tmp_path, monkeypatch):
         raise RuntimeError('fixture export failure')
     monkeypatch.setattr('kildeanalyse.task_workbook.write_workbook', fail)
     with pytest.raises(RuntimeError, match='fixture export failure'):
-        tjeneste.eksporter(store, aid)
+        tjeneste.eksporter(store, aid, row_scope='runs')
     project = store.prosjekt(store.analyse(aid)['prosjekt_id'])
     assert list((Path(project['directory'])/'exports').iterdir()) == []
 
 
 def test_empty_root_lists_and_null_results_are_not_failed_or_negative(tmp_path, monkeypatch):
     store, aid, runs = execute(tmp_path, monkeypatch, {'type':['array','null'], 'items':{'type':'string'}}, [[], None])
-    out = tjeneste.eksporter(store, aid)
+    out = tjeneste.eksporter(store, aid, row_scope='runs')
     book = load_workbook(out['workbook'])
     assert book['Results'].max_row - 1 == len(store.kjoringer(aid))
     states = [r['Dataset'] for r in rows(book['Runs'])]

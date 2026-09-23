@@ -15,7 +15,7 @@ from openpyxl.utils import get_column_letter
 from .task_dataset import add_result, describe, pointer, source_locations
 
 
-def write_workbook(directory, analysis, versions, records, archive_name, *, include_csv=False, csv_directory=None, list_layout='sheets'):
+def write_workbook(directory, analysis, versions, records, archive_name, *, include_csv=False, csv_directory=None, list_layout='sheets', compact=False):
     if list_layout not in ('sheets', 'inline'):
         raise ValueError('list_layout must be sheets or inline.')
     nb = versions[-1]['plan'].sprak == 'nb'
@@ -88,14 +88,16 @@ def write_workbook(directory, analysis, versions, records, archive_name, *, incl
                     cell.fill = PatternFill('solid', fgColor='F0F4F7')
         for c in range(1, len(headers)+1):
             ws.column_dimensions[get_column_letter(c)].width = (widths or {}).get(c, 24)
-        ws.row_dimensions[1].height = 34
+        header_lines = max((math.ceil(len(str(c.value or '')) / max(8, ws.column_dimensions[c.column_letter].width-2)) for c in ws[1]), default=1)
+        ws.row_dimensions[1].height = max(30, min(100, header_lines*15+6))
         for row in ws.iter_rows(min_row=2):
             lines = max((sum(max(1, math.ceil(len(p) / max(8, ws.column_dimensions[c.column_letter].width-2)))
                              for p in str(c.value if c.value is not None else '').split('\n')) for c in row), default=1)
-            ws.row_dimensions[row[0].row].height = min(409, max(30, lines*16+6))
+            ws.row_dimensions[row[0].row].height = min(409, max(22, lines*15+4))
         ws.auto_filter.ref = ws.dimensions
         return ws
 
+    schema_groups = {}
     for record in records:
         run, doc, plan, chosen, view = (record[k] for k in ('run', 'document', 'plan', 'chosen', 'view'))
         aid = chosen['id'] if chosen else ''
@@ -117,7 +119,10 @@ def write_workbook(directory, analysis, versions, records, archive_name, *, incl
         else:
             state = tr('Med i datasettet', 'Included in dataset')
         pid = run['planversjon_id']
-        tables = datasets.setdefault(pid, describe(plan.output_schema))
+        key = json.dumps(plan.output_schema, sort_keys=True, ensure_ascii=False)
+        group = schema_groups.setdefault(key, pid) if compact else pid
+        record['dataset_key'] = group
+        tables = datasets.setdefault(group, describe(plan.output_schema))
         context = {'document': doc['navn'], 'document_id': doc['id'], 'run_id': run['id'], 'attempt_id': aid,
                    'plan_id': pid, 'source_sha256': doc['sha256'], 'review': review,
                    'simulated': bool(chosen and chosen['simulert']), 'origin': (view or {}).get('result_origin', ''),
@@ -188,10 +193,14 @@ def write_workbook(directory, analysis, versions, records, archive_name, *, incl
             ('origin', tr('Svargrunnlag', 'Result origin')), ('result_path', tr('Resultatsti', 'Result path')),
             ('null_fields', tr('Nullfelt', 'Null fields')), ('missing_fields', tr('Fraværende felt', 'Absent fields'))]
 
-    # The primary dataset has exactly one row per run, including failed/unstarted runs.
+    if compact:
+        meta = [m for m in meta if m[0] in ('source_location', 'record_id', 'parent_id', 'review')]
+
+    # The primary dataset has exactly one row per selected run, including failed/unstarted runs.
     # Repeated values default to detail sheets; inline lists are an explicit option.
     primary_columns = []
-    primary_headers = [tr('Kjøring', 'Run'), tr('Dokument', 'Document')]
+    primary_headers = ([tr('Dokument', 'Document'), tr('Status', 'Status'), tr('Menneskelig kontroll', 'Human review'), tr('Kjøring', 'Run')]
+                       if compact else [tr('Kjøring', 'Run'), tr('Dokument', 'Document')])
     for pid, tables in datasets.items():
         for table in tables.values():
             if table.repeated and list_layout == 'sheets':
@@ -200,7 +209,7 @@ def write_workbook(directory, analysis, versions, records, archive_name, *, incl
                     primary_headers.append(header)
                     primary_columns.append((pid, table, None))
                     dictionary.append([results_name, header, '/', tr('Antall poster i detaljfanen.', 'Number of detail records.'),
-                                       'integer', pid, '/', tr('Én kjøring', 'One run')])
+                                       'integer', pid, '/', tr('Én dokumentrad' if compact else 'Én kjøring', 'One document row' if compact else 'One run')])
                 continue
             for label, col in zip(headers_for(table), table.columns.values()):
                 prefix = '.'.join(p for p in table.path if p != '*')
@@ -219,14 +228,14 @@ def write_workbook(directory, analysis, versions, records, archive_name, *, incl
                     kind = tr('Liste av ', 'List of ') + str(kind)
                 dictionary.append([results_name, header, pointer(col.path) or '/',
                     col.schema.get('description') or (tr('Antall elementer i listen.', 'Number of list items.') if col.role == 'count' else tr('Ikke beskrevet i planen.', 'Not described in the plan.')),
-                    kind, pid, pointer(table.path) or '/', tr('Én kjøring', 'One run')])
+                    kind, pid, pointer(table.path) or '/', tr('Én dokumentrad' if compact else 'Én kjøring', 'One document row' if compact else 'One run')])
     primary_rows = []
     for record in records:
         run, chosen, view = record['run'], record['chosen'], record['view']
         values, nulls, missing, locations = [], [], [], []
         for pid, table, col in primary_columns:
             selected = [r for r in table.rows if r['run_id'] == run['id']]
-            if pid != run['planversjon_id'] or not record['dataset_included']:
+            if pid != record['dataset_key'] or not record['dataset_included']:
                 values.append(None)
                 continue
             if col is None:
@@ -249,12 +258,15 @@ def write_workbook(directory, analysis, versions, records, archive_name, *, incl
                 location = source_locations(table, row, row['plan'], row['source'])
                 if location:
                     locations.append(location)
-        primary_rows.append([run['id'], record['document']['navn'], *values])
+        prefix = ([record['document']['navn'], run['status'] + ': ' + record['dataset_state'],
+                   (view or {}).get('review_status', 'ikke kontrollert'), run['id']] if compact else
+                  [run['id'], record['document']['navn']])
+        primary_rows.append([*prefix, *values])
         record['null_fields'] = '\n'.join(dict.fromkeys(nulls))
         record['missing_fields'] = '\n'.join(dict.fromkeys(missing))
         record['source_locations'] = '\n'.join(dict.fromkeys(locations))
-    widths = {1:16, 2:30}
-    for i, (_, table, col) in enumerate(primary_columns, 3):
+    widths = {1:32, 2:40, 3:22, 4:14} if compact else {1:16, 2:30}
+    for i, (_, table, col) in enumerate(primary_columns, len(primary_headers)-len(primary_columns)+1):
         if col is None:
             widths[i] = 22
             continue
@@ -271,7 +283,7 @@ def write_workbook(directory, analysis, versions, records, archive_name, *, incl
     summaries = []
     for pid, tables in datasets.items():
         for table in tables.values():
-            if not table.repeated:
+            if not table.repeated or (compact and not table.rows):
                 continue  # Already represented in the one-row-per-run primary dataset.
             label = table.schema.get('title') or (tr('Funn', 'Findings') if not table.path else '.'.join(table.path).replace('.*', ''))
             name = name_for(str(label))
@@ -323,15 +335,16 @@ def write_workbook(directory, analysis, versions, records, archive_name, *, incl
 
     for row, record in zip(run_rows, records):
         row += [record['source_locations'], record['null_fields'], record['missing_fields']]
-    sheet(runs_name, [tr(a, b) for a, b in [
-        ('Dokument','Document'), ('Kjøringsstatus','Run status'), ('Datasett','Dataset'), ('Validering','Validation'),
-        ('Menneskelig kontroll','Human review'), ('Begrensninger','Limitations'), ('Feil','Error'),
-        ('Dekning oppgitt','Reported coverage'), ('Forsøk','Attempt'), ('Kjøring','Run'), ('Planversjon','Plan version'),
-        ('Dokument-ID','Document ID'), ('Simulert','Simulated'), ('Bestilt modell','Requested model'),
-        ('Rapportert modell','Reported model'), ('Bestilt tenkenivå','Requested effort'), ('Sesjons-ID','Session ID'),
-        ('Kilde SHA-256','Source SHA-256'), ('Valideringsmerknader','Validation notes'),
-        ('Kildeplasseringer','Source locations'), ('Nullfelt','Null fields'), ('Fraværende felt','Absent fields')]], run_rows,
-        {1:30, 3:40, 6:85, 7:65, 18:68, 19:85})
+    if not compact:
+        sheet(runs_name, [tr(a, b) for a, b in [
+            ('Dokument','Document'), ('Kjøringsstatus','Run status'), ('Datasett','Dataset'), ('Validering','Validation'),
+            ('Menneskelig kontroll','Human review'), ('Begrensninger','Limitations'), ('Feil','Error'),
+            ('Dekning oppgitt','Reported coverage'), ('Forsøk','Attempt'), ('Kjøring','Run'), ('Planversjon','Plan version'),
+            ('Dokument-ID','Document ID'), ('Simulert','Simulated'), ('Bestilt modell','Requested model'),
+            ('Rapportert modell','Reported model'), ('Bestilt tenkenivå','Requested effort'), ('Sesjons-ID','Session ID'),
+            ('Kilde SHA-256','Source SHA-256'), ('Valideringsmerknader','Validation notes'),
+            ('Kildeplasseringer','Source locations'), ('Nullfelt','Null fields'), ('Fraværende felt','Absent fields')]], run_rows,
+            {1:30, 3:40, 6:85, 7:65, 18:68, 19:85})
     issues = []
     for r in run_rows:
         for kind, text in [(tr('Feil','Error'), r[6]), (tr('Begrensning','Limitation'), r[5]),
@@ -342,16 +355,23 @@ def write_workbook(directory, analysis, versions, records, archive_name, *, incl
         sheet(name_for(tr('Feil og merknader','Errors and notes')),
               [tr('Dokument','Document'), tr('Kjøring','Run'), tr('Forsøk','Attempt'), tr('Type','Type'), tr('Melding','Message')],
               issues, {1:30, 2:16, 3:16, 4:24, 5:110})
-    sheet(dictionary_name, [tr('Dataark','Data sheet'), tr('Kolonne','Column'), tr('Variabelsti','Variable path'),
-                           tr('Forklaring','Definition'), tr('Datatype','Data type'), tr('Planversjon','Plan version'),
-                           tr('Tabellsti','Table path'), tr('Én rad betyr','Row unit')], dictionary,
-          {1:28, 2:30, 3:35, 4:90, 5:25, 6:20, 7:35, 8:75})
+    if compact:
+        if csv_directory is not None:
+            csv_directory.mkdir(parents=True, exist_ok=True)
+            (csv_directory / 'variables.json').write_text(json.dumps(dictionary, ensure_ascii=False, indent=2), encoding='utf-8')
+    else:
+        sheet(dictionary_name, [tr('Dataark','Data sheet'), tr('Kolonne','Column'), tr('Variabelsti','Variable path'),
+                               tr('Forklaring','Definition'), tr('Datatype','Data type'), tr('Planversjon','Plan version'),
+                               tr('Tabellsti','Table path'), tr('Én rad betyr','Row unit')], dictionary,
+              {1:28, 2:30, 3:35, 4:90, 5:25, 6:20, 7:35, 8:75})
     if overflow:
         sheet(texts_name, [tr('Celle','Cell'), tr('Del','Part'), tr('Tekst','Text')], overflow, {1:35, 2:10, 3:120})
     for notice in dict.fromkeys(notices):
         overview.append([tr('Merknad','Note'), notice])
+    if compact:
+        book.remove(overview)
     filename = tr('Resultater.xlsx', 'Results.xlsx')
     book.save(directory / filename)
     book.close()
-    return filename, [{'sheet': results_name, 'rows': len(records), 'row_unit': 'One run'}] + [
+    return filename, [{'sheet': results_name, 'rows': len(records), 'row_unit': 'One document' if compact else 'One run'}] + [
         {'sheet': n, 'plan_version_id': p, 'rows': c, 'row_unit': u} for n,p,c,u in summaries]

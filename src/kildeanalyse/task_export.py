@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from .file_io import copy_file, native_path, display_path
 import tempfile
 import zipfile
@@ -28,21 +29,28 @@ def readable(value, depth=1):
     return json.dumps(value, ensure_ascii=False)
 
 
-def export(store, analysis_id, include_sources=True, *, include_csv=False, list_layout='sheets'):
+def export(store, analysis_id, include_sources=True, *, include_csv=False, list_layout='sheets', row_scope='documents', output_directory=None):
     from .tjeneste import vis_kjoring
     from .reader_files import copy_artifacts
     from .dokument import sha256_fil
     if list_layout not in ('sheets', 'inline'):
         raise ValueError('list_layout must be sheets or inline.')
+    if row_scope not in ('documents', 'runs'):
+        raise ValueError('row_scope must be documents or runs.')
     analysis = store.analyse(analysis_id)
     runs = store.kjoringer(analysis_id)
     if any(r['status'] == 'aktiv' for r in runs):
         raise ValueError('Wait for active runs to finish before exporting a consistent snapshot.')
     versions = store.planversjoner(analysis_id)
     root = root_for(store, analysis['prosjekt_id'])
-    exports = native_path(root / 'exports')
-    exports.mkdir(exist_ok=True)
-    final = exports / f'{analysis_id}-{datetime.now():%Y%m%d-%H%M%S}-{uuid4().hex[:8]}'
+    from .project_files import validate_directory
+    exports = native_path(validate_directory(output_directory, store) if output_directory else root / 'exports')
+    final = exports / f'{analysis_id}-{uuid4().hex[:8]}'
+    # A writable extended Windows path is not necessarily openable by Excel.
+    if os.name == 'nt' and len(str(display_path(final / 'Resultater.xlsx'))) > 218:
+        raise ValueError('Excel export path exceeds the 218-character compatibility budget. '
+                         'Choose a shorter absolute output_directory; the project and history stay unchanged.')
+    exports.mkdir(parents=True, exist_ok=True)
     nb = versions[-1]['plan'].sprak == 'nb'
     entry = 'START_HER.md' if nb else 'START_HERE.md'
     counts, snapshot, records = {}, [], []
@@ -124,8 +132,16 @@ def export(store, analysis_id, include_sources=True, *, include_csv=False, list_
         published = stage / 'deliverable'
         published.mkdir()
         from .task_workbook import write_workbook
-        workbook, datasets = write_workbook(published, analysis, versions, records, archive_name,
-                                            include_csv=include_csv, csv_directory=stage / 'datasets', list_layout=list_layout)
+        selected = records
+        if row_scope == 'documents':
+            # Plan order, not lexical run IDs (kj9 sorts after kj10).
+            ranks = {v['id']: v['versjon'] for v in versions}
+            latest = {}
+            for record in sorted(records, key=lambda r: (ranks[r['run']['planversjon_id']], r['run']['opprettet'], int(r['run']['id'][2:]))):
+                latest[record['document']['id']] = record
+            selected = list(latest.values())
+        workbook, datasets = write_workbook(published, analysis, versions, selected, archive_name,
+                                            include_csv=include_csv, csv_directory=stage / 'datasets', list_layout=list_layout, compact=row_scope == 'documents')
         with zipfile.ZipFile(published / archive_name, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
             for path in sorted(stage.rglob('*')):
                 if path.is_file() and not path.is_relative_to(published):
@@ -133,10 +149,11 @@ def export(store, analysis_id, include_sources=True, *, include_csv=False, list_
         (published / entry).write_text('\n'.join([
             f'# {analysis["navn"]}', '',
             f'[{"Åpne resultatene" if nb else "Open results"}]({workbook})', '',
-            ('Hovedarket har én rad per kjøring og resultatvariabler i kolonnene. Kjøringer uten gyldig resultat beholder sin rad med tomme variabler. '
-             'Nested objekter blir kolonner; gjentatte poster ligger i koblede detaljfaner. Feil, variabelforklaringer og kjøringsdokumentasjon ligger i egne faner.' if nb else
-             'The main sheet has one row per run and generated variables in columns. Runs without valid results retain their row with blank variables. '
-             'Nested objects become columns; repeated records have linked detail sheets. Errors, variable definitions and run evidence have separate sheets.'), '',
+            (('Én rad per dokument: nyeste planlagte kjøring, også ved feil. Ingen automatisk bruk av eldre resultater.' if nb else
+              'One row per document: newest planned run, including failures. No automatic fallback to older results.') if row_scope == 'documents' else
+             ('Historikk: én rad per kjøring.' if nb else 'History: one row per run.')), '',
+            ('Tekststykker og andre gjentatte poster har detaljfaner. Plan, variabeldefinisjoner og full historikk ligger i arkivet.' if nb else
+             'Excerpts and other repeated records have detail sheets. The plan, variable definitions and full history are in the archive.'), '',
             ('Dette regnearket er laget automatisk fra de bevarte resultatene, uten nye modellkall. Excel-endringer oppdaterer ikke originalene og registrerer ikke menneskelig kontroll.' if nb else
              'This workbook is generated automatically from preserved results, without new model calls. Excel edits neither update originals nor record human review.'), '',
             f'[{"Dokumentasjonsarkiv" if nb else "Documentation archive"}]({archive_name})', '',
@@ -149,9 +166,9 @@ def export(store, analysis_id, include_sources=True, *, include_csv=False, list_
     files = sorted(p.name for p in final.iterdir())
     final = display_path(final)
     store.logg('eksportert', analyse_id=analysis_id, mappe=str(final), med_kilder=include_sources,
-               include_csv=include_csv, format='task_results')
+               include_csv=include_csv, row_scope=row_scope, format='task_results')
     write_index(store, analysis['prosjekt_id'])
     return {'mappe': str(final), 'entrypoint': str(final / entry), 'workbook': str(final / workbook),
             'documentation_archive': str(final / archive_name), 'datasets': datasets,
-            'project_directory': str(root), 'antall_kjoringer': len(runs), 'teller': counts,
+            'project_directory': str(root), 'row_scope': row_scope, 'selected_run_ids': [r['run']['id'] for r in selected], 'antall_kjoringer': len(runs), 'teller': counts,
             'filer': files, 'format': 'task_results'}

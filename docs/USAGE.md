@@ -20,9 +20,9 @@ First-time setup requires internet access. The installer provides Python and ins
 ## Project folder and results
 
 Choose a visible project folder in the conversation. Plans and input previews are saved there
-before execution. The default result is a workbook: one row per run, with generated variables
+before execution. The default result is a workbook: one row per document by default, with generated variables
 in columns. Nested objects become columns; repeated records have linked detail sheets.
-Errors, variable definitions and run information have separate sheets. Start in `START_HERE.md`.
+Errors have a sheet when relevant; variable definitions and run history remain in the ZIP. Start in `START_HERE.md`.
 One documentation ZIP preserves the plan, original results, source copies and audit trail.
 Export edits do not update recorded results. See [Project files and exports](PROJECT_FILES.md).
 
@@ -94,7 +94,7 @@ Open an ordinary project folder in the app and put your own source files in a `d
 
 You do not need a schema or technical settings. The assistant helps turn your intent into one repeatable instruction, inspects the files and proposes a useful deliverable and checks. It asks about consequential choices, distinguishes your requirements from suggestions and flags missing/unsupported sources. A small agreed pilot is optional.
 
-Before the reader starts, you receive a short plan covering the task, file selection, generated variables and definitions, checks, uncertainty, reader/model and result location. Approve the concrete plan and identify the responsible person. The assistant normally defines typed task-specific variables before execution. The default deliverable is a workbook with one row per run and generated variables in columns. Nested objects become columns and repeated values can have linked detail sheets. Errors and other auxiliary information have separate sheets. After completion, export the workbook without waiting for a separate spreadsheet request. Raw responses and JSON are kept in one documentation ZIP. Prose-only or historical unstructured tasks retain a text result column.
+Before the reader starts, you receive a short plan covering the task, file selection, generated variables and definitions, checks, uncertainty, reader/model and result location. Approve the concrete plan and identify the responsible person. The assistant normally defines typed task-specific variables before execution. The default deliverable is a workbook with one row per document by default and generated variables in columns. Nested objects become columns and repeated values can have linked detail sheets. Errors and other auxiliary information have separate sheets. After completion, export the workbook without waiting for a separate spreadsheet request. Raw responses and JSON are kept in one documentation ZIP. Prose-only or historical unstructured tasks retain a text result column.
 
 Runs execute independently per file, with one fresh worker per attempt. Large CLI inputs use file tools; oversized API inputs fail explicitly. You can stop, resume, inspect attempts, record actual human review, and export. Changed tasks/contracts/settings require a new plan version. Afterward, use the host flexibly for tables, reports or further analysis while preserving originating run/attempt references.
 
@@ -144,3 +144,5 @@ This supports API-key authentication on the listed public Azure resource domains
 - [Supported formats and extraction scope](SOURCE_FORMATS.md)
 - [OCR, large documents and the audit trail](DOCUMENT_PROCESSING.md)
 - [Five example folders](https://github.com/emilmsh/systematic-document-analysis/tree/main/examples/README.md) with fictional files, draft criteria and prompts. Optional; the plugin is meant for your own documents.
+
+Agree delivery format, row unit, columns and location before execution; reuse explicit preferences. The default selects the newest planned run per document, even when it failed; never silently substitute an older success. `row_scope="runs"` explicitly includes history. Use `output_directory` for a shorter export parent without moving the project.
