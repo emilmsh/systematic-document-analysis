@@ -14,9 +14,9 @@ from typing import Any
 
 from . import VERSJON
 from .adaptere import ADAPTERE
-from .dokument import DokumentFeil, importer_dokument, sider_uten_tekst
+from .dokument import DokumentFeil, importer_dokument, sider_uten_tekst, sha256_fil, MIN_TEGN_PER_SIDE
 from .kjoring import KoFeil, Koer
-from .lager import FS_FULLFORT, FS_VALIDERINGSFEIL, KJ_AKTIV, KJ_PLANLAGT, KONTROLL_AVVIST, KONTROLL_GODKJENT, KONTROLL_RETTET, PLAN_GODKJENT, Lager, KJ_FEILET, KJ_VALIDERINGSFEIL, KJ_ULESELIG, KJ_UAVKLART
+from .lager import FS_FULLFORT, FS_VALIDERINGSFEIL, KJ_AKTIV, KJ_PLANLAGT, KONTROLL_AVVIST, KONTROLL_GODKJENT, KONTROLL_RETTET, PLAN_GODKJENT, Lager, KJ_FEILET, KJ_VALIDERINGSFEIL, KJ_ULESELIG, KJ_UAVKLART, naa
 from .modell import Plan
 from .prompt import bygg_inputpakke
 from .parametre import normaliser, fra_plan
@@ -136,6 +136,39 @@ def inspect_source(lager: Lager, document_id: str, unit_ids: list[int] | None = 
         result['markdown_path'] = str(path)
         result['markdown_scope'] = 'All extracted units, irrespective of the preview selection.'
     return result
+
+
+def verify_blank_pdf_page(lager: Lager, document_id: str, physical_page: int,
+                          verified_by: str, visual_evidence: str) -> dict:
+    """Record an actual visual source check; this is not a result review."""
+    doc = lager.dokument(document_id)
+    if Path(doc['lagret_kopi']).suffix.lower() != '.pdf':
+        raise TjenesteFeil('Blank-page verification applies only to physical PDF pages.')
+    if type(physical_page) is not int or not 1 <= physical_page <= doc['antall_sider']:
+        raise TjenesteFeil('Choose a physical PDF page within the document.')
+    if not verified_by.strip() or not visual_evidence.strip():
+        raise TjenesteFeil('Record who visually checked the page and what they saw.')
+    if sha256_fil(Path(doc['lagret_kopi'])) != doc['sha256']:
+        raise TjenesteFeil('Stored PDF has changed; reimport before verifying pages.')
+    page = next(s for s in doc['sider'] if s['nr'] == physical_page)
+    if page.get('readable', page['tegn'] >= MIN_TEGN_PER_SIDE):
+        raise TjenesteFeil('This page has a readable text layer and cannot be marked blank.')
+    if physical_page in doc.get('source_metadata', {}).get('verified_blank_pages', []):
+        raise TjenesteFeil('This page is already recorded as visually verified blank.')
+    if any(Koer(lager).aktiv_arbeider(item['id']) for item in lager.analyser(doc['prosjekt_id'])):
+        raise TjenesteFeil('Wait for active analysis workers to finish before changing source status.')
+    source_metadata = dict(doc.get('source_metadata', {}))
+    source_metadata.setdefault('verified_blank_pages', []).append(physical_page)
+    source_metadata.setdefault('blank_page_checks', []).append({
+        'physical_page': physical_page, 'source_sha256': doc['sha256'],
+        'method': 'visual_review', 'verified_by': verified_by.strip(),
+        'evidence': visual_evidence.strip(), 'recorded_at': naa()})
+    updated = lager.oppdater_dokumentmetadata(document_id, source_metadata)
+    lager.logg('blank_pdf_page_verified', document_id=document_id, physical_page=physical_page,
+               source_sha256=doc['sha256'], verified_by=verified_by.strip())
+    return {'document_id': document_id, 'physical_page': physical_page,
+            'remaining_unreadable_pages': sider_uten_tekst(updated),
+            'source_metadata': updated['source_metadata']}
 
 
 def opprett_analyse(lager: Lager, prosjekt_id: str, navn: str, oppgavetekst: str, *,
@@ -504,6 +537,11 @@ def registrer_kontroll(lager: Lager, forsok_id: str, ansvarlig: str, handling: s
 def eksporter(lager, analyse_id, med_kilder=True, *, include_csv=False, list_layout='sheets', row_scope='documents', output_directory=None):
     from .task_export import export
     return export(lager, analyse_id, med_kilder, include_csv=include_csv, list_layout=list_layout, row_scope=row_scope, output_directory=output_directory)
+
+
+def preview_export_destination(lager, analyse_id, output_directory=None):
+    from .task_export import destination_preview
+    return destination_preview(lager, analyse_id, output_directory)
 
 
 __all__ = [n for n in dir() if not n.startswith("_")]

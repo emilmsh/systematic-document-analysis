@@ -33,10 +33,13 @@ def bygg_brukermelding(dokument: dict[str, Any], sider: list[Side]) -> str:
     ]
     if dokument.get('source_metadata'):
         deler.insert(0, 'Extraction profile: ' + json.dumps(metadata(dokument), ensure_ascii=False))
+    verified_blank = set(dokument.get('source_metadata', {}).get('verified_blank_pages', []))
     for s in sider:
         deler.append(f"[Fysisk side {s.nr}]")
         if 'character_range' in s.source:
             deler.append('Fragment character range (zero-based, end-exclusive): ' + str(s.source['character_range']))
+        if s.nr in verified_blank:
+            deler.append('(visuelt kontrollert som blank fysisk side; eventuelt topp-/bunntekst er bevart nedenfor)')
         deler.append(s.tekst.strip() if s.tekst.strip() else "(ingen tekst kunne trekkes ut fra denne siden)")
     deler += ["=== DOKUMENT SLUTT ===", "", "Utfør oppgaven i instruksen og svar med JSON."]
     return "\n".join(deler)

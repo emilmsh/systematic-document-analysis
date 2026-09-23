@@ -20,7 +20,7 @@ Extraction scope and structural summaries are stored with the imported file, sho
 
 ## Traceability
 
-Each extracted unit has a stable ID and a locator within the preserved source. Optional `quote_checks` resolve declared unit fields to locations and test exact substrings against extracted text. Matching a quote does not establish that it supports a conclusion or exactly matches a rendered page. Detail sheets retain the declared source locations.
+Each extracted unit has a stable ID and a locator within the preserved source. Optional `quote_checks` resolve declared unit fields to locations and test substrings against extracted text. When only whitespace differs, a quote can be restored from the sole source span with the same non-whitespace tokens. Ambiguous matches and changed wording fail. The raw reply, original and restored quote, unit, span, source-text hash and rule remain in the attempt audit; the derived result is identified as `source_whitespace_repair`, never as human review. Matching a quote does not establish that it supports a conclusion or exactly matches a rendered page. Detail sheets retain the declared source locations.
 
 Internal fields such as `sider` and `antall_sider` represent source units for non-PDF files. Extraction metadata records scope and limitations. Use `inspect_source` for previews or a complete Markdown inspection copy with original locators.
 

@@ -1,14 +1,33 @@
 """Read and review arbitrary results without translating or flattening their contents."""
 import json
+import copy
+
+
+def _restored_response(response, validation):
+    repairs = (validation or {}).get('quote_repairs', []) if (validation or {}).get('gyldig') else []
+    if not repairs or not isinstance(response, dict):
+        return response, False
+    from .task_contract import pointer
+    restored = copy.deepcopy(response)
+    try:
+        for repair in repairs:
+            entry = pointer(restored['result'], repair['path'])[repair['index']]
+            if entry[repair['quote_field']] != repair['before']:
+                return response, False
+            entry[repair['quote_field']] = repair['after']
+    except (KeyError, IndexError, TypeError, ValueError):
+        return response, False
+    return restored, True
 
 
 def current(store, attempt):
     response = json.loads(attempt['svar_json']) if attempt.get('svar_json') else None
+    validation = json.loads(attempt.get('validering_json') or 'null')
+    response, repaired = _restored_response(response, validation)
     reviews = store.kontroller(attempt['id'])
     for item in reviews:
         if item['handling'] == 'rettet':
             response = item['nytt']
-    validation = json.loads(attempt.get('validering_json') or 'null')
     if any(r['handling'] == 'rettet' for r in reviews):
         from .task_contract import validate
         run = store.kjoring(attempt['kjoring_id'])
@@ -19,7 +38,7 @@ def current(store, attempt):
     return {'result': response.get('result') if isinstance(response, dict) else None,
             'response': response, 'review_status': reviews[-1]['handling'] if reviews else 'ikke kontrollert',
             'result_validation': validation,
-            'result_origin': 'human_correction' if any(r['handling'] == 'rettet' for r in reviews) else 'worker'}
+            'result_origin': 'human_correction' if any(r['handling'] == 'rettet' for r in reviews) else 'source_whitespace_repair' if repaired else 'worker'}
 
 
 def review(store, attempt, plan, reviewer, action, reason, replacement):

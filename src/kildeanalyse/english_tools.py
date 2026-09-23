@@ -47,6 +47,10 @@ def register(server, get_store):
     def inspect_source(document_id: str, unit_ids: list[int] | None = None, maximum_units: int = 10, export_markdown: bool = False) -> str:
         return call(tjeneste.inspect_source, document_id, unit_ids, maximum_units, export_markdown)
 
+    @server.tool(description='After actual visual inspection, record a PDF physical page with no substantive content as blank. This is a source-status check, not human review of analysis results. Image or scan pages remain blocked unless genuinely inspected and verified.')
+    def verify_blank_pdf_page(document_id: str, physical_page: int, verified_by: str, visual_evidence: str) -> str:
+        return call(tjeneste.verify_blank_pdf_page, document_id, physical_page, verified_by, visual_evidence)
+
     @server.tool(description='Draft one task for the selected files. request is the instruction unless task_instructions is supplied. output_schema describes result, with readable titles and definitions. quote_checks optionally checks exact text: [{path, quote_field, unit_field}]. Returns a dataset preview.')
     def create_analysis(project_id: str, name: str, request: str,
                         engine: str = '', model: str = '', language: str = 'en', reasoning_effort: str = '',
@@ -66,6 +70,10 @@ def register(server, get_store):
     @server.tool(description='Show the exact instructions, source input, schema, settings and hash for one run.')
     def show_input_package(run_id: str) -> str:
         return call(tjeneste.vis_inputpakke, run_id)
+
+    @server.tool(description='Before reader execution, check whether the planned workbook destination fits Excel on Windows. Choose a shorter absolute output_directory if needed and preserve that choice in the plan purpose.')
+    def preview_export_destination(analysis_id: str, output_directory: str | None = None) -> str:
+        return call(tjeneste.preview_export_destination, analysis_id, output_directory)
 
     @server.tool(description='Record actual user approval of the concrete task and scope. approved_by identifies the responsible person; this does not review results.')
     def approve_plan(analysis_id: str, approved_by: str, plan_version_id: str | None = None) -> str:

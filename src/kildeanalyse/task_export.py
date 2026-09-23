@@ -16,6 +16,25 @@ from .project_files import root_for, plan_text, write_index
 from .task_results import current
 
 
+def destination_preview(store, analysis_id, output_directory=None):
+    """Check the final Excel path budget before any reader is dispatched."""
+    from .project_files import validate_directory
+    analysis = store.analyse(analysis_id)
+    project = store.prosjekt(analysis['prosjekt_id'])
+    if output_directory:
+        parent = validate_directory(output_directory, store)
+    elif project.get('directory'):
+        parent = validate_directory(project['directory'], store) / 'exports'
+    else:
+        return {'ready': False, 'reason': 'Choose a visible project directory before reader execution.'}
+    candidate = parent / f'{analysis_id}-12345678' / 'Resultater.xlsx'
+    length = len(str(display_path(candidate)))
+    return {'ready': os.name != 'nt' or length <= 218, 'workbook_path_example': str(candidate),
+            'path_characters': length, 'windows_excel_budget': 218,
+            'reason': '' if os.name != 'nt' or length <= 218 else
+            'Excel export path exceeds the 218-character compatibility budget. Choose a shorter absolute output_directory before running.'}
+
+
 def readable(value, depth=1):
     """A lossless JSON file accompanies this shape-independent reading copy."""
     if isinstance(value, str):
@@ -44,6 +63,9 @@ def export(store, analysis_id, include_sources=True, *, include_csv=False, list_
     versions = store.planversjoner(analysis_id)
     root = root_for(store, analysis['prosjekt_id'])
     from .project_files import validate_directory
+    destination = destination_preview(store, analysis_id, output_directory)
+    if not destination['ready']:
+        raise ValueError(destination['reason'])
     exports = native_path(validate_directory(output_directory, store) if output_directory else root / 'exports')
     final = exports / f'{analysis_id}-{uuid4().hex[:8]}'
     # A writable extended Windows path is not necessarily openable by Excel.

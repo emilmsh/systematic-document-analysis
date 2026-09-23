@@ -106,6 +106,29 @@ def test_task_execution_all_readers(tmp_path, monkeypatch, engine, large):
         assert len([n for n in archive.namelist() if n.startswith('sources/')]) == 2
 
 
+def test_whitespace_repair_reaches_workbook_without_changing_raw_reply(tmp_path, monkeypatch):
+    from openpyxl import load_workbook
+    store, aid, runs, _ = fixture(tmp_path, monkeypatch, structured=True)
+    altered = QUOTE.replace('We support', 'We  support')
+    def reply(self, package, *args):
+        response = {'result': [{'navn': 'Audit', 'passage': altered, 'unit': 2}],
+                    'source_units_read': [1, 2], 'limitations': []}
+        return Motorsvar(json.dumps(response), response, sesjon_id=package.forsok_id,
+                         modell_rapportert='fake-model', motorinfo={'test_fixture': True})
+    monkeypatch.setattr(ADAPTERE['claude_cli'], 'kjor', reply)
+    tjeneste.godkjenn_plan(store, aid, 'Fixture reviewer')
+    assert not tjeneste.start(store, aid)['run_issues']
+    attempt = store.forsok_for_kjoring(runs[0]['id'])[0]
+    assert altered in attempt['raasvar']
+    assert tjeneste.vis_kjoring(store, runs[0]['id'])['forsok'][0]['result'][0]['passage'] == QUOTE
+    workbook = load_workbook(tjeneste.eksporter(store, aid, med_kilder=False)['workbook'], read_only=True)
+    try:
+        assert any(QUOTE in str(value) for sheet in workbook for row in sheet.values for value in row if value)
+        assert not any(altered in str(value) for sheet in workbook for row in sheet.values for value in row if value)
+    finally:
+        workbook.close()
+
+
 @pytest.mark.parametrize('large', [False, True])
 def test_failure_is_local_and_intermediate_work_is_preserved(tmp_path, monkeypatch, large):
     store, aid, runs, seen = fixture(tmp_path, monkeypatch, large=large, broken=True)
@@ -178,8 +201,8 @@ def test_versioning_and_mcp_preserve_custom_contract(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize('quote,unit', [('we support a mandatory annual accessibility audit.', 1),
-    ('We  support a mandatory annual accessibility audit.', 1), ('invented', 1), (QUOTE, 2), ('', 1)])
-def test_exact_quote_validation_does_not_normalize(quote, unit):
+    ('invented', 1), (QUOTE, 2), ('', 1)])
+def test_quote_validation_rejects_non_whitespace_changes(quote, unit):
     plan = Plan('Extract', task_instructions='Extract', output_schema=SCHEMA, quote_checks=CHECKS)
     doc = {'sider': [{'nr': 1, 'tekst': QUOTE, 'tegn': len(QUOTE)}]}
     response = {'result': [{'navn': 'Audit', 'passage': quote, 'unit': unit}], 'source_units_read': [1], 'limitations': []}

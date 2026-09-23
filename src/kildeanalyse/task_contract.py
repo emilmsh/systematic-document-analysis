@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 
 from jsonschema import Draft202012Validator
@@ -97,6 +98,7 @@ def pointer(value, path):
 
 def validate(plan, document, response, sent):
     from .dokument import sider_uten_tekst
+    from .quote_repair import unique_source_span
     errors, warnings = [], []
     def error(kind, message):
         errors.append({'type': kind, 'melding': message})
@@ -109,32 +111,56 @@ def validate(plan, document, response, sent):
     read = response.get('source_units_read', []) if isinstance(response, dict) else []
     if not isinstance(read, list) or any(type(n) is not int for n in read):
         read = []
-    complete = set(read) == set(sent) == set(units) and not sider_uten_tekst(document)
+    blank = set(document.get('source_metadata', {}).get('verified_blank_pages', []))
+    required = set(sent) - blank
+    complete = required <= set(read) <= set(sent) and set(sent) == set(units) and not sider_uten_tekst(document)
     if set(read) - set(sent):
         error('coverage', 'Worker reported reading source units that were not supplied.')
     if not complete:
         warnings.append({'type': 'coverage', 'melding': 'Reported coverage is incomplete; inspect the result and limitations.'})
-    checked = 0
+    checked, repairs = 0, []
     for rule in plan.quote_checks:
         try:
             entries = pointer(response['result'], rule['path'])
             if not isinstance(entries, list):
                 raise ValueError('quotation path must identify an array')
-            for entry in entries:
+            for index, entry in enumerate(entries):
                 quote, unit = entry[rule['quote_field']], entry[rule['unit_field']]
                 if type(unit) is not int or unit not in units or unit not in sent:
                     raise ValueError('unknown or unsent quotation source unit')
-                if not isinstance(quote, str) or not quote.strip() or quote not in units[unit]:
-                    raise ValueError('quotation is not an exact substring of the extracted source unit')
+                if not isinstance(quote, str) or not quote.strip():
+                    raise ValueError('quotation is blank or is not text')
+                if quote not in units[unit]:
+                    span = unique_source_span(quote, units[unit])
+                    if span is None:
+                        raise ValueError('quotation is not an exact or uniquely whitespace-recoverable source substring')
+                    start, end, restored = span
+                    repairs.append({'path': rule['path'], 'index': index, 'quote_field': rule['quote_field'],
+                                    'unit': unit, 'before': quote, 'after': restored,
+                                    'source_start': start, 'source_end': end,
+                                    'source_sha256': hashlib.sha256(units[unit].encode('utf-8')).hexdigest(),
+                                    'rule': 'unique_source_whitespace_v1'})
                 checked += 1
         except (KeyError, IndexError, TypeError, ValueError) as exc:
             error('quotation', f'{rule["path"]}: {exc}')
+    if repairs and not errors:
+        derived = copy.deepcopy(response)
+        for repair in repairs:
+            pointer(derived['result'], repair['path'])[repair['index']][repair['quote_field']] = repair['after']
+        for issue in validator.iter_errors(derived):
+            error('schema', f'Restored quotation violates result schema at {list(issue.absolute_path)}: {issue.message}')
+        if errors:
+            repairs = []
+        else:
+            warnings.append({'type': 'source_whitespace_repair', 'melding':
+                f'{len(repairs)} quotation(s) had whitespace restored from unique extracted source spans; inspect original page images for important evidence.'})
     if isinstance(response, dict) and response.get('limitations'):
         warnings.append({'type': 'limitations', 'melding': str(response['limitations'])})
     warnings.append({'type': 'validation_scope', 'melding':
         'Schema and declared checks only. Relevance, completeness, factual accuracy and human review are not established.'})
     return {'gyldig': not errors, 'feil': errors, 'advarsler': warnings,
-            'checks': {'schema': True, 'exact_quotes_checked': checked, 'quote_rules': len(plan.quote_checks),
+            'quote_repairs': repairs,
+            'checks': {'schema': True, 'exact_quotes_checked': checked, 'source_whitespace_repairs': len(repairs), 'quote_rules': len(plan.quote_checks),
                        'semantic_accuracy': 'not_checked', 'coverage_basis': 'worker_self_report'},
             'lesedekning': {'sider_i_dokument': list(units), 'sider_sendt': sent,
                            'sider_lest_oppgitt': sorted(set(read)), 'fullstendig': complete}}

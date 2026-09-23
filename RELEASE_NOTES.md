@@ -1,3 +1,10 @@
+# 0.10.7 — Source-grounded quotation whitespace and blank-page checks
+
+- Restore only source whitespace in declared quotations when the non-whitespace tokens identify exactly one extracted source span. Preserve the raw reply and record the original text, restored text, source position and hash; ambiguous or substantive changes still fail validation. This does not constitute human review.
+- Allow a visually checked blank PDF page to be recorded with verifier, evidence and source hash, without treating an unreadable image or scan as blank automatically. Unverified pages remain blocked.
+- Add a workbook destination preview before reader execution so long Windows paths can be resolved before paid calls. Keep the agreed destination in the plan purpose.
+- No existing analysis records or source files are rewritten, and no model calls are made by these checks.
+
 # 0.10.6 — Agree the deliverable and export by document
 
 - Agree format, row unit, columns, repeated excerpts and destination before reader execution; reuse explicit user choices.

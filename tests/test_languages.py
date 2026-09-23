@@ -24,7 +24,7 @@ def test_english_workflow_and_export_boundary(tmp_path):
                 return fn
             return decorator
     register(Server(), lambda:store)
-    assert len(functions) == 19
+    assert len(functions) == 21
     def call(tool_name, **kwargs):
         result = json.loads(functions[tool_name](**kwargs))
         assert 'error' not in result, result

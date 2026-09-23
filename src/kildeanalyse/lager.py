@@ -201,6 +201,12 @@ class Lager:
             d['source_metadata'] = json.loads(d.pop('metadata_json', '{}'))
         return rader
 
+    def oppdater_dokumentmetadata(self, id: str, metadata: dict[str, Any]) -> dict[str, Any]:
+        self.dokument(id)
+        with self.transaksjon() as con:
+            self._oppdater(con, 'dokument', id, metadata_json=json.dumps(metadata, ensure_ascii=False))
+        return self.dokument(id)
+
     # --- analyse og plan -----------------------------------------------------------
 
     def opprett_analyse(self, prosjekt_id: str, navn: str) -> dict[str, Any]:

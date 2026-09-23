@@ -128,4 +128,6 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path, *, ocr_mo
 
 
 def sider_uten_tekst(dokument: dict[str, Any]) -> list[int]:
-    return [s["nr"] for s in dokument["sider"] if not s.get('readable', s["tegn"] >= MIN_TEGN_PER_SIDE)]
+    verified = set(dokument.get('source_metadata', {}).get('verified_blank_pages', []))
+    return [s["nr"] for s in dokument["sider"]
+            if s['nr'] not in verified and not s.get('readable', s["tegn"] >= MIN_TEGN_PER_SIDE)]
