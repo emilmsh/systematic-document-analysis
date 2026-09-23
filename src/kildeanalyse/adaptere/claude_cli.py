@@ -37,6 +37,7 @@ ISOLASJONSFLAGG = [
 ]
 STANDARD_MODELL = "sonnet"
 STANDARD_TIDSAVBRUDD_SEK = 600
+FILE_MAX_TURNS = 60
 
 
 def file_flags(workspace):
@@ -52,7 +53,7 @@ def file_flags(workspace):
         '--permission-mode', 'dontAsk', '--allowedTools', 'Read', 'Write', 'Edit', 'Glob', 'Grep',
         f"Bash({workspace['bash_prefix']} *)", f"PowerShell({workspace['powershell_prefix']} *)",
         '--disallowedTools', 'WebSearch', 'WebFetch',
-        '--output-format', 'stream-json', '--verbose', '--max-turns', '20',
+        '--output-format', 'stream-json', '--verbose', '--max-turns', str(FILE_MAX_TURNS),
     ]
 
 
@@ -71,6 +72,28 @@ def result_events(stdout):
     if len(results) != 1:
         raise ValueError('Expected exactly one CLI result event.')
     return results[0], events
+
+
+def cli_failure(result: dict, returncode: int) -> str | None:
+    """Keep provider, turn-limit and tool-permission failures distinct in status."""
+    denials = result.get('permission_denials') or []
+    subtype = result.get('subtype')
+    if subtype == 'error_max_turns':
+        detail = f' One or more tool calls were denied ({len(denials)}).' if denials else ''
+        return f'Claude Code reached its maximum number of tool turns before answering.{detail}'
+    if denials:
+        names = sorted({str(item.get('tool_name', 'tool')) for item in denials if isinstance(item, dict)})
+        return ('Claude Code used a command outside the permitted reader tools'
+                + (f" ({', '.join(names)})" if names else '')
+                + '; the response was retained in the raw audit but was not accepted.')
+    if result.get('is_error') or returncode != 0:
+        message = result.get('result')
+        if isinstance(message, str) and message.strip():
+            if 'Prompt is too long' in message:
+                return 'Claude Code rejected the input as too long. Use a file-enabled plan for this document.'
+            return f'Claude Code error: {message[:500]}'
+        return f'Claude Code error ({subtype or "unknown"}; exit code {returncode}).'
+    return None
 
 
 def reported_model(result: dict, events: list[dict]) -> tuple[str | None, dict]:
@@ -298,9 +321,10 @@ class ClaudeCliAdapter(Adapter):
             "type": "cli_resultat", "subtype": d.get("subtype"), "is_error": d.get("is_error"), "num_turns": d.get("num_turns"),
             "duration_ms": d.get("duration_ms"), "permission_denials": d.get("permission_denials"), "stop_reason": d.get("stop_reason"),
         }]
-        if d.get("is_error") or proc.returncode != 0 or d.get('permission_denials'):
+        cli_error = cli_failure(d, proc.returncode)
+        if cli_error:
             return Motorsvar(raasvar=stdout, svar=None, sesjon_id=d.get("session_id"), modell_rapportert=modell_rapportert,
-                             forbruk=forbruk, hendelser=hendelser, feil=f"CLI error or required file operation denied: {str(d.get('result'))[:500]}",
+                             forbruk=forbruk, hendelser=hendelser, feil=cli_error,
                              motorinfo=motorinfo)
         svar = d.get("structured_output")
         if svar is None and isinstance(d.get("result"), str):

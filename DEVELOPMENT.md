@@ -6,7 +6,7 @@ Systematic Document Analysis is a controlled for-loop over files. The conversati
 
 `modell.py` defines plans; `tjeneste.py` exposes operations; `kjoring.py` owns the queue; `lager.py` owns SQLite. `prompt.py` builds exact inputs, `execution.py` prepares one call per file, and `adaptere/` implements readers. `task_contract.py` validates the declared response; `task_results.py` applies actual reviews without replacing originals.
 
-`source_formats.py` and `ocr.py` extract source units. CLI workers can inspect the original file using `reader_files.py`. Large CLI inputs reference that file; oversized API inputs fail explicitly. There is no automatic extraction/synthesis pipeline.
+`source_formats.py` and `ocr.py` extract source units. `reader_files.py` gives CLI workers the original file plus small, searchable text chunks of the same extracted units. Large CLI inputs reference those files; oversized API inputs fail explicitly. There is no automatic extraction/synthesis pipeline.
 
 `task_dataset.py` maps arbitrary nested results into variables and related collections. `task_workbook.py` writes one main row per run and appropriate detail sheets. `task_export.py` stages and publishes a workbook, start file and documentation ZIP. `file_io.py` handles Windows extended paths for export and file copies.
 

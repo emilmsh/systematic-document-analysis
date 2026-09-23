@@ -28,8 +28,9 @@ def prepare(plan, document, package):
         # same worker chooses how to read it; no lossy intermediate summaries.
         package = replace(package, brukermelding=(
             f'Source file: {document["navn"]} (ID {document["id"]}, SHA-256 {document["sha256"]}).\n'
-            'Read the complete file and source-unit map described in SOURCE_GUIDE.md in your working directory. '
-            'Perform the agreed task and report the units actually read.'), api_foresporsel=None)
+            'Use SOURCE_GUIDE.md and the searchable plain-text source chunks in your working directory. '
+            'Read the units needed for the agreed whole-file task; inspect all chunks when complete coverage is required. '
+            'Use the original file for visual context when needed. Report only units actually read.'), api_foresporsel=None)
         mode = 'file'
     if size(package) > budget:
         raise ValueError('Input exceeds input_budget_bytes. Increase the agreed budget or use a file-capable CLI reader. '

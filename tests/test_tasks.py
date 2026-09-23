@@ -13,13 +13,28 @@ from kildeanalyse.lager import Lager, FS_FULLFORT, KJ_FULLFORT
 from kildeanalyse.languages import public_result
 from kildeanalyse.modell import Plan, Motorsvar, Stotte
 from kildeanalyse.prompt import bygg_inputpakke
-from kildeanalyse.task_contract import validate, problem
+from kildeanalyse.task_contract import validate, problem, instruction
 
 QUOTE = 'We support a mandatory annual accessibility audit.'
 SCHEMA = {'type': 'array', 'items': {'type': 'object', 'properties': {
     'navn': {'type': 'string'}, 'passage': {'type': 'string'}, 'unit': {'type': 'integer'}},
     'required': ['navn', 'passage', 'unit'], 'additionalProperties': False}}
 CHECKS = [{'path': '', 'quote_field': 'passage', 'unit_field': 'unit'}]
+
+
+def test_file_reader_instructions_match_cli_tools():
+    plan = Plan('Read', task_instructions='Find relevant passages.', motorinnstillinger={'file_tools': True})
+    plan.motor = 'claude_cli'
+    claude = instruction(plan)
+    assert 'native Glob, Grep and Read' in claude
+    assert 'only the exact bundled helper prefix' in claude
+    assert 'rg --files' not in claude
+    plan.motor = 'codex_cli'
+    codex = instruction(plan)
+    assert 'rg --files, rg -n' in codex
+    assert 'Get-Content' in codex
+    assert 'no extra MCP tool is required' in codex
+    assert 'only the exact bundled helper prefix' not in codex
 
 
 def fixture(tmp_path, monkeypatch, *, engine='claude_cli', structured=False, large=False, broken=False):

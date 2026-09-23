@@ -1,3 +1,16 @@
+# 0.10.4 — Reader-specific file tools
+
+- Tell Claude Code to use native Glob, Grep and Read for the searchable source chunks, with its fixed helper for parsing and OCR.
+- Tell Codex CLI to use its native shell for read-only `rg` searches and file reads inside the assigned workspace, with the fixed helper for parsing and OCR. No extra MCP tool or package is added.
+- Keep the same source-unit evidence map and fail-closed checks from 0.10.3.
+
+# 0.10.3 — Searchable source copies for large CLI reads
+
+- Add small, numbered plain-text copies of extracted source units for native Glob, Grep and Read. This works across supported formats without another model tool, dependency or model pass; the original file and exact source-unit map remain authoritative.
+- Give Claude file-reading sessions up to 60 tool turns and direct readers to use the bundled helper only for permitted parsing, rendering and OCR commands.
+- Report turn-limit, denied-tool, oversized-prompt and provider errors separately. Failed responses remain failed and their raw transcripts remain in the audit trail.
+- No change to API input limits, source import records, existing plans or completed results.
+
 # 0.10.2 — Reader update offer during installation
 
 - After interactive plugin installation and reader sign-in, ask whether to check for and install the latest selected reader CLI version. Declining leaves the installed CLI untouched.

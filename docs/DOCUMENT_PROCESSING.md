@@ -21,11 +21,18 @@ an OCR failure leaves the plugin installed but reports incomplete setup.
 New Claude/Codex plans enable `file_tools` by default. Existing approved plans keep
 their recorded settings; enabling tools for one requires a new plan version.
 Each reading call starts a fresh CLI session in a new `workfiles` directory with
-one original source copy, assigned source units and `SOURCE_GUIDE.md`. User/project
-instructions, memory, plugins, other MCP servers and previous conversations are
+one original source copy, assigned source units and `SOURCE_GUIDE.md`. The plugin also
+writes the extracted units into small, numbered plain-text files under `source-chunks/`
+and lists them in `source-index.txt`. Claude Code searches them with native Glob/Grep
+and reads them with Read. Codex CLI searches and reads them with its shell tool,
+for example `rg` and PowerShell `Get-Content`. No extra MCP tool is installed in
+the reader session. These reading copies work regardless of whether the original
+is PDF, Word, Excel, CSV or text. `source-units.json` remains the exact evidence map. A source unit larger
+than the target chunk size stays whole, so readers may need line-range reads for it.
+User and project instructions, memory, plugins, other MCP servers and previous conversations are
 disabled. No previous file results are included.
 
-Readers have native file tools plus an explicit bundled Python interpreter and
+Readers have their respective native file tools plus an explicit bundled Python interpreter and
 helper for PDF, Word, Excel, CSV/TSV, text/Markdown, PDF page rendering and per-page
 Tesseract OCR. No parser installation by the model is needed. The guide records
 the available commands. Web search is disabled. Codex uses workspace-write with
@@ -43,6 +50,10 @@ sources from export also omits `workfiles/source.*`; transcripts, OCR and render
 pages still contain source-derived content, just like recorded text input.
 
 Tool reading can inspect the complete original document and its source-unit map.
+The reader should search the plain-text chunks, read matching and neighboring chunks,
+and inspect all chunks when the agreed task requires full coverage. For Claude file
+sessions, the maximum is 60 tool turns. A reported list of units read is still a
+self-report, not proof of complete reading or semantic accuracy.
 The inline byte budget does not cap tool output or total model context. CLI calls
 can include multiple tool turns. Visual/OCR findings do not silently change the
 approved extraction: quotations absent from it require reimport/review. This
@@ -72,7 +83,7 @@ an absent-text answer cannot claim full coverage while such pages remain.
 
 Each attempt invokes one worker for the whole file. `input_budget_bytes` defaults to 60000 and measures serialized UTF-8 request bytes including instructions/schema. It is not a token count or a model-context guarantee.
 
-For large CLI input with file tools, the prompt references the complete original and unit map in the working directory. The worker decides how to read it. For APIs or text-only CLI calls, oversized input fails before dispatch. Increase the agreed budget or choose a file-capable reader; the plugin never silently truncates or changes the task into extraction and synthesis. Instructions/schema must fit the limit in either mode. A CLI session may use multiple internal tool turns; tool output is not capped by the input byte budget.
+For large CLI input with file tools, the prompt references the complete original and searchable source chunks in the working directory. The worker decides how to read them. For APIs or text-only CLI calls, oversized input fails before dispatch. Increase the agreed budget or choose a file-capable reader; the plugin never silently truncates or changes the task into extraction and synthesis. Instructions/schema must fit the limit in either mode. A CLI session may use multiple internal tool turns; tool output is not capped by the input byte budget.
 
 `show_input_package` previews the actual input mode and request. Exact inputs, raw replies, telemetry and workfiles remain in the attempt and documentation ZIP. Start with Results.xlsx; inspect the archive when provenance is needed. Optional quote checks match preserved extracted text, not images or substantive meaning.
 
