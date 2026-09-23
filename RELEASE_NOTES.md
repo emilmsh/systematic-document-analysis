@@ -1,3 +1,9 @@
+# 0.10.1 — Reader CLI updates in the installer
+
+- Add a separate reader CLI update option to the installer menu and direct commands. Reader setup displays the update command.
+- Use Claude Code's own updater. For a Codex CLI installed privately by this plugin, fetch the latest official stable Windows release, verify its published SHA-256, check the reported version, and restore the previous executable if verification fails. Leave other installers' Codex executables untouched and explain where to update them.
+- Keep reader login and plugin updates separate. When updating both readers, attempt each one and report any failures. No analysis data, model settings or reader permissions change.
+
 # 0.10.0 — One independent task per file
 
 - One general task model and one public MCP interface (19 tools). Removed classification-specific plans, validators/exporters, Norwegian MCP aliases and old database migrations. Development breaking change: no compatibility layer; use a fresh store for analyses from v0.9.0 or earlier. Existing exported artifacts are not rewritten.

@@ -4,7 +4,7 @@
 
 If one task can be standardized and repeated across a file list, this plugin fits. The default output is a dataset: **one row per iteration/run, with generated variables in columns**, delivered as an Excel workbook. The task determines the variables: extracted entities or passages, scores, topics, sentiment, calculations or other results. Nested objects become meaningful columns; repeated collections can have linked detail sheets. Errors and other auxiliary information have their own sheets. Each file gets one fresh worker; large CLI inputs use file tools, while oversized API inputs fail explicitly.
 
-**v0.10.0 is a breaking development release.** Plan records from v0.9.0 and earlier are unsupported. Keep their exported artifacts and use a fresh data store for new work; installation does not delete or migrate old analysis data. See [data location](docs/USAGE.md#data).
+**v0.10.x is a breaking development series.** Plan records from v0.9.0 and earlier are unsupported. Keep their exported artifacts and use a fresh data store for new work; installation does not delete or migrate old analysis data. See [data location](docs/USAGE.md#data).
 
 [Task contracts and examples](docs/TASKS.md) · [Core principles and implementation plan](docs/CORE_REDESIGN.md)
 

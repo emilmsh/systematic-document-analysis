@@ -9,6 +9,7 @@ ACTIONS = {
     'repair': ('installer.py', ['--repair']),
     'recover': ('installer.py', ['--recover']),
     'reader': ('setup_reader.py', []),
+    'reader-update': ('setup_reader.py', ['--update']),
     'ocr': ('setup_ocr.py', []),
     'settings': ('configure_keys.py', []),
     'update': ('update_plugin.py', []),
@@ -20,6 +21,7 @@ Double-click installer.cmd for the menu, or use:
   installer.cmd repair [claude|codex|both]
   installer.cmd recover [claude|codex|both]
   installer.cmd reader [claude|codex|both] [--login]
+  installer.cmd reader [claude|codex|both] --update
   installer.cmd ocr
   installer.cmd settings
   installer.cmd update [--check|--install|--mode notify|auto|off]
@@ -64,6 +66,7 @@ def menu_action():
                 ('repair', 'Repair plugin / Reparer plugin'),
                 ('ocr', 'Repair OCR / Reparer OCR'),
                 ('recover', 'Recover interrupted installation / Gjenopprett avbrutt installasjon'),
+                ('reader-update', 'Check/update reader CLIs / Kontroller/oppdater leser-CLI-er'),
             ], back=True)
         if action is not None:
             return action

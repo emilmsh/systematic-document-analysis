@@ -15,6 +15,7 @@ import manage
     (['repair','claude'], 'installer.py', ['claude','--repair']),
     (['recover','codex'], 'installer.py', ['codex','--recover']),
     (['reader','claude','--login'], 'setup_reader.py', ['claude','--login']),
+    (['reader','both','--update'], 'setup_reader.py', ['both','--update']),
     (['ocr'], 'setup_ocr.py', []),
     (['settings'], 'configure_keys.py', []),
     (['update','--mode','notify'], 'update_plugin.py', ['--mode','notify']),
