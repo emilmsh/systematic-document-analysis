@@ -13,7 +13,7 @@ If one task can be standardized and repeated across a file list, this plugin fit
 ## Start here
 
 1. Extract the Windows ZIP and double-click **installer.cmd** in File Explorer. Choose **1 — Install**, then Claude Code, Codex or both. Use an ordinary Windows terminal or Explorer, outside the Codex app.
-2. Continue in the same window. Setup prepares the required runtime and file tools, checks OCR and lets you set up Codex, Claude Code or both for subscription reading. Existing sign-ins are reused. No manual PATH setup is needed.
+2. Continue in the same window. Setup prepares the required runtime and file tools, checks OCR and lets you set up Codex, Claude Code or both for subscription reading. Existing sign-ins are reused. The installer then offers to check for and install the latest reader CLI version. No manual PATH setup is needed.
 3. Start a new local conversation with the plugin enabled, open your document folder and describe your task:
 
    > Use Systematic Document Analysis. How do these annual reports describe their use of AI?

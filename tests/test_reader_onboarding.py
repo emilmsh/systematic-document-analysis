@@ -189,7 +189,7 @@ def test_failed_login_process_does_not_claim_success(cli, monkeypatch, capsys):
 
 @pytest.fixture
 def main_setup(monkeypatch, tmp_path):
-    state = {'locked': False, 'installs': [], 'readers': [], 'ocr': 0}
+    state = {'locked': False, 'installs': [], 'readers': [], 'updates': [], 'ocr': 0}
     monkeypatch.setattr(sys, 'stdin', type('Terminal', (io.StringIO,), {'isatty': lambda self: True})())
     monkeypatch.setattr(sys, 'argv', ['installer.py', 'claude', '--base-dir', str(tmp_path / 'installed')])
     monkeypatch.setattr(installer, 'packaged_process', lambda: False)
@@ -217,6 +217,12 @@ def main_setup(monkeypatch, tmp_path):
     monkeypatch.setattr(installer, 'installation_lock', lock)
     monkeypatch.setattr(installer, 'install', install)
     monkeypatch.setattr(installer, 'setup_subscription_reader', reader)
+    def update(name):
+        assert not state['locked'], 'CLI updates must not hold the installation lock'
+        state['updates'].append(name)
+        if 'update_error' in state:
+            raise state['update_error']
+    monkeypatch.setattr(installer, 'update_subscription_readers', update)
     def ocr_setup():
         assert not state['locked']
         state['ocr'] += 1
@@ -229,7 +235,7 @@ def main_setup(monkeypatch, tmp_path):
 @pytest.mark.parametrize('result', ['installed', 'already up to date'])
 def test_interactive_install_selects_independent_reader_after_unlock(main_setup, monkeypatch, result):
     main_setup['result'] = result
-    choices = iter(['invalid', '1'])
+    choices = iter(['invalid', '1', 'n'])
     monkeypatch.setattr('builtins.input', lambda prompt: next(choices))
     assert installer.main() == 0
     assert main_setup['installs'] == ['claude']
@@ -238,7 +244,7 @@ def test_interactive_install_selects_independent_reader_after_unlock(main_setup,
 
 def test_double_click_both_hosts_asks_for_reader_only_once(main_setup, monkeypatch):
     monkeypatch.setattr(sys, 'argv', [sys.argv[0], *sys.argv[2:]])
-    choices = iter(['3', '2'])
+    choices = iter(['3', '2', 'n'])
     monkeypatch.setattr('builtins.input', lambda prompt: next(choices))
     assert installer.main() == 0
     assert main_setup['installs'] == ['claude', 'codex']
@@ -264,12 +270,38 @@ def test_redirected_input_never_opens_login(main_setup, monkeypatch):
 ])
 def test_skip_and_explicit_or_noninteractive_reader(main_setup, monkeypatch, flags, choice, expected):
     monkeypatch.setattr(sys, 'argv', sys.argv + flags)
+    replies = iter([choice, 'n'])
     def choose(prompt):
         assert choice is not None, 'Must not prompt in this mode'
-        return choice
+        return next(replies)
     monkeypatch.setattr('builtins.input', choose)
     assert installer.main() == 0
     assert main_setup['readers'] == expected
+
+
+def test_menu_install_offers_reader_update_after_signin(main_setup, monkeypatch):
+    choices = iter(['3', 'invalid', 'ja'])
+    monkeypatch.setattr('builtins.input', lambda prompt: next(choices))
+    assert installer.main() == 0
+    assert main_setup['readers'] == [('both', {'allow_login': True})]
+    assert main_setup['updates'] == ['both']
+
+
+def test_declined_update_leaves_reader_versions_untouched(main_setup, monkeypatch):
+    choices = iter(['1', ''])
+    monkeypatch.setattr('builtins.input', lambda prompt: next(choices))
+    assert installer.main() == 0
+    assert main_setup['updates'] == []
+
+
+def test_update_failure_reports_manual_retry_without_undoing_install(main_setup, monkeypatch, tmp_path, capsys):
+    main_setup['update_error'] = RuntimeError('release lookup failed')
+    choices = iter(['2', 'y'])
+    monkeypatch.setattr('builtins.input', lambda prompt: next(choices))
+    assert installer.main() == 1
+    assert (tmp_path / 'installed' / 'claude').is_dir()
+    assert main_setup['updates'] == ['claude']
+    assert 'installer.cmd reader claude --update' in capsys.readouterr().err
 
 
 @pytest.mark.parametrize('error', [RuntimeError('Sign-in failed'), KeyboardInterrupt(), EOFError()])

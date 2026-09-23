@@ -1,3 +1,8 @@
+# 0.10.2 — Reader update offer during installation
+
+- After interactive plugin installation and reader sign-in, ask whether to check for and install the latest selected reader CLI version. Declining leaves the installed CLI untouched.
+- Keep direct installations with an explicit reader and noninteractive installations free of an extra prompt. Update checks run after the installation lock is released; failures leave the plugin and sign-in in place and show the retry command.
+
 # 0.10.1 — Reader CLI updates in the installer
 
 - Add a separate reader CLI update option to the installer menu and direct commands. Reader setup displays the update command.

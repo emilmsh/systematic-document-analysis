@@ -95,3 +95,15 @@ def test_reader_update_is_separate_from_login(monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['setup_reader.py', 'claude', '--update', '--login'])
     with pytest.raises(SystemExit, match='2'):
         setup_reader.main()
+
+
+def test_both_reader_updates_continue_after_first_failure(monkeypatch):
+    attempted = []
+    def update(name):
+        attempted.append(name)
+        if name == 'codex':
+            raise RuntimeError('release lookup failed')
+    monkeypatch.setattr(setup_reader, 'update', update)
+    with pytest.raises(RuntimeError, match='codex: release lookup failed'):
+        setup_reader.update_readers('both')
+    assert attempted == ['codex', 'claude']

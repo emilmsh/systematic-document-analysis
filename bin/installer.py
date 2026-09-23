@@ -18,6 +18,7 @@ import uuid
 from pakk_plugin import ROOT, pakk, pakkefiler, configure_codex
 from setup_reader import install as ensure_reader
 from setup_reader import setup as setup_subscription_reader
+from setup_reader import update_readers as update_subscription_readers
 from setup_ocr import install as setup_local_ocr
 from kildeanalyse.maintenance import PACKAGED_MESSAGE, maintenance_lock, installation_lock, packaged_process, read_json, write_json
 
@@ -480,6 +481,7 @@ def _finish(host, transaction, journal, actions, result):
 
 def finish_reader_setup(reader, *, interactive):
     """Run after the installation transaction, so login cannot roll it back or hold its lock."""
+    selected_in_menu = reader is None and interactive
     if reader is None and interactive:
         print('\nSet up subscription reading (independent of the app hosting the plugin):')
         print('1 = Codex / ChatGPT, 2 = Claude Code, 3 = Both / Begge, 4 = Skip (API or set up later)')
@@ -492,7 +494,22 @@ def finish_reader_setup(reader, *, interactive):
               'For subscription reading, run installer.cmd reader later; for API reading, use installer.cmd settings.')
         return
     setup_subscription_reader(reader, allow_login=interactive)
-    print('Subscription sign-in complete. Start a new local conversation after setup finishes.')
+    print('Subscription sign-in complete.')
+    if selected_in_menu:
+        while True:
+            choice = input('Check for and install the latest reader CLI version now? '
+                           '/ Sjekke og installere nyeste leser-CLI nå? [y/N]: ').strip().lower()
+            if choice in ('', 'n', 'no', 'nei'):
+                break
+            if choice in ('y', 'yes', 'j', 'ja'):
+                try:
+                    update_subscription_readers(reader)
+                except (RuntimeError, OSError, subprocess.SubprocessError) as exc:
+                    raise RuntimeError(f'Reader CLI update incomplete: {exc} '
+                                       f'Retry installer.cmd reader {reader} --update.') from None
+                break
+            print('Choose yes or no / Velg ja eller nei.')
+    print('Start a new local conversation after setup finishes.')
 
 
 def main():

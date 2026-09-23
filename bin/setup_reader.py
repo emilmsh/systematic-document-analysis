@@ -101,6 +101,19 @@ def update(name):
     return binary
 
 
+def update_readers(name):
+    """Try each selected reader and report all failures without a silent fallback."""
+    failures = []
+    for reader in reader_names(name):
+        try:
+            update(reader)
+        except (RuntimeError, OSError, subprocess.SubprocessError) as exc:
+            failures.append(f'{reader}: {exc}')
+            print(f'{reader}: update incomplete; continuing with the other selected reader.', flush=True)
+    if failures:
+        raise RuntimeError(' '.join(failures))
+
+
 def subscription_env():
     """Use stored subscription sign-in, like the readers; never alter the parent environment."""
     excluded = {
@@ -225,15 +238,7 @@ def main():
         if not args.update:
             args.login = True
     if args.update:
-        failures = []
-        for reader in reader_names(args.reader):
-            try:
-                update(reader)
-            except (RuntimeError, OSError, subprocess.SubprocessError) as exc:
-                failures.append(f'{reader}: {exc}')
-                print(f'{reader}: update incomplete; continuing with the other selected reader.', flush=True)
-        if failures:
-            raise RuntimeError(' '.join(failures))
+        update_readers(args.reader)
     elif args.login:
         setup(args.reader, force_login=force_login)
     else:
