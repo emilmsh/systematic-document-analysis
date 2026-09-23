@@ -9,12 +9,11 @@ import pytest
 from kildeanalyse.adaptere import lag_adapter
 from kildeanalyse.adaptere.api import les_svar
 from kildeanalyse.api_oppsett import API_MOTORER, AZURE_FORMATS, wire_engine
-from kildeanalyse.modell import Plan, Kriterium
+from kildeanalyse.modell import Plan
 from kildeanalyse.parametre import normaliser
 from kildeanalyse.prompt import bygg_inputpakke
 
-ANSWER = {'vurderinger':[{'kriterium_id':'k1','svar':'ja','belegg':[], 'kommentar':''}],
-          'sider_lest':[1], 'merknader':[]}
+ANSWER = {'result':'Source finding', 'source_units_read':[1], 'limitations':[]}
 API_CASES = [(engine, None) for engine in API_MOTORER if engine != 'azure_foundry_api'] + [
     ('azure_foundry_api', fmt) for fmt in AZURE_FORMATS]
 
@@ -28,7 +27,7 @@ def package(engine, level='high', **settings):
         settings.setdefault('base_url', 'https://test-resource.services.ai.azure.com')
         settings.setdefault('api_format', 'responses')
     model, settings = normaliser(engine, 'chosen-model', settings, level)
-    plan = Plan('formål', [Kriterium('k1','navn','spørsmål',['ja'])], motor=engine,
+    plan = Plan('formål', task_instructions='Read', motor=engine,
                 modell=model, motorinnstillinger=settings)
     doc = {'id':'d1','navn':'dokument','sha256':'sha','antall_sider':1,
            'sider':[{'nr':1,'tekst':'Dokument med æøå.','tegn':17}]}
@@ -282,7 +281,7 @@ def test_full_workflow_and_export_with_http_mock(engine, api_format, transport, 
     doc = imported['resultater'][0]['dokument']
     _, settings = package(engine, api_format=api_format)
     criteria = {'kriterier':[{'id':'k1','spørsmål':'Lokal kontroll','tillatte_svar':['ja']}]}
-    created = tjeneste.opprett_analyse(lager, pr['id'], 'API', 'Bestilling', criteria,
+    created = tjeneste.opprett_analyse(lager, pr['id'], 'API', 'Bestilling',
         motor=engine, modell='chosen-model', motorinnstillinger=settings, sprak='en')
     aid = created['analyse']['id']
     text = visning.md_plan(tjeneste.vis_plan(lager, aid))
@@ -291,9 +290,9 @@ def test_full_workflow_and_export_with_http_mock(engine, api_format, transport, 
         assert api_format in text
     kid = tjeneste.legg_til_kjoringer(lager, aid)['nye'][0]['id']
     preview = tjeneste.vis_inputpakke(lager, kid)['pakke']
-    answer = dict(ANSWER, sider_lest=list(range(1, doc['antall_sider']+1)))
+    answer = dict(ANSWER, source_units_read=list(range(1, doc['antall_sider']+1)))
     quote = doc['sider'][0]['tekst'].strip()[:80]
-    answer['vurderinger'] = [dict(ANSWER['vurderinger'][0], belegg=[{'side':1,'sitat':quote}])]
+    answer['result'] = quote
     requests=[]
     def handler(req):
         requests.append(req)
@@ -306,28 +305,23 @@ def test_full_workflow_and_export_with_http_mock(engine, api_format, transport, 
     tjeneste.start(lager, aid)
     assert lager.kjoring(kid)['status'] == KJ_FULLFORT and len(requests) == 1
     attempt = lager.forsok_for_kjoring(kid)[0]
-    export = Path(tjeneste.eksporter(lager, aid, legacy_format=True)['mappe'])
-    saved = json.loads((export/'forsok'/attempt['id']/'input.json').read_text(encoding='utf-8'))
-    assert saved['input_hash'] == preview['input_hash'] and saved['api_foresporsel'] == preview['api_foresporsel']
-    manifest = json.loads((export/'forsok'/attempt['id']/'manifest.json').read_text(encoding='utf-8'))
-    assert manifest['modell_rapportert'] == 'reported-model'
-    assert manifest['kjoreparametre']['language'] == 'en'
-    assert 'in English' in saved['systeminstruks']
-    assert manifest['motorinfo']['harness'].startswith('direct API')
-    if engine == 'azure_foundry_api':
-        assert manifest['motorinfo']['api_format'] == api_format
-        assert manifest['kjoreparametre']['api']['api_format'] == api_format
-    import csv
-    with (export/'evidence.csv').open(encoding='utf-8-sig', newline='') as source:
-        evidence = list(csv.DictReader(source, delimiter=';'))
-    assert evidence[0]['quote'] == quote and evidence[0]['answer'] == 'ja'
-    original = Path(attempt['input_sti'])
-    for name in ('input.json','manifest.json','raasvar.txt','systeminstruks.txt'):
-        if (original/name).is_file():
-            assert (export/'forsok'/attempt['id']/name).read_bytes() == (original/name).read_bytes()
-    for file in export.rglob('*'):
-        if file.is_file():
-            assert b'fake-secret-for-offline-tests' not in file.read_bytes()
+    import zipfile
+    exported = tjeneste.eksporter(lager, aid)
+    with zipfile.ZipFile(exported['documentation_archive']) as archive:
+        base = f'audit/attempts/{attempt["id"]}/'
+        saved = json.loads(archive.read(base+'input.json'))
+        assert saved['input_hash'] == preview['input_hash'] and saved['api_foresporsel'] == preview['api_foresporsel']
+        manifest = json.loads(archive.read(base+'manifest.json'))
+        assert manifest['modell_rapportert'] == 'reported-model'
+        assert manifest['kjoreparametre']['language'] == 'en'
+        if engine == 'azure_foundry_api':
+            assert manifest['motorinfo']['api_format'] == api_format
+        assert json.loads(archive.read(f'results/{kid}.json')) == quote
+        original = Path(attempt['input_sti'])
+        for name in ('input.json','manifest.json','raasvar.txt','systeminstruks.txt'):
+            if (original/name).is_file():
+                assert archive.read(base+name) == (original/name).read_bytes()
+        assert all(b'fake-secret-for-offline-tests' not in archive.read(n) for n in archive.namelist())
 
 
 def test_api_quota_is_reported_per_run_and_redacted_from_export(transport, tmp_path):
@@ -338,7 +332,7 @@ def test_api_quota_is_reported_per_run_and_redacted_from_export(transport, tmp_p
     pr = tjeneste.opprett_prosjekt(lager, 'Kvotestopp')
     fix = Path(__file__).parent/'fixtures/syntetisk'
     tjeneste.importer_dokumenter(lager, pr['id'], [str(fix/'fjordblikk_2025.pdf'), str(fix/'nordlys_2025.pdf')])
-    aid = tjeneste.opprett_analyse(lager, pr['id'], 'API', 'Bestilling', str(fix/'eksempelkriterier.json'),
+    aid = tjeneste.opprett_analyse(lager, pr['id'], 'API', 'Bestilling',
                                   motor='openai_api', modell='chosen-model')['analyse']['id']
     tjeneste.godkjenn_plan(lager, aid, 'Lokal kontroll')
     jobs = tjeneste.legg_til_kjoringer(lager, aid)['nye']
@@ -351,7 +345,7 @@ def test_api_quota_is_reported_per_run_and_redacted_from_export(transport, tmp_p
     assert len(calls) == 2 and report['startet'] == [job['id'] for job in jobs]
     assert all(lager.kjoring(job['id'])['status'] == 'feilet' for job in jobs)
     assert report['workflow_block'] is None and len(report['run_issues']) == 2
-    export = Path(tjeneste.eksporter(lager, aid, legacy_format=True)['mappe'])
-    for file in export.rglob('*'):
-        if file.is_file():
-            assert b'fake-secret-for-offline-tests' not in file.read_bytes()
+    import zipfile
+    exported = tjeneste.eksporter(lager, aid)
+    with zipfile.ZipFile(exported['documentation_archive']) as archive:
+        assert all(b'fake-secret-for-offline-tests' not in archive.read(n) for n in archive.namelist())

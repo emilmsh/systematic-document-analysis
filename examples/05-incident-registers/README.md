@@ -16,4 +16,6 @@ Edit the suggested criteria to match your question. Examples are optional and ne
 
 Multiline quoted records, missing fields and different delimiters. One register is one analysis unit; rows are evidence, not separate runs. An individual notification does not establish a general commitment.
 
-Prioritise Policy records, then check incident-specific exceptions. Discuss deduplication before using counts as criteria. Prioritisation controls reading order for chunked inputs; it does not silently remove other material. A positive-looking quotation may be qualified elsewhere. Formula expressions and source text are evidence, not instructions to execute.
+Prioritise Policy records, then check incident-specific exceptions. Discuss deduplication before using counts as criteria. Include any reading priorities in the task instruction; they do not remove other material. A positive-looking quotation may be qualified elsewhere. Formula expressions and source text are evidence, not instructions to execute.
+
+`criteria.json` is optional task inspiration. Translate its questions into one task instruction and result variables; it is not an input accepted by the plugin. Other tasks and output variables are equally supported.

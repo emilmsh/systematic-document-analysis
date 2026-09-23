@@ -1,4 +1,4 @@
-"""Datamodell: kriterier, plan, inputpakke og motorsvar.
+"""Datamodell: oppgaveplan, inputpakke og motorsvar.
 
 Begreper (se UTVIKLINGSSTRATEGI.md del 5): et prosjekt rommer analyser; en analyse har en
 versjonert arbeidsplan; en kjøring utfører planens instruks på én inputpakke (her: ett
@@ -8,128 +8,29 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-HELTALL = "<heltall>"
-_HELTALL_RE = re.compile(r"-?\d+")
-
-
-def _er_heltall(svar: str) -> bool:
-    return _HELTALL_RE.fullmatch(svar.strip()) is not None
-
-
-@dataclass
-class Kriterium:
-    id: str
-    navn: str
-    sporsmal: str
-    tillatte_svar: list[str]
-    krever_belegg_ved: list[str] = field(default_factory=list)
-    regel: str = ""
-    # Bare for simulert motor: ord som brukes til å finne en setning i dokumentet.
-    sokeord: list[str] = field(default_factory=list)
-
-    @classmethod
-    def fra_dict(cls, d: dict[str, Any]) -> "Kriterium":
-        return cls(
-            id=str(d["id"]),
-            navn=str(d.get("navn", d["id"])),
-            sporsmal=str(d.get("spørsmål") or d.get("sporsmal") or ""),
-            tillatte_svar=[str(s) for s in d["tillatte_svar"]],
-            krever_belegg_ved=[str(s) for s in d.get("krever_belegg_ved", [])],
-            regel=str(d.get("regel", "")),
-            sokeord=[str(s) for s in d.get("sokeord", [])],
-        )
-
-    def til_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-    def svar_er_tillatt(self, svar: str) -> bool:
-        if svar in self.tillatte_svar:
-            return True
-        return HELTALL in self.tillatte_svar and _er_heltall(svar)
-
-    def krever_belegg(self, svar: str) -> bool:
-        if svar in self.krever_belegg_ved:
-            return True
-        return HELTALL in self.krever_belegg_ved and _er_heltall(svar)
-
-    def svar_uten_beleggkrav(self) -> list[str]:
-        return [s for s in self.tillatte_svar if s != HELTALL and not self.krever_belegg(s)]
-
-
 @dataclass
 class Plan:
-    """Innholdet i én planversjon. Lagres som JSON i planversjon.plan_json."""
-
+    """One versioned task and its execution settings."""
     formaal: str
-    kriterier: list[Kriterium] = field(default_factory=list)
-    kriteriesett_navn: str = ""
-    kriteriesett_versjon: str = ""
-    kriteriesett_merknad: str = ""
-    analyseenhet: str = "ett dokument per kjøring"
-    leseregel_ikke_omtalt: str = ""
-    tillat_sider_uten_tekst: bool = False
-    motor: str = "simulert"
-    modell: str = ""
-    motorinnstillinger: dict[str, Any] = field(default_factory=dict)
-    tilleggsinstruks: str = ""
-    sprak: str = "nb"
-    task_instructions: str = ""
+    task_instructions: str = ''
     output_schema: dict[str, Any] | None = None
     quote_checks: list[dict[str, Any]] = field(default_factory=list)
-
-    @property
-    def is_task(self) -> bool:
-        return bool(self.task_instructions)
-
-    @classmethod
-    def fra_kriteriefil(
-        cls,
-        kriteriefil: dict[str, Any],
-        *,
-        formaal: str,
-        motor: str = "simulert",
-        modell: str = "",
-        motorinnstillinger: dict[str, Any] | None = None,
-        tilleggsinstruks: str = "",
-        tillat_sider_uten_tekst: bool = False,
-        sprak: str = "nb",
-    ) -> "Plan":
-        return cls(
-            formaal=formaal,
-            kriterier=[Kriterium.fra_dict(k) for k in kriteriefil["kriterier"]],
-            kriteriesett_navn=str(kriteriefil.get("navn", "")),
-            kriteriesett_versjon=str(kriteriefil.get("versjon", "")),
-            kriteriesett_merknad=str(kriteriefil.get("_merknad", "")),
-            analyseenhet=str(kriteriefil.get("analyseenhet", "one document per run" if sprak == "en" else "ett dokument per kjøring")),
-            leseregel_ikke_omtalt=str(kriteriefil.get("leseregel_ikke_omtalt", "")),
-            tillat_sider_uten_tekst=tillat_sider_uten_tekst,
-            motor=motor,
-            modell=modell,
-            motorinnstillinger=dict(motorinnstillinger or {}),
-            tilleggsinstruks=tilleggsinstruks,
-            sprak=sprak,
-        )
+    tillat_sider_uten_tekst: bool = False
+    motor: str = 'simulert'
+    modell: str = ''
+    motorinnstillinger: dict[str, Any] = field(default_factory=dict)
+    tilleggsinstruks: str = ''
+    sprak: str = 'nb'
 
     @classmethod
-    def fra_dict(cls, d: dict[str, Any]) -> "Plan":
-        d = dict(d)
-        d["kriterier"] = [Kriterium.fra_dict(k) for k in d.get("kriterier", [])]
-        return cls(**d)
+    def fra_dict(cls, data):
+        return cls(**data)
 
-    def til_dict(self) -> dict[str, Any]:
-        d = asdict(self)
-        d["kriterier"] = [k.til_dict() for k in self.kriterier]
-        return d
-
-    def kriterium(self, kriterium_id: str) -> Kriterium | None:
-        for k in self.kriterier:
-            if k.id == kriterium_id:
-                return k
-        return None
+    def til_dict(self):
+        return asdict(self)
 
 
 @dataclass

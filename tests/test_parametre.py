@@ -20,7 +20,7 @@ FIX = Path(__file__).parent / "fixtures/syntetisk"
 def test_planvalg_lagres_og_endring_bevarer_historikk(tmp_path):
     lager = Lager(tmp_path)
     pr = tjeneste.opprett_prosjekt(lager, "Analyse")
-    an = tjeneste.opprett_analyse(lager, pr['id'], 'Analyse', 'Bestilling', str(FIX/'eksempelkriterier.json'),
+    an = tjeneste.opprett_analyse(lager, pr['id'], 'Analyse', 'Bestilling',
                                 motor='codex_cli', modell='gpt-5.6-terra', tenkenivaa='medium')
     aid = an['analyse']['id']
     old = lager.gjeldende_planversjon(aid)['plan']
@@ -36,7 +36,7 @@ def test_planvalg_lagres_og_endring_bevarer_historikk(tmp_path):
     tjeneste.ny_planversjon(lager, aid, 'Mer tid', motorinnstillinger={'tidsavbrudd_sek':1200})
     assert lager.gjeldende_planversjon(aid)['plan'].motorinnstillinger == {
         'tenkenivaa':'high','tidsavbrudd_sek':1200,
-        'document_processing':'auto','input_budget_bytes':60000,'max_chunks':100,'file_tools':True}
+        'input_budget_bytes':60000,'file_tools':True}
     tjeneste.ny_planversjon(lager, aid, 'Claude', motor='claude_cli')
     assert lager.gjeldende_planversjon(aid)['plan'].modell == 'sonnet'
 
@@ -95,14 +95,14 @@ def test_parametre_i_input_historikk_og_eksport(engine, adapter, tmp_path, monke
     def local_run(self, pakke, modell, *args):
         observed.append((modell, self.innstillinger['tenkenivaa'], pakke.kjoreparametre['language']))
         if pakke.kjoreparametre['language'] == 'en':
-            assert 'Write commentary (kommentar) and notes (merknader) in English' in pakke.systeminstruks
+            assert 'Write the result in English' in pakke.systeminstruks
         # Ingen leverandørkontakt. Prøver lagring også for et mislykket forsøk.
         return Motorsvar(raasvar='lokal kontroll', svar=None, feil='lokal kontroll uten modellkall')
     monkeypatch.setattr(adapter, 'kjor', local_run)
     lager = Lager(tmp_path)
     pr = tjeneste.opprett_prosjekt(lager, 'Parametre')
     tjeneste.importer_dokumenter(lager, pr['id'], [str(FIX/'fjordblikk_2025.pdf')])
-    an = tjeneste.opprett_analyse(lager, pr['id'], 'Analyse', 'Bestilling', str(FIX/'eksempelkriterier.json'),
+    an = tjeneste.opprett_analyse(lager, pr['id'], 'Analyse', 'Bestilling',
                                 motor=engine, modell='valgt-modell', tenkenivaa='medium',
                                 motorinnstillinger={'base_url':'https://example.org/v1'} if engine == 'kompatibel_api' else None)
     aid = an['analyse']['id']
@@ -119,19 +119,12 @@ def test_parametre_i_input_historikk_og_eksport(engine, adapter, tmp_path, monke
         assert json.loads((saved/'input.json').read_text(encoding='utf-8'))['input_hash'] == preview['input_hash']
         assert json.loads((saved/'manifest.json').read_text(encoding='utf-8'))['kjoreparametre']['tenkenivaa'] == level
     assert observed == [('valgt-modell','medium','nb'),('valgt-modell','high','en')]
-    out = Path(tjeneste.eksporter(lager, aid, legacy_format=True)['mappe'])
-    exported = json.loads((out/'resultater.json').read_text(encoding='utf-8'))
-    assert [v['plan']['motorinnstillinger']['tenkenivaa'] for v in exported['planversjoner']] == ['medium','high']
-    assert [v['plan']['sprak'] for v in exported['planversjoner']] == ['nb','en']
-    plantext = (out/'plan.md').read_text(encoding='utf-8')
-    assert 'medium' in plantext and 'high' in plantext and 'valgt-modell' in plantext
-    for file in ('resultater.csv','forsok.csv'):
-        with (out/file).open(encoding='utf-8-sig', newline='') as f:
-            rows = list(csv.DictReader(f, delimiter=';'))
-        assert [r['tenkenivaa_onsket'] for r in rows] == ['medium','high']
-        assert [r['language'] for r in rows] == ['nb','en']
-        if engine.endswith('_api'):
-            assert all(r['api_endpoint'].startswith('https://') and r['maks_output_tokens'] == '16384' for r in rows)
-    for kid in lager.kjoringer(aid):
-        fid = lager.forsok_for_kjoring(kid['id'])[0]['id']
-        assert (out/'forsok'/fid/'input.json').is_file()
+    import zipfile
+    exported = tjeneste.eksporter(lager, aid)
+    with zipfile.ZipFile(exported['documentation_archive']) as archive:
+        data = json.loads(archive.read('audit/analysis.json'))
+        assert [v['plan']['motorinnstillinger']['tenkenivaa'] for v in data['plans']] == ['medium','high']
+        assert [v['plan']['sprak'] for v in data['plans']] == ['nb','en']
+        for run in lager.kjoringer(aid):
+            attempt = lager.forsok_for_kjoring(run['id'])[0]
+            assert archive.read(f'audit/attempts/{attempt["id"]}/input.json') == (Path(attempt['input_sti'])/'input.json').read_bytes()

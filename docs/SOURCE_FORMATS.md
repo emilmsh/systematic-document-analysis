@@ -16,14 +16,14 @@ Text/CSV uses UTF-8 (optional BOM) or BOM-marked UTF-16. CSV delimiter detection
 
 Word pagination is not inferred. Headers, footers, footnotes, comments, tracked-change wrappers, text boxes and images are outside the current DOCX extractor. Workbook charts, images, comments and embedded objects are outside the XLSX extractor. Formula caches may be missing or stale; formulas are never executed or recalculated, and external links are not followed. Excel numeric values are not the same as their formatted display (for example percentages); number formats accompany ordinary cell values in the input metadata. Old binary DOC/XLS, XLSM, presentations, images and other formats are unsupported and produce an explicit error when selected.
 
-Extraction scope and structural summaries are stored with the imported file, shown in the plan and preserved in input/exports. Read coverage refers to extracted units within this stated scope. A missing formula cache, omitted object or structural mismatch must not be interpreted as a substantive negative finding. Agree how to handle uncertain answers in the criteria.
+Extraction scope and structural summaries are stored with the imported file, shown in the plan and preserved in input/exports. Read coverage refers to extracted units within this stated scope. A missing formula cache, omitted object or structural mismatch must not be interpreted as a substantive negative finding. Agree how to handle uncertain answers in the task.
 
-## Traceability and compatibility
+## Traceability
 
-Each extracted unit has a stable ID and a locator within the preserved source. The model cites the unit ID; the application resolves its location. Evidence CSV includes `source_format`, `source_unit`, `source_location` and quotations. `physical_page` is populated only for PDFs. Short spreadsheet evidence must match a full cell value rather than a digit in a cell address. A located quote still needs human review to establish that it supports the conclusion.
+Each extracted unit has a stable ID and a locator within the preserved source. Optional `quote_checks` resolve declared unit fields to locations and test exact substrings against extracted text. Matching a quote does not establish that it supports a conclusion or exactly matches a rendered page. Detail sheets retain the declared source locations.
 
-Existing database fields `sider`, `antall_sider`, `side` and `sider_lest` retain their technical names but represent source units for non-PDF files. Older PDF records and attempt files remain readable. A small additive database migration stores extraction metadata; it does not rewrite existing attempts.
+Internal fields such as `sider` and `antall_sider` represent source units for non-PDF files. Extraction metadata records scope and limitations. Use `inspect_source` for previews or a complete Markdown inspection copy with original locators.
 
-Use `inspect_source` to preview units and optionally save a complete Markdown inspection copy with original locators. New plans split oversized extracted input into bounded reading calls and a synthesis of checked findings. This processing is shared by CLI and API readers. Discuss source challenges and important sections before approval; priority terms and locations alter chunk order while retaining full coverage. See [document processing](DOCUMENT_PROCESSING.md).
+One worker handles each whole file. Large CLI input uses the original file and source-unit map; oversized API input fails explicitly. Describe substantive reading priorities in the task instruction. See [document processing](DOCUMENT_PROCESSING.md).
 
 Parser behaviour follows [python-docx document iteration](https://python-docx.readthedocs.io/en/latest/api/document.html) and [openpyxl workbook loading](https://openpyxl.readthedocs.io/en/3.1/tutorial.html#loading-from-a-file).

@@ -11,7 +11,7 @@ API_MOTORER = {
 }
 API_ENV = tuple(item[1] for item in API_MOTORER.values())
 API_FELT = {'tenkenivaa', 'tidsavbrudd_sek', 'maks_output_tokens', 'base_url', 'provider', 'api_format',
-            'document_processing', 'input_budget_bytes', 'max_chunks', 'priority_terms', 'priority_locations'}
+            'input_budget_bytes'}
 
 
 def local_key(motor):
@@ -93,4 +93,4 @@ def api_metadata(motor, valg):
             **extra,
             'nokkelvariabel': key_env, 'maks_output_tokens': valg.get('maks_output_tokens', 16384),
             'provider': valg.get('provider') or ('automatisk valg hos OpenRouter' if motor == 'openrouter_api' else motor),
-            'betaling': 'separat API-forbruk', 'harness': 'direct API per stage; shared chunking when enabled, no model tools or automatic retries'}
+            'betaling': 'separat API-forbruk', 'harness': 'one independent API request per file, no model tools or automatic retries'}

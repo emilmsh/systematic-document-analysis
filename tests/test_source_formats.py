@@ -11,7 +11,7 @@ from kildeanalyse.lager import Lager, SKJEMA, KJ_FULLFORT
 from kildeanalyse.modell import Motorsvar, Stotte
 from kildeanalyse.adaptere.claude_cli import ClaudeCliAdapter
 from kildeanalyse.source_formats import extract, location
-from kildeanalyse.validering import valider
+from kildeanalyse.task_contract import validate as valider
 
 QUOTE = 'The board adopted a policy.'
 
@@ -46,7 +46,7 @@ def test_complete_format_workflow_without_models(tmp_path, monkeypatch, extensio
     assert Path(document['lagret_kopi']).suffix == '.'+extension
     criterion = {'criteria':[{'id':'policy', 'question':'Does the source describe a policy?',
                               'allowed_answers':['yes','not_mentioned'], 'evidence_required_for':['yes']}]}
-    analysis = tjeneste.opprett_analyse(store, project['id'], 'Policy', 'Compare each file', criterion, motor='claude_cli', sprak='en')
+    analysis = tjeneste.opprett_analyse(store, project['id'], 'Policy', 'Compare each file', motor='claude_cli', sprak='en')
     aid = analysis['analyse']['id']; plan = analysis['planversjon']['plan']
     assert tjeneste.vis_plan(store,aid)['source_profiles'][0]['format'] == extension
     run = tjeneste.legg_til_kjoringer(store,aid)['nye'][0]['id']
@@ -56,22 +56,21 @@ def test_complete_format_workflow_without_models(tmp_path, monkeypatch, extensio
     monkeypatch.setattr(ClaudeCliAdapter, 'sjekk_stotte', lambda self:Stotte(True))
     def reader(self, package, *args):
         unit = next(s for s in package.sider if QUOTE in s.tekst)
-        return Motorsvar(raasvar='offline fixture', svar={'vurderinger':[{'kriterium_id':'policy','svar':'yes',
-            'belegg':[{'side':unit.nr,'sitat':QUOTE}], 'kommentar':'Explicit statement.'}],
-            'sider_lest':[s.nr for s in package.sider], 'merknader':[]})
+        answer = {'result':QUOTE, 'source_units_read':[s.nr for s in package.sider], 'limitations':[]}
+        return Motorsvar(raasvar=json.dumps(answer), svar=answer)
     monkeypatch.setattr(ClaudeCliAdapter, 'kjor', reader)
     tjeneste.godkjenn_plan(store,aid,'Offline check'); tjeneste.start(store,aid)
     assert store.kjoring(run)['status'] == KJ_FULLFORT
     details = tjeneste.vis_kjoring(store,run)
-    assert details['forsok'][0]['vurderinger']['policy']['belegg'][0]['source']['location'] == locator
-    assert locator in visning.md_kjoring(details)
-    output = Path(tjeneste.eksporter(store,aid,True,legacy_format=True)['mappe'])
-    with (output/'evidence.csv').open(encoding='utf-8-sig',newline='') as f:
-        row = next(csv.DictReader(f,delimiter=';'))
-    assert row['source_location'] == locator and row['physical_page'] == '' and row['quote'] == QUOTE
-    assert any(p.suffix == '.'+extension for p in (output/'kilder').iterdir())
+    assert details['forsok'][0]['result'] == QUOTE
+    import zipfile
+    output = tjeneste.eksporter(store, aid)
+    with zipfile.ZipFile(output['documentation_archive']) as archive:
+        assert json.loads(archive.read(f'results/{run}.json')) == QUOTE
+        assert any(n.startswith('sources/') and n.endswith('.'+extension) for n in archive.namelist())
+        audit = json.loads(archive.read(f'audit/{run}.json'))
+        assert audit['dokument']['source_metadata']['format'] == extension
     assert sha256_fil(file) == original_hash
-    assert json.loads((output/'resultater.json').read_text(encoding='utf-8'))['kjoringer'][0]['source_metadata']['format'] == extension
 
 
 def test_workbook_formulas_hidden_sheet_and_short_values(tmp_path):
@@ -83,14 +82,6 @@ def test_workbook_formulas_hidden_sheet_and_short_values(tmp_path):
     assert profile['missing_formula_values'] == ['Data!C1']
     assert 'UNAVAILABLE' in units[0]['tekst'] and '=B1*2' in units[0]['tekst']
     assert units[1]['source']['sheet_state'] == 'hidden' and units[1]['source']['row'] == 3
-    from kildeanalyse.modell import Plan, Kriterium
-    plan = Plan('Read', [Kriterium('k','k','question',['yes'],['yes'])])
-    def validate_quote(quote):
-        return valider(plan, {'sider':units}, {'vurderinger':[{'kriterium_id':'k','svar':'yes',
-            'belegg':[{'side':1,'sitat':quote}]}], 'sider_lest':[1,2]}, [1,2])['gyldig']
-    assert validate_quote('17')
-    assert not validate_quote('1')  # must not match the coordinate B1
-    assert not validate_quote('34')  # no recalculation or invented cached value
 
 
 def test_csv_record_ids_handle_multiline_quotes_and_single_columns(tmp_path):
@@ -99,18 +90,6 @@ def test_csv_record_ids_handle_multiline_quotes_and_single_columns(tmp_path):
     assert len(units) == 2 and units[1]['source']['record'] == 2 and 'first\nsecond' in units[1]['tekst']
     file.write_text('header\nvalue\n',encoding='utf-8')
     assert len(extract(file)[0]) == 2
-
-
-def test_old_database_migration_preserves_documents(tmp_path):
-    schema = SKJEMA.replace(",\n  metadata_json TEXT NOT NULL DEFAULT '{}'", '')
-    with sqlite3.connect(tmp_path/'kildeanalyse.sqlite') as con:
-        con.executescript(schema)
-        con.execute("INSERT INTO prosjekt VALUES ('pr1','Existing','yesterday')")
-    store = Lager(tmp_path)
-    assert store.prosjekt('pr1')['navn'] == 'Existing'
-    with sqlite3.connect(store.db) as con:
-        assert 'metadata_json' in [row[1] for row in con.execute('PRAGMA table_info(dokument)')]
-    assert Lager(tmp_path).prosjekt('pr1')['navn'] == 'Existing'
 
 
 def test_explicit_unsupported_and_empty_files_fail_visibly(tmp_path):

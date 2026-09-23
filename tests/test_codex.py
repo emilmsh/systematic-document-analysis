@@ -48,7 +48,7 @@ def test_codex_input_schema_is_the_sent_schema():
     from kildeanalyse.prompt import bygg_inputpakke
     from pathlib import Path
     raw=json.loads((Path(__file__).parent/'fixtures/syntetisk/eksempelkriterier.json').read_text(encoding='utf-8'))
-    plan=Plan.fra_kriteriefil(raw,formaal='Test',motor='codex_cli',modell='')
+    plan=Plan(formaal='Test',task_instructions='Read',motor='codex_cli',modell='')
     doc={'id':'d','navn':'test','sha256':'test','antall_sider':1,'sider':[{'nr':1,'tegn':20,'tekst':'syntetisk dokument'}]}
     pakke=bygg_inputpakke(plan,doc,forsok_id='f',kjoring_id='k')
     assert pakke.svarskjema==strengt_skjema(pakke.svarskjema)
@@ -64,7 +64,7 @@ def test_quota_reports_each_run_without_retry(tmp_path, monkeypatch):
     lager=Lager(tmp_path)
     pr=tjeneste.opprett_prosjekt(lager,'Test')
     tjeneste.importer_dokumenter(lager,pr['id'],[str(fix/'fjordblikk_2025.pdf'),str(fix/'nordlys_2025.pdf')])
-    an=tjeneste.opprett_analyse(lager,pr['id'],'Test','Test',str(fix/'eksempelkriterier.json'))
+    an=tjeneste.opprett_analyse(lager,pr['id'],'Test','Test')
     aid=an['analyse']['id']
     tjeneste.godkjenn_plan(lager,aid,'Test')
     kj=tjeneste.legg_til_kjoringer(lager,aid)['nye']

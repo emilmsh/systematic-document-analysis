@@ -4,7 +4,7 @@ Use the same analysis workflow for different kinds of comparable material. Each 
 
 | Use case | Files | What to discuss before reading |
 |---|---|---|
-| [Policy reports](01-policy-reports/README.md) | Text PDF, scanned PDF, long appendix | OCR quality, qualifications far from the headline, chunk order |
+| [Policy reports](01-policy-reports/README.md) | Text PDF, scanned PDF, long appendix | OCR quality, qualifications far from the headline, whole-file reading |
 | [Supplier offers](02-supplier-offers/README.md) | DOCX with tables | Contractual guarantees versus targets; exceptions |
 | [Project portfolio](03-project-workbooks/README.md) | XLSX with formulas and hidden sheets | Formula caches, decision logs, scope |
 | [Consultation analysis](04-consultation-notes/README.md) | English Markdown and Norwegian text | Conditional support, source language and reporting language |

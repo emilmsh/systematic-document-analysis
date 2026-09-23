@@ -30,7 +30,7 @@ def auth_gate(name, verified):
 def blocked_support(name):
     message = (f'CLI_AUTH_REQUIRED: Subscription sign-in for {name} could not be confirmed. '
                'Document analysis is blocked. Do not substitute host analysis, subagents, another reader, '
-               'API calls or simulated results. You may prepare criteria and the plan, but produce no classifications. '
+               'API calls or simulated results. You may prepare the task and plan, but must not substitute results. '
                f'Ask the user to run installer.cmd reader {name} --login in a terminal, then check show_setup again. '
                'Resume only after sign-in is verified and the user asks to continue.')
     return Stotte(False, [message], {'auth_gate': auth_gate(name, False)})

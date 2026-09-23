@@ -1,6 +1,6 @@
 """File adapters produce numbered source units, never fictitious PDF pages.
 
-The legacy response fields side/sider_lest carry unit IDs. Locators are resolved
+Task responses reference source unit IDs. Locators are resolved
 from the preserved source, not invented by the reading model.
 """
 import csv
@@ -135,12 +135,3 @@ def extract(path):
 
 def metadata(document):
     return document.get('source_metadata') or {'format':'pdf', 'scope':'Extracted PDF text; physical pages, no OCR.', 'structure':{}}
-
-
-def annotate_assessments(document, assessments):
-    if assessments:
-        for assessment in assessments.values():
-            for evidence in assessment.get('belegg', []):
-                evidence['source_unit'] = evidence.get('side')
-                evidence['source'] = location(document, evidence.get('side'))
-    return assessments

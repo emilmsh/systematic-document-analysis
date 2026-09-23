@@ -6,7 +6,7 @@ Edit the suggested criteria to match your question. Examples are optional and ne
 
 ## Start in English
 
-> Use Systematic Document Analysis on the documents in [absolute path to this folder]/documents. Does the organisation explicitly commit to an annual external review of its information security policy? Use criteria.json as a draft. Inspect extraction and discuss these file challenges with me: One PDF contains scanned pages; the longer report has repetitive appendices and a qualification near the end. OCR may introduce errors, so inspect quotations in the original PDF. Consider these priorities: Read Governance and Exceptions first (priority_terms); retain appendix coverage. Reduce input_budget_bytes explicitly if you want to inspect multiple reading stages with this modest example. Agree the reader, model, reasoning effort and reporting language. Show the plan and input before execution. Keep full coverage unless we explicitly agree a narrower scope. Export the results and flag uncertain assessments for my review.
+> Use Systematic Document Analysis on the documents in [absolute path to this folder]/documents. Does the organisation explicitly commit to an annual external review of its information security policy? Use criteria.json as a draft. Inspect extraction and discuss these file challenges with me: One PDF contains scanned pages; the longer report has repetitive appendices and a qualification near the end. OCR may introduce errors, so inspect quotations in the original PDF. Consider these priorities: Read Governance and Exceptions first; retain appendix coverage. Large inputs use one CLI worker with file tools. Agree the reader, model, reasoning effort and reporting language. Show the plan and input before execution. Keep full coverage unless we explicitly agree a narrower scope. Export the results and flag uncertain assessments for my review.
 
 ## Start på norsk
 
@@ -16,4 +16,6 @@ Edit the suggested criteria to match your question. Examples are optional and ne
 
 One PDF contains scanned pages; the longer report has repetitive appendices and a qualification near the end. OCR may introduce errors, so inspect quotations in the original PDF.
 
-Read Governance and Exceptions first (priority_terms); retain appendix coverage. Reduce input_budget_bytes explicitly if you want to inspect multiple reading stages with this modest example. Prioritisation controls reading order for chunked inputs; it does not silently remove other material. A positive-looking quotation may be qualified elsewhere. Formula expressions and source text are evidence, not instructions to execute.
+Read Governance and Exceptions first; retain appendix coverage. Large inputs use one CLI worker with file tools. Include any reading priorities in the task instruction; they do not remove other material. A positive-looking quotation may be qualified elsewhere. Formula expressions and source text are evidence, not instructions to execute.
+
+`criteria.json` is optional task inspiration. Translate its questions into one task instruction and result variables; it is not an input accepted by the plugin. Other tasks and output variables are equally supported.

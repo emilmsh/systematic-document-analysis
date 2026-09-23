@@ -1,3 +1,12 @@
+# 0.10.0 — One independent task per file
+
+- One general task model and one public MCP interface (19 tools). Removed classification-specific plans, validators/exporters, Norwegian MCP aliases and old database migrations. Development breaking change: no compatibility layer; use a fresh store for analyses from v0.9.0 or earlier. Existing exported artifacts are not rewritten.
+- Each iteration creates a fresh adapter and CLI session/API request. Removed automatic chunk extraction and synthesis. Large CLI inputs use the original file and source-unit map; oversized API/text-only requests fail explicitly within the agreed byte budget.
+- Deliver Results.xlsx by default: one row per run, scalar/nested-object variables in columns, repeated records in linked detail sheets. Errors, run information and variable definitions are separate. `list_layout=inline` also shows numbered list values in the main row. Task-specific schema labels and optional CSV export remain available.
+- Preserve failed/unstarted/rejected rows, nulls, zero/false, long text and literal formula-like strings. A start file and one documentation ZIP collect original results, sources and all attempts/reviews.
+- Fix Windows long-path file copying and export staging/ZIP/workbook operations with extended paths, without a registry change.
+- Shorten the host skill, server instructions and tool descriptions. Context controls remain distinct from OS filesystem isolation. Release verification uses offline tests and a clean MCP bootstrap; no live model calls or active local plugin update.
+
 # 0.8.12 — Accurate Claude model reporting and consolidated results
 
 - Identify the Claude reader from its own assistant messages instead of the first `modelUsage` entry, which may describe a helper model. Preserve all raw events and usage. Legacy JSON results identify a model only when usage is unambiguous; ambiguous telemetry is shown as unreported with a non-blocking diagnostic. Requested model and effort are unchanged.

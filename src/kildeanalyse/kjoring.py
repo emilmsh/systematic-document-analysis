@@ -23,7 +23,7 @@ from .lager import (
 )
 from .modell import Motorsvar
 from .prompt import bygg_inputpakke
-from .validering import valider
+from .task_contract import validate as valider
 from .maintenance import maintenance_lock, update_pending, draining
 from .workflow_guard import plan_problem
 
@@ -146,7 +146,7 @@ class Koer:
             self.blokker(analyse_id, 'INVALID_RUN_SCOPE', reason)
             raise KoFeil(reason)
         try:
-            adapter = lag_adapter(plan.motor, {**plan.motorinnstillinger, 'kriterier': [k.til_dict() for k in plan.kriterier]})
+            adapter = lag_adapter(plan.motor, plan.motorinnstillinger)
             stotte = adapter.sjekk_stotte()
         except Exception as exc:
             self.blokker(analyse_id, 'READER_UNAVAILABLE', 'Could not verify the selected reader.')
@@ -223,7 +223,7 @@ class Koer:
                     break
                 rapport["startet"].append(kj["id"])
                 try:
-                    outcome = self._kjor_en(kj, planrad, adapter, stotte.egenskaper)
+                    outcome = self._kjor_en(kj, planrad, lag_adapter(planrad['plan'].motor, planrad['plan'].motorinnstillinger), stotte.egenskaper)
                 except Exception as exc:
                     # A source/preparation/audit-file failure belongs to this run.
                     # If the shared store cannot record it, the outer handler stops dispatch.
@@ -284,7 +284,7 @@ class Koer:
         nr = len(self.lager.forsok_for_kjoring(kj["id"])) + 1
         forsok_id = f"{kj['id']}.f{nr}"
         pakke = bygg_inputpakke(plan, dok, forsok_id=forsok_id, kjoring_id=kj["id"])
-        from .chunking import preview, execute
+        from .execution import preview, execute
         try:
             input_data = preview(plan, dok, pakke)
         except ValueError as exc:
@@ -332,11 +332,6 @@ class Koer:
             status, kj_status = FS_FEILET, KJ_FEILET
         else:
             validering = valider(plan, dok, svar.svar, [s.nr for s in pakke.sider])
-            if input_data['processing']['mode'] == 'chunked':
-                validering['lesedekning']['basis'] = 'Aggregate of all extraction calls; synthesis read findings, not the full source.'
-                if plan.is_task:
-                    validering['checks']['coverage_basis'] = 'aggregate_map_self_reports; synthesis_read_findings'
-                validering['advarsler'].append({'type':'chunked_reading', 'melding':'The final answer synthesizes extracted findings. Inspect calls/ for omissions, conflicts and evidence.'})
             if dok.get('source_metadata', {}).get('ocr', {}).get('pages'):
                 validering['advarsler'].append({'type':'ocr', 'melding':'Quotes were checked against OCR text. Verify important evidence against original page images.'})
             if uten:

@@ -17,7 +17,7 @@ from .modell import Plan
 
 SKJEMA = """
 CREATE TABLE IF NOT EXISTS prosjekt (
-  id TEXT PRIMARY KEY, navn TEXT NOT NULL, opprettet TEXT NOT NULL
+  id TEXT PRIMARY KEY, navn TEXT NOT NULL, opprettet TEXT NOT NULL, directory TEXT
 );
 CREATE TABLE IF NOT EXISTS dokument (
   id TEXT PRIMARY KEY, prosjekt_id TEXT NOT NULL REFERENCES prosjekt(id),
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS forsok (
 );
 CREATE TABLE IF NOT EXISTS kontroll (
   id TEXT PRIMARY KEY, forsok_id TEXT NOT NULL REFERENCES forsok(id), tid TEXT NOT NULL,
-  ansvarlig TEXT NOT NULL, handling TEXT NOT NULL, kriterium_id TEXT,
+  ansvarlig TEXT NOT NULL, handling TEXT NOT NULL,
   opprinnelig_json TEXT, nytt_json TEXT, begrunnelse TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS hendelse (
@@ -94,11 +94,6 @@ class Lager:
         try:
             con.execute("PRAGMA journal_mode=WAL")
             con.executescript(SKJEMA)
-            con.execute('BEGIN IMMEDIATE')
-            if 'metadata_json' not in {row[1] for row in con.execute('PRAGMA table_info(dokument)')}:
-                con.execute("ALTER TABLE dokument ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}'")
-            if 'directory' not in {row[1] for row in con.execute('PRAGMA table_info(prosjekt)')}:
-                con.execute('ALTER TABLE prosjekt ADD COLUMN directory TEXT')
             con.commit()
         finally:
             con.close()
@@ -348,14 +343,14 @@ class Lager:
     # --- kontroll ----------------------------------------------------------------
 
     def registrer_kontroll(self, forsok_id: str, *, ansvarlig: str, handling: str, begrunnelse: str,
-                           kriterium_id: str | None = None, opprinnelig: Any = None, nytt: Any = None) -> dict[str, Any]:
+                           opprinnelig: Any = None, nytt: Any = None) -> dict[str, Any]:
         self.forsok(forsok_id)
         with self.transaksjon() as con:
             id = self.neste_id(con, "ko")
             con.execute(
-                "INSERT INTO kontroll(id, forsok_id, tid, ansvarlig, handling, kriterium_id, opprinnelig_json, nytt_json, begrunnelse)"
-                " VALUES (?,?,?,?,?,?,?,?,?)",
-                (id, forsok_id, naa(), ansvarlig, handling, kriterium_id,
+                "INSERT INTO kontroll(id, forsok_id, tid, ansvarlig, handling, opprinnelig_json, nytt_json, begrunnelse)"
+                " VALUES (?,?,?,?,?,?,?,?)",
+                (id, forsok_id, naa(), ansvarlig, handling,
                  json.dumps(opprinnelig, ensure_ascii=False) if opprinnelig is not None else None,
                  json.dumps(nytt, ensure_ascii=False) if nytt is not None else None, begrunnelse),
             )

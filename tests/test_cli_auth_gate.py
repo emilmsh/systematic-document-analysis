@@ -155,7 +155,7 @@ def analysis(tmp_path, name):
     criteria = {'name': 'Policy', 'version': 1, 'criteria': [{'id': 'policy', 'name': 'Policy',
         'question': 'Is a policy described?', 'allowed_answers': ['yes', 'not_mentioned'],
         'evidence_required_for': ['yes'], 'rule': 'Use the document.'}]}
-    result = tjeneste.opprett_analyse(store, project['id'], 'Test', 'Test', criteria,
+    result = tjeneste.opprett_analyse(store, project['id'], 'Test', 'Test',
                                     motor=name + '_cli', motorinnstillinger={'file_tools': False})
     aid = result['analyse']['id']
     tjeneste.godkjenn_plan(store, aid, 'Test user')
@@ -191,45 +191,16 @@ def test_missing_auth_blocks_queue_but_call_errors_do_not(monkeypatch, tmp_path,
     assert all(store.kjoring(run)['status'] == ('planlagt' if failure == 'before_call' else 'feilet') for run in runs[1:])
     assert bool(report['workflow_block']) == (failure == 'before_call')
     attempt = tjeneste.vis_kjoring(store, runs[0])['forsok'][0]
-    assert not attempt['vurderinger']
+    assert attempt['result'] is None
 
 
 @pytest.mark.parametrize('name,reader_class', READERS)
 def test_revocation_between_documents_keeps_completed_result(monkeypatch, tmp_path, name, reader_class):
     store, aid, runs = analysis(tmp_path, name)
     status_cli(monkeypatch, name, reader_class, [ready(name), ready(name), (1, '', 'Expired')])
-    payload = {'vurderinger': [{'kriterium_id': 'policy', 'svar': 'not_mentioned', 'belegg': [],
-                                'kommentar': 'No policy mentioned.'}], 'sider_lest': [1], 'merknader': []}
+    payload = {'result':'No policy mentioned.', 'source_units_read':[1], 'limitations':[]}
     calls = process_cli(monkeypatch, name, payload)
     report = tjeneste.start(store, aid)
     assert len(calls) == 1 and report['startet'] == runs[:2]
     assert [store.kjoring(run)['status'] for run in runs] == ['fullført', 'feilet', 'planlagt']
-    assert tjeneste.vis_kjoring(store, runs[0])['forsok'][0]['vurderinger']['policy']['svar'] == 'not_mentioned'
-
-
-@pytest.mark.parametrize('name,reader_class', READERS)
-@pytest.mark.parametrize('blocked_stage', ['extraction', 'synthesis'])
-def test_chunks_and_synthesis_each_recheck_signin(monkeypatch, tmp_path, name, reader_class, blocked_stage):
-    from test_document_processing import context, fake_reader
-    from kildeanalyse.chunking import execute, prepare
-    plan, document, package = context(engine=name + '_cli')
-    chunks, summary = prepare(plan, document, package)
-    permitted = 1 if blocked_stage == 'extraction' else len(chunks)
-    status_cli(monkeypatch, name, reader_class, [ready(name)] * permitted + [(1, '', 'Expired')])
-    current = {}
-
-    def prepare_payload(pakke, directory):
-        current['value'] = fake_reader(pakke).svar
-        return None
-
-    module = claude_cli if name == 'claude' else codex_cli
-    monkeypatch.setattr(module, 'prepare_files', prepare_payload)
-    calls = process_cli(monkeypatch, name, lambda: current['value'])
-    result = execute(plan, document, package, reader_class(), lambda: False, tmp_path)
-    assert len(calls) == permitted
-    assert result.svar is None and result.motorinfo['stopp_ko']
-    assert result.motorinfo['auth_gate']['status'] == 'blocked'
-    records = result.motorinfo['calls']
-    assert len(records) == permitted + 1
-    assert records[-1]['stage'] == ('extract' if blocked_stage == 'extraction' else 'synthesis')
-    assert all(record['svar'] is not None for record in records[:-1])
+    assert tjeneste.vis_kjoring(store, runs[0])['forsok'][0]['result'] == 'No policy mentioned.'

@@ -83,9 +83,24 @@ def plan_text(analysis: dict, versions: list[dict], language: str) -> str:
                   json.dumps(fra_plan(plan), ensure_ascii=False, indent=2), '```', '',
                   f'### {"Instruks" if nb else "Instructions"}', '',
                   '~~~~text', bygg_systeminstruks(plan), '~~~~', '']
-        if plan.is_task:
-            from .task_contract import schema
-            lines += ['### Result contract', '', '```json', json.dumps(schema(plan), ensure_ascii=False, indent=2), '```', '']
+        from .task_contract import schema
+        from .task_dataset import plan_preview
+        preview = plan_preview(plan)
+        lines += [f'### {"Datasett" if nb else "Dataset"}', '',
+                  ('Hovedarket har én rad per kjøring og én kolonne per resultatvariabel. Feil og kjøringsdokumentasjon har egne faner.' if nb else
+                   'The main sheet has one row per run and one column per result variable. Errors and run evidence have separate sheets.'), '',
+                  ('Nested objekter utvides til kolonner. Gjentatte poster bevares i koblede detaljfaner.' if nb else
+                   'Nested objects expand into columns. Repeated records have linked detail sheets.'), '']
+        for table in preview['tables']:
+            for variable in table['variables']:
+                label = variable['label'] or variable['path'] or ('Resultat' if nb else 'Result')
+                description = variable['description'] or ('Ikke beskrevet.' if nb else 'Not described.')
+                lines.append(f'- {table["path"] or "/"} · {label}: {description}')
+        if not preview['structured']:
+            lines += ['', ('Planen gir fritekst i én resultatkolonne. Foreslå et output_schema før godkjenning når oppgaven skal generere flere analysevariabler.' if nb else
+                           'This plan produces prose in one result column. Propose an output_schema before approval when the task should generate several analytical variables.')]
+        lines.append('')
+        lines += ['### Result contract', '', '```json', json.dumps(schema(plan), ensure_ascii=False, indent=2), '```', '']
     return '\n'.join(lines)
 
 
@@ -100,20 +115,12 @@ def save_plan(store, analysis_id: str) -> dict:
     path = directory / 'Plan.md'
     if not path.exists():
         path.write_text(plan_text(analysis, [version], version['plan'].sprak), encoding='utf-8')
-    if version['plan'].is_task:
-        contract = directory / 'task.json'
-        if not contract.exists():
-            contract.write_text(json.dumps({k: getattr(version['plan'], k) for k in
-                ('task_instructions', 'output_schema', 'quote_checks')}, ensure_ascii=False, indent=2), encoding='utf-8')
-        write_index(store, project_id)
-        return {'project_directory': str(root), 'plan_path': str(path), 'task_path': str(contract)}
-    criteria = directory / 'criteria.json'
-    if not criteria.exists():
-        criteria.write_text(json.dumps({'name':version['plan'].kriteriesett_navn,
-            'version':version['plan'].kriteriesett_versjon,
-            'kriterier':[k.til_dict() for k in version['plan'].kriterier]}, ensure_ascii=False, indent=2), encoding='utf-8')
+    contract = directory / 'task.json'
+    if not contract.exists():
+        contract.write_text(json.dumps({k: getattr(version['plan'], k) for k in
+            ('task_instructions', 'output_schema', 'quote_checks')}, ensure_ascii=False, indent=2), encoding='utf-8')
     write_index(store, project_id)
-    return {'project_directory':str(root), 'plan_path':str(path), 'criteria_path':str(criteria)}
+    return {'project_directory': str(root), 'plan_path': str(path), 'task_path': str(contract)}
 
 
 def save_input(store, run: dict, package: dict) -> str:

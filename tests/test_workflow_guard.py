@@ -13,8 +13,7 @@ from test_flyt import KRIT, _oppsett
 
 def draft(store, criteria=None, purpose='Read the sources'):
     project = tjeneste.opprett_prosjekt(store, 'Workflow guard')
-    result = tjeneste.opprett_analyse(store, project['id'], 'Test', purpose,
-                                    criteria if criteria is not None else KRIT)
+    result = tjeneste.opprett_analyse(store, project['id'], 'Test', purpose)
     return result['analyse']['id']
 
 
@@ -30,22 +29,7 @@ def paused(store, aid, code):
     return block
 
 
-@pytest.mark.parametrize('fault', ['question', 'duplicate_id', 'blank_id', 'answers', 'duplicate_answer', 'evidence', 'purpose'])
-def test_invalid_criteria_cannot_be_approved(tmp_path, fault):
-    store = Lager(tmp_path / 'data')
-    criteria = json.loads(Path(KRIT).read_text(encoding='utf-8'))
-    first = criteria['kriterier'][0]
-    if fault == 'question': first['spørsmål'] = ' '
-    elif fault == 'duplicate_id': criteria['kriterier'][1]['id'] = first['id']
-    elif fault == 'blank_id': first['id'] = ' '
-    elif fault == 'answers': first['tillatte_svar'] = []
-    elif fault == 'duplicate_answer': first['tillatte_svar'].append('ja')
-    elif fault == 'evidence': first['krever_belegg_ved'] = ['not-an-answer']
-    aid = draft(store, criteria, ' ' if fault == 'purpose' else 'Read the sources')
-    with pytest.raises(tjeneste.TjenesteFeil):
-        tjeneste.godkjenn_plan(store, aid, 'Test user')
-    assert store.planversjoner(aid)[0]['status'] == 'utkast'
-    paused(store, aid, 'INVALID_CRITERIA')
+
 
 
 @pytest.mark.parametrize('background', [False, True])
@@ -110,7 +94,7 @@ def test_source_integrity_failure_does_not_block_other_sources(tmp_path, monkeyp
 
 
 @pytest.mark.parametrize('failure,code', [('krasj', 'READER_FAILED'), ('timeout', 'READER_FAILED'), ('ugyldig_svar', 'READER_FAILED'),
-                                        ('oppdiktet_sitat', 'VALIDATION_FAILED')])
+                                        ('invalid_result', 'VALIDATION_FAILED')])
 def test_failure_mid_queue_reports_error_and_finishes_other_work(tmp_path, failure, code):
     store = Lager(tmp_path / 'data')
     _, aid, runs = _oppsett(store, {'scenarier': {'nordlys_2025.pdf': failure}})
@@ -188,22 +172,22 @@ def test_failed_final_audit_preserves_raw_answer_and_finishes_other_runs(tmp_pat
 
 
 def test_error_flag_rejects_even_a_structurally_valid_answer(tmp_path, monkeypatch):
-    from kildeanalyse import chunking
+    from kildeanalyse import execution
     store = Lager(tmp_path / 'data')
     _, aid, runs = _oppsett(store)
-    original = chunking.execute
+    original = execution.execute
 
     def reply(*args):
         result = original(*args)
         result.feil = 'Reader reported an error alongside its answer'
         return result
 
-    monkeypatch.setattr(chunking, 'execute', reply)
+    monkeypatch.setattr(execution, 'execute', reply)
     report = tjeneste.start(store, aid)
     assert report['workflow_block'] is None and len(report['run_issues']) == 3
     attempt, = store.forsok_for_kjoring(runs[0]['id'])
     assert attempt['raasvar'] and not attempt['svar_json']
-    assert not tjeneste.vis_kjoring(store, runs[0]['id'])['forsok'][0]['vurderinger']
+    assert not tjeneste.vis_kjoring(store, runs[0]['id'])['forsok'][0]['result']
     assert all(store.kjoring(run['id'])['status'] == 'feilet' for run in runs)
 
 

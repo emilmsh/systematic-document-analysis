@@ -37,7 +37,7 @@ def review(store, attempt, plan, reviewer, action, reason, replacement):
         if not validation['gyldig']:
             raise TjenesteFeil('Cannot approve/correct an invalid result: ' + str(validation['feil']))
     item = store.registrer_kontroll(attempt['id'], ansvarlig=reviewer.strip(), handling=action,
-        begrunnelse=reason.strip(), kriterium_id=None, opprinnelig=original,
+        begrunnelse=reason.strip(), opprinnelig=original,
         nytt=replacement if action == 'rettet' else None)
     store.logg('kontroll_registrert', analyse_id=run['analyse_id'], kjoring_id=run['id'],
                forsok_id=attempt['id'], handling=action, ansvarlig=reviewer)

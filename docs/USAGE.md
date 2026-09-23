@@ -20,9 +20,10 @@ First-time setup requires internet access. The installer provides Python and ins
 ## Project folder and results
 
 Choose a visible project folder in the conversation. Plans and input previews are saved there
-before execution; results arrive in a new snapshot with readable and JSON results per file,
-a plan, a start file, source copies and a separate audit folder. Start in `START_HERE.md`.
-Choose later presentation with your assistant. Legacy criteria analyses retain their workbook.
+before execution. The default result is a workbook: one row per run, with generated variables
+in columns. Nested objects become columns; repeated records have linked detail sheets.
+Errors, variable definitions and run information have separate sheets. Start in `START_HERE.md`.
+One documentation ZIP preserves the plan, original results, source copies and audit trail.
 Export edits do not update recorded results. See [Project files and exports](PROJECT_FILES.md).
 
 ## Why use it
@@ -36,7 +37,7 @@ When one task is repeated across forty reports, offers or workbooks, you need to
 - **Runs one document per attempt with fixed settings.** The plan records reader, model, reasoning effort, language and instructions. The assistant can inspect source text during preparation; a named person approves the plan before the reader runs. Changing it creates a new version; earlier attempts are untouched.
 - **Stores execution evidence.** Every attempt retains exact input, raw answer, declared checks and their outcomes. Source units have PDF page, Word block, sheet/cell, text line or CSV record locations. Exact-quote checks are optional for general tasks.
 - **Records human review.** A person approves, corrects or rejects each assessment with a reason. Automatic checks are never recorded as human review.
-- **Delivers results per file.** Readable content and JSON preserve the result, alongside a full audit trail. Choose later presentation freely. Legacy criteria analyses retain Excel/CSV exports.
+- **Delivers a dataset automatically.** One workbook row per run, task-specific variables in columns, and separate sheets for repeated records and auxiliary information. Original results and the full audit trail are preserved in one documentation ZIP. Legacy criteria analyses retain their existing exports.
 
 The conversation stays in Claude Code or Codex. The plugin adds the record keeping and the repeatable reading; the assistant still helps you think about the question, the criteria and problem files.
 
@@ -93,9 +94,9 @@ Open an ordinary project folder in the app and put your own source files in a `d
 
 You do not need a schema or technical settings. The assistant helps turn your intent into one repeatable instruction, inspects the files and proposes a useful deliverable and checks. It asks about consequential choices, distinguishes your requirements from suggestions and flags missing/unsupported sources. A small agreed pilot is optional.
 
-Before the reader starts, you receive a short plan covering the task, file selection, deliverable/checks, uncertainty, reader/model and result location. The detailed plan and exact input remain available to inspect. Approve the concrete plan and identify the responsible person. The defaults are the available host CLI reader, your conversation language, a new project subfolder and readable Markdown results. An optional task-defined JSON schema supports structured work. These are proposals you can change.
+Before the reader starts, you receive a short plan covering the task, file selection, generated variables and definitions, checks, uncertainty, reader/model and result location. Approve the concrete plan and identify the responsible person. The assistant normally defines typed task-specific variables before execution. The default deliverable is a workbook with one row per run and generated variables in columns. Nested objects become columns and repeated values can have linked detail sheets. Errors and other auxiliary information have separate sheets. After completion, export the workbook without waiting for a separate spreadsheet request. Raw responses and JSON are kept in one documentation ZIP. Prose-only or historical unstructured tasks retain a text result column.
 
-Runs execute independently per file, using map–reduce for large inputs. You can stop, resume, inspect attempts, record actual human review, and export. Changed tasks/contracts/settings require a new plan version. Afterward, use the host flexibly for tables, reports or further analysis while preserving originating run/attempt references.
+Runs execute independently per file, with one fresh worker per attempt. Large CLI inputs use file tools; oversized API inputs fail explicitly. You can stop, resume, inspect attempts, record actual human review, and export. Changed tasks/contracts/settings require a new plan version. Afterward, use the host flexibly for tables, reports or further analysis while preserving originating run/attempt references.
 
 ### Hosts and readers
 
@@ -107,32 +108,13 @@ The app you talk to and the model that reads the documents are chosen separately
 
 CLI readers use your subscription sign-in and the vendor's agent harness with restricted context and tools. API readers make direct calls and are billed by the provider. The requested model and effort are recorded; whether a provider honoured the effort is only known if it reports it.
 
-### Optional legacy criteria file
-
-Use this for categorical coding only. General tasks use instructions and an optional [result contract](TASKS.md), without a criteria file.
-
-```json
-{
-  "name": "AI governance",
-  "version": "1",
-  "criteria": [{
-    "id": "ai_policy",
-    "name": "Documented AI policy",
-    "question": "Does the report explicitly describe an adopted AI policy?",
-    "allowed_answers": ["yes", "no", "not_mentioned"],
-    "evidence_required_for": ["yes", "no"],
-    "rule": "Use no only for an explicit statement that no policy exists."
-  }]
-}
-```
-
-`not_mentioned` requires that the whole document was read. Quotations are kept in the source language; answer labels are stored exactly as agreed. Plans record `language: en` or `nb` for the commentary.
-
 ### API keys (optional)
 
 `installer.cmd settings` opens `%LOCALAPPDATA%\systematic-document-analysis\settings\providers.env` in Notepad. Paste a key after `OPENAI_API_KEY=`, `ANTHROPIC_API_KEY=`, `OPENROUTER_API_KEY=`, `AZURE_AI_API_KEY=` or `SDA_CUSTOM_API_KEY=` and save. The file is plain text outside the project; do not share it, commit it or ask an assistant to read it. Keys are only used to authenticate requests and are excluded from stored inputs and exports. Environment variables with the same names override the file.
 
 ### Data
+
+v0.10.0 removes old criteria-based plans and database migration support. For a store containing analyses from v0.9.0 or earlier, keep the old store and exports, then select a fresh empty directory with `SDA_DATA` before starting the updated plugin. Do not point the new version at that old store. This is separate from installing/updating the plugin; installation does not delete analysis data.
 
 Analysis data is stored in `%LOCALAPPDATA%\systematic-document-analysis` and shared by both apps. `SDA_DATA` selects another directory. Nothing is moved or deleted automatically; `show_setup` displays the directory in use.
 

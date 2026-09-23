@@ -13,7 +13,7 @@ or data stores from claiming the same folder.
 ## Before execution
 
 Open `START_HERE.md` in the project folder for plans, input previews, exports and run status.
-Draft and approved plans are saved under `plans/`, with `Plan.md` and `task.json` (or a legacy criteria copy).
+Draft and approved plans are saved under `plans/`, with `Plan.md` and `task.json`.
 `show_input_package` saves the exact returned package under `previews/`.
 `inspect_source(export_markdown=true)` puts the extraction inspection copy there too.
 These are generated reading copies. Substantive changes must go through a new plan version;
@@ -21,108 +21,25 @@ editing a copy does not change the approved plan or historical inputs.
 
 ## After execution
 
-`export_results` creates a new snapshot under the project's `exports/` directory. General tasks have no fixed workbook:
+`export_results` creates a new snapshot under the project's `exports/` directory. Tasks deliver a workbook by default, with task-specific variables:
 
 ```text
 an1-<timestamp>-<unique-id>/
   START_HERE.md               # START_HER.md for Norwegian
-  Plan.md
-  results/
-    kj1.md                    # actual readable deliverable plus provenance
-    kj1.json                  # result in its task-defined structure
-  sources/                    # optional preserved originals
-  audit/
-    analysis.json
-    kj1.json                  # all attempts, reviews, validation, source units
-    attempts/
-      kj1.f1/                 # exact input, raw response, manifest, subcalls
+  Results.xlsx               # Resultater.xlsx for Norwegian
+  Documentation.zip          # Dokumentasjon.zip for Norwegian
 ```
 
-Every file, including failed or unstarted runs, has a visible status entry. The reading copy exposes the result itself; JSON preserves its exact shape. Export changes do not modify original results. Later tables/reports should retain run, attempt and plan references. See [task contracts and validation](TASKS.md).
+The first sheet has **exactly one row per run**, with the run ID, document and generated variables. Nested objects become columns. Repeated records default to detail sheets linked by run and parent IDs, with counts in the main row. Set `list_layout="inline"` to additionally display numbered lists in main cells. Independent lists never multiply the main rows or create a Cartesian product. Errors, run information and variable definitions live in separate sheets. Long text uses a linked sheet inside the same workbook.
 
-## Legacy criteria export
+Failed, unstarted and rejected runs retain their row with blank result variables; their status and reasons are in auxiliary sheets. Prose-only results remain a text variable; export does not invent new findings. Plan approval and automatic validation do not count as human result review.
 
-Analyses using a criteria file keep their existing workbook snapshot:
+The ZIP preserves `Plan.md`, original-shape JSON and readable results in `results/`, optional originals in `sources/`, and all attempts, reviews, validation, exact inputs and raw responses in `audit/`. Extract it only when this detail is needed. `include_csv=true` adds the main dataset and detail tables in `datasets/` inside the ZIP. CSV retains raw values, so use the workbook for safe Excel viewing. Export edits do not modify original results. See [task contracts and validation](TASKS.md).
 
-```text
-an1-20260921-120000-<unique-id>/
-  START_HER.md                 # START_HERE.md for English
-  Resultater.xlsx              # Results.xlsx for English
-  Plan.md
-  Kilder/                     # Sources/ for English; optional
-  Dokumentasjon/              # Documentation/ for English
-    analyse.json
-    modellkall/
-```
+## Status and portability
 
-The four workbook sheets are **Overview**, **Results**, **Runs** and **Model calls**
-(`Oversikt`, `Resultater`, `Kjøringer`, `Modellkall` in Norwegian). Results keeps each answer,
-comment and status beside its verbatim quotes and source locations. Multiple quotes and locations
-appear in matching order, separated by blank lines. Document names link to included source copies.
-Runs includes failures and actual human review history: one row per attempt and review event.
-An attempt without a review is explicitly marked Not reviewed. Multiple review events repeat
-the attempt ID; they are not additional attempts. Plan approval is not result review.
-The last sheet lists each recorded reader call, including separate
-extraction and synthesis calls, across all attempts. It includes session/request IDs, CLI version,
-requested/reported model and effort, timestamps, duration, exit/HTTP status, token usage and
-diagnostics, with relative links to the exact input, raw reply and manifest. Chunk parents do not
-count synthesis twice. Unavailable telemetry is explicitly marked **Not reported**. Historical
-timestamps are not inferred; older manifests and raw files are never rewritten.
-Header language follows the current plan; quotes and answer labels stay unchanged.
-Source strings are written as text, never executable Excel formulas. Strings exceeding Excel
-cell limits or containing XML-incompatible characters are preserved in linked text files.
-The start file identifies these cases; nothing is silently truncated.
+`show_status` is compact by default. Use `details=true` or `show_run` for exact attempt evidence, diagnostics and reported telemetry. Missing metadata remains unknown. Status covers current attempts; the documentation archive retains all attempts and reviews.
 
-`analyse.json` preserves the structured record. `modellkall/` retains exact requests,
-instructions, raw replies and metadata per attempt and extraction/synthesis call. Failed
-attempts remain recorded. Internal schema names remain stable for compatibility.
-Source copies are included by default. Use `include_sources=false` to omit them; a missing
-requested source stops the export.
+Every export is staged and published with a unique name. Failed exports leave no completed snapshot; existing exports and user edits remain untouched. Move all three deliverable files together. Windows export paths use extended-path filesystem operations without requiring a registry setting.
 
-`show_status` returns compact progress by default. Use `show_status(details=true)` for the previous
-full payload or `show_run` for a selected run's `model_calls` and immutable raw manifest. The legacy
-Python service and Norwegian Markdown status retain their existing detailed behavior.
-`run_warnings` exposes reader stderr diagnostics even on successful calls. Warnings do not block
-the queue or change result validation. Status covers the latest attempts; exports retain all attempts.
-Complete recorded diagnostics remain in the manifests; status snippets are bounded and indicate truncation.
-
-Recorded reader attempts may be simulated, failed or stopped before dispatch. Session IDs, raw events
-and exit status are local execution evidence, not independent vendor attestations. Requested model
-settings do not prove the actual model, reported token usage is not an invoice, and available file
-tools do not prove the reader used them.
-
-For new Claude CLI attempts, the reported model comes from top-level assistant message metadata.
-Helper models in `modelUsage` do not override the reader. Legacy JSON output can identify a model
-only when usage names exactly one model. Multiple reader models or ambiguous usage leave the
-model unreported with a diagnostic. Raw usage and events remain unchanged, including historical
-attempts recorded by older versions.
-
-Move the entire snapshot together to preserve relative links. Every export has a timestamp
-and unique suffix, so existing files and user edits are not overwritten. Failed exports are
-not published as completed snapshots. Active runs must finish before export.
-
-Excel edits do **not** update the authoritative analysis or count as human review.
-Use `record_review` for actual approval, rejection or correction with a person and reason.
-
-## Optional formats and compatibility
-
-- `include_csv=true`: four CSV tables under `CSV/`, in the current plan's language only.
-- `legacy_format=true`: the previous bilingual CSV/Markdown layout in a new visible snapshot.
-- XLSX is the reading surface; JSON/raw files serve audit and machine-processing needs.
-  Narrative Word/PDF reports are not automatically generated.
-
-Norwegian tools: `opprett_prosjekt(mappe=...)`, `sett_prosjektmappe`, and
-`eksporter(med_csv=..., gammelt_format=...)`. CLI examples:
-
-```text
-sda prosjekt "My analysis" --mappe "C:\Projects\Policy analysis"
-sda prosjektmappe pr1 "C:\Projects\New policy analysis"
-sda eksporter an1
-sda eksporter an1 --med-csv
-sda eksporter an1 --gammelt-format
-sda eksporter an1 --no-med-kilder
-```
-
-Migration adds only the project directory field. Earlier analyses, sources, approvals, attempts
-and reviews are preserved. Old projects get a visible folder at their first file-producing
-operation, or can be assigned one explicitly beforehand.
+CLI equivalents include `sda eksporter an1`, `--med-csv`, `--list-layout inline`, and `--no-med-kilder`. Editing Excel does not update the authoritative analysis or count as human review; use `record_review` for actual decisions.

@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import json
-import shutil
+from .file_io import copy_file, native_path, display_path
 import tempfile
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
@@ -27,22 +28,25 @@ def readable(value, depth=1):
     return json.dumps(value, ensure_ascii=False)
 
 
-def export(store, analysis_id, include_sources=True):
+def export(store, analysis_id, include_sources=True, *, include_csv=False, list_layout='sheets'):
     from .tjeneste import vis_kjoring
     from .reader_files import copy_artifacts
     from .dokument import sha256_fil
+    if list_layout not in ('sheets', 'inline'):
+        raise ValueError('list_layout must be sheets or inline.')
     analysis = store.analyse(analysis_id)
     runs = store.kjoringer(analysis_id)
     if any(r['status'] == 'aktiv' for r in runs):
         raise ValueError('Wait for active runs to finish before exporting a consistent snapshot.')
     versions = store.planversjoner(analysis_id)
     root = root_for(store, analysis['prosjekt_id'])
-    exports = root / 'exports'
+    exports = native_path(root / 'exports')
     exports.mkdir(exist_ok=True)
     final = exports / f'{analysis_id}-{datetime.now():%Y%m%d-%H%M%S}-{uuid4().hex[:8]}'
     nb = versions[-1]['plan'].sprak == 'nb'
     entry = 'START_HER.md' if nb else 'START_HERE.md'
-    counts, snapshot = {}, []
+    counts, snapshot, records = {}, [], []
+    archive_name = 'Dokumentasjon.zip' if nb else 'Documentation.zip'
     with tempfile.TemporaryDirectory(prefix='.building-', dir=exports) as temporary:
         stage = Path(temporary)
         (stage / 'results').mkdir()
@@ -61,10 +65,11 @@ def export(store, analysis_id, include_sources=True):
             detail = vis_kjoring(store, run['id'])
             document, attempts = detail['dokument'], store.forsok_for_kjoring(run['id'])
             chosen = next((a for a in attempts if a['id'] == run['gjeldende_forsok_id']), None)
-            task = detail['planversjon']['plan'].is_task
-            view = current(store, chosen) if chosen and task else None
+            view = current(store, chosen) if chosen else None
             response = json.loads(chosen['svar_json']) if chosen and chosen.get('svar_json') else None
             payload = view['result'] if view else response
+            records.append({'run': run, 'document': document, 'plan': detail['planversjon']['plan'],
+                            'chosen': chosen, 'view': view, 'detail': detail})
             aid = chosen['id'] if chosen else '—'
             review = view['review_status'] if view else 'See audit'
             simulated = bool(chosen and chosen['simulert'])
@@ -86,7 +91,7 @@ def export(store, analysis_id, include_sources=True):
                 if not source.is_file() or sha256_fil(source) != document['sha256']:
                     raise ValueError(f'Missing or changed preserved source: {document["id"]}.')
                 name = f'{document["id"]}_{source.name}'
-                shutil.copy2(source, folder / name)
+                copy_file(source, folder / name)
                 header += [f'[Source](../sources/{quote(name)})', '']
             header += ['---', '', readable(payload) if payload is not None else
                        ('Ingen resultatleveranse. ' if nb else 'No deliverable. ') + (run.get('merknad') or ''), '']
@@ -101,8 +106,8 @@ def export(store, analysis_id, include_sources=True):
                 for name in ('input.json', 'manifest.json', 'raasvar.txt', 'systeminstruks.txt',
                              'file-workspace.json', 'reader-helper.py'):
                     if (origin / name).is_file():
-                        shutil.copy2(origin / name, target / name)
-                for name in ('calls', 'workfiles'):
+                        copy_file(origin / name, target / name)
+                for name in ('workfiles',):
                     if (origin / name).is_dir():
                         copy_artifacts(origin / name, target / name, include_sources=include_sources)
             (stage / 'audit' / f'{run["id"]}.json').write_text(json.dumps(detail, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
@@ -113,10 +118,40 @@ def export(store, analysis_id, include_sources=True):
         (stage / 'audit' / 'analysis.json').write_text(json.dumps({'app_version': VERSJON, 'analysis': analysis,
             'plans': [{**v, 'plan': v['plan'].til_dict()} for v in versions], 'runs': snapshot,
             'exported': datetime.now().astimezone().isoformat()}, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
+        # Keep the detailed, original-shape records in one portable archive. Daily use
+        # starts in the workbook, not in a directory of per-file JSON documents.
         (stage / entry).write_text('\n'.join(lines) + '\n', encoding='utf-8')
-        stage.rename(final)
-    store.logg('eksportert', analyse_id=analysis_id, mappe=str(final), med_kilder=include_sources, format='task_results')
+        published = stage / 'deliverable'
+        published.mkdir()
+        from .task_workbook import write_workbook
+        workbook, datasets = write_workbook(published, analysis, versions, records, archive_name,
+                                            include_csv=include_csv, csv_directory=stage / 'datasets', list_layout=list_layout)
+        with zipfile.ZipFile(published / archive_name, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+            for path in sorted(stage.rglob('*')):
+                if path.is_file() and not path.is_relative_to(published):
+                    archive.write(path, path.relative_to(stage).as_posix())
+        (published / entry).write_text('\n'.join([
+            f'# {analysis["navn"]}', '',
+            f'[{"Åpne resultatene" if nb else "Open results"}]({workbook})', '',
+            ('Hovedarket har én rad per kjøring og resultatvariabler i kolonnene. Kjøringer uten gyldig resultat beholder sin rad med tomme variabler. '
+             'Nested objekter blir kolonner; gjentatte poster ligger i koblede detaljfaner. Feil, variabelforklaringer og kjøringsdokumentasjon ligger i egne faner.' if nb else
+             'The main sheet has one row per run and generated variables in columns. Runs without valid results retain their row with blank variables. '
+             'Nested objects become columns; repeated records have linked detail sheets. Errors, variable definitions and run evidence have separate sheets.'), '',
+            ('Dette regnearket er laget automatisk fra de bevarte resultatene, uten nye modellkall. Excel-endringer oppdaterer ikke originalene og registrerer ikke menneskelig kontroll.' if nb else
+             'This workbook is generated automatically from preserved results, without new model calls. Excel edits neither update originals nor record human review.'), '',
+            f'[{"Dokumentasjonsarkiv" if nb else "Documentation archive"}]({archive_name})', '',
+            ('Pakk ut arkivet ved behov for plan, råsvar, historiske forsøk, originale JSON-resultater og eventuelle kildekopier.' if nb else
+             'Extract the archive when you need the plan, raw replies, historical attempts, original JSON results or included source copies.'), '',
+            ('CSV-filer ligger i datasets/ i arkivet. De beholder råverdier; åpne regnearket for sikker Excel-visning.' if nb else
+             'CSV files are in datasets/ in the archive. They retain raw values; use the workbook for safe Excel viewing.') if include_csv else '',
+        ]).strip() + '\n', encoding='utf-8')
+        published.rename(final)
+    files = sorted(p.name for p in final.iterdir())
+    final = display_path(final)
+    store.logg('eksportert', analyse_id=analysis_id, mappe=str(final), med_kilder=include_sources,
+               include_csv=include_csv, format='task_results')
     write_index(store, analysis['prosjekt_id'])
-    return {'mappe': str(final), 'entrypoint': str(final / entry), 'results_directory': str(final / 'results'),
+    return {'mappe': str(final), 'entrypoint': str(final / entry), 'workbook': str(final / workbook),
+            'documentation_archive': str(final / archive_name), 'datasets': datasets,
             'project_directory': str(root), 'antall_kjoringer': len(runs), 'teller': counts,
-            'filer': sorted(p.name for p in final.iterdir()), 'format': 'task_results'}
+            'filer': files, 'format': 'task_results'}

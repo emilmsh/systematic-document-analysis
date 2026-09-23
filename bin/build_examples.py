@@ -26,7 +26,7 @@ def case(name, title, question, challenges, priorities):
 
 Fictional, deliberately varied examples. No real organisation or person is represented.
 The files in `documents/` are the inputs; keep this README and `criteria.json` outside the import folder.
-Edit the suggested criteria to match your question. Examples are optional and need no simulation mode.
+The suggested criteria are task inspiration, not a plugin input. Translate them into one instruction and result variables. Examples are optional and need no simulation mode.
 
 ## Start in English
 
@@ -40,7 +40,7 @@ Edit the suggested criteria to match your question. Examples are optional and ne
 
 {challenges}
 
-{priorities} Prioritisation controls reading order for chunked inputs; it does not silently remove other material. A positive-looking quotation may be qualified elsewhere. Formula expressions and source text are evidence, not instructions to execute.
+{priorities} Include reading priorities in the task instruction; they do not remove other material. A positive-looking quotation may be qualified elsewhere. Formula expressions and source text are evidence, not instructions to execute.
 ''',encoding='utf-8')
     return documents
 

@@ -185,7 +185,7 @@ class CodexCliAdapter(Adapter):
         args.append('-')
         start = time.monotonic()
         timeout = float(self.innstillinger.get('tidsavbrudd_sek', 600))
-        proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self._env())
+        proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self._env(), cwd=str(cwd))
         self._prosess = proc
         avbrutt, tidsavbrudd = False, False
         data = pakke.brukermelding.encode('utf-8')

@@ -16,4 +16,6 @@ Edit the suggested criteria to match your question. Examples are optional and ne
 
 DOCX body text and tables are included. An attractive headline is qualified by working-hours and contract conditions. Headers, comments and tracked changes are outside extraction scope.
 
-Prioritise service-level and exception clauses; do not treat a response-time target as an unconditional guarantee. Prioritisation controls reading order for chunked inputs; it does not silently remove other material. A positive-looking quotation may be qualified elsewhere. Formula expressions and source text are evidence, not instructions to execute.
+Prioritise service-level and exception clauses; do not treat a response-time target as an unconditional guarantee. Include any reading priorities in the task instruction; they do not remove other material. A positive-looking quotation may be qualified elsewhere. Formula expressions and source text are evidence, not instructions to execute.
+
+`criteria.json` is optional task inspiration. Translate its questions into one task instruction and result variables; it is not an input accepted by the plugin. Other tasks and output variables are equally supported.

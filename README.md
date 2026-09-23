@@ -2,7 +2,9 @@
 
 **A controlled for-loop over files.** Define one task, run an independent CLI or API worker for each file, and trace every result back to its instructions, source, settings and raw response. Works inside Claude Code and Codex, in English and Norwegian.
 
-If one task can be standardized and repeated across a file list, this plugin fits. The task determines the result: quotations, summaries, structured data, reviews or another deliverable. Readability, source traceability and honest validation are the defaults; a fixed classification schema or workbook is not required. Large files use controlled map–reduce within the same file's run. Prepare the task and develop the results further in your existing conversation.
+If one task can be standardized and repeated across a file list, this plugin fits. The default output is a dataset: **one row per iteration/run, with generated variables in columns**, delivered as an Excel workbook. The task determines the variables: extracted entities or passages, scores, topics, sentiment, calculations or other results. Nested objects become meaningful columns; repeated collections can have linked detail sheets. Errors and other auxiliary information have their own sheets. Each file gets one fresh worker; large CLI inputs use file tools, while oversized API inputs fail explicitly.
+
+**v0.10.0 is a breaking development release.** Plan records from v0.9.0 and earlier are unsupported. Keep their exported artifacts and use a fresh data store for new work; installation does not delete or migrate old analysis data. See [data location](docs/USAGE.md#data).
 
 [Task contracts and examples](docs/TASKS.md) · [Core principles and implementation plan](docs/CORE_REDESIGN.md)
 
@@ -16,7 +18,7 @@ If one task can be standardized and repeated across a file list, this plugin fit
 
    > Use Systematic Document Analysis. How do these annual reports describe their use of AI?
 
-The assistant helps make the task repeatable and shows the selected documents, expected deliverable and reader settings for approval before running. A readable result is the default; choose a structured result when useful. Your source files, results and settings stay separate from the plugin installation.
+The assistant proposes a repeatable task and useful variables, then shows the selected documents, definitions and reader settings for approval before running. After execution it exports the workbook automatically. Start with Results.xlsx; the raw responses, JSON and full audit trail are preserved together in Documentation.zip. Your source files, results and settings stay separate from the plugin installation.
 
 Open **installer.cmd** again and choose **Sign-in and settings** for reader sign-in or API keys, or **Update or repair** for maintenance. For update checks and update policy, use the menu in the **installed plugin folder**; its location is shown after installation. Never paste API keys into chat.
 
@@ -32,7 +34,7 @@ Open **installer.cmd** again and choose **Sign-in and settings** for reader sign
 
    > Bruk Systematic Document Analysis. Hvordan beskriver disse årsrapportene bruken av KI?
 
-Pluginen er i bunn og grunn en kontrollert for-løkke over filer: én standardisert oppgave, én uavhengig CLI/API-arbeider per fil, og et etterprøvbart kontrollspor. Oppgaven bestemmer resultatet. Assistenten hjelper med å presisere oppgaven og viser dokumentutvalget, forventet leveranse og leserinnstillingene før kjøring. Store filer behandles med map–reduce innenfor samme kjøring. Videre presentasjon og analyse kan dere velge i samtalen etterpå. Kilder, resultater og innstillinger lagres separat fra plugininstallasjonen.
+Pluginen er en kontrollert for-løkke over filer: én standardisert oppgave og én uavhengig CLI/API-arbeider per fil. Standardleveransen er **et regneark med én rad per kjøring og resultatvariabler i kolonnene**. Oppgaven bestemmer variablene. Nested objekter blir kolonner, mens gjentatte funn kan få koblede detaljfaner. Feil og øvrig tilleggsinformasjon får egne faner. Assistenten foreslår variablene før godkjenning og eksporterer regnearket etter kjøring. Åpne Resultater.xlsx; råsvar, JSON og kontrollsporet ligger samlet i Dokumentasjon.zip. Hver fil får én ny arbeider; store CLI-input leses med filverktøy, mens for store API-input gir en tydelig feil.
 
 Åpne **installer.cmd** igjen og velg **Innlogging og innstillinger** for lesermotor eller API-nøkler, eller **Oppdater eller reparer** for vedlikehold. Oppdateringer styres fra menyen i **den installerte pluginmappen**, som vises etter installasjon. Ikke lim API-nøkler inn i chatten.
 

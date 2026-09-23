@@ -45,7 +45,7 @@ def test_siste_kontroll_gjelder_etter_ti_registreringer(tmp_path):
     lager = Lager(tmp_path)
     pr = tjeneste.opprett_prosjekt(lager, "Test")
     tjeneste.importer_dokumenter(lager, pr["id"], [str(FIX / "fjordblikk_2025.pdf")])
-    an = tjeneste.opprett_analyse(lager, pr["id"], "Test", "EKSEMPEL", str(FIX / "eksempelkriterier.json"))
+    an = tjeneste.opprett_analyse(lager, pr["id"], "Test", "EKSEMPEL")
     aid = an["analyse"]["id"]
     kj = tjeneste.legg_til_kjoringer(lager, aid)["nye"][0]["id"]
     tjeneste.godkjenn_plan(lager, aid, "Test")
@@ -55,8 +55,8 @@ def test_siste_kontroll_gjelder_etter_ti_registreringer(tmp_path):
         tjeneste.registrer_kontroll(lager, fid, "Test", "godkjent", "Test av rekkefølge")
     tjeneste.registrer_kontroll(lager, fid, "Test", "avvist", "Siste vurdering skal gjelde")
     view = tjeneste.vis_kjoring(Lager(tmp_path), kj)
-    assert all(v["kontrollstatus"] == "avvist" for v in view["forsok"][0]["vurderinger"].values())
-    assert tjeneste.eksporter(lager, aid)["kontrollert_av_totalt"] == "0/3"
+    assert view["forsok"][0]["review_status"] == "avvist"
+    assert len(view["forsok"][0]["kontroller"]) == 10
 
 
 def test_bootstrap_avbrutt_installering_proves_igjen(tmp_path, monkeypatch):

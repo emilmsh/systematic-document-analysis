@@ -1,6 +1,7 @@
 """Instruction-first tasks through the real queue, using fake CLI/API responses only."""
 import copy
 import json
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -32,27 +33,18 @@ def fixture(tmp_path, monkeypatch, *, engine='claude_cli', structured=False, lar
     seen = []
     def read(self, package, *args):
         seen.append(package)
-        assert package.dokument_navn in package.brukermelding or 'chunks' in package.brukermelding
+        assert package.dokument_navn in package.brukermelding
         assert ('b.txt' if package.dokument_navn == 'a.txt' else 'a.txt') not in package.brukermelding
         evidence = [{'side': s.nr, 'sitat': QUOTE} for s in package.sider if QUOTE in s.tekst]
-        if 'findings' in package.svarskjema['properties']:
-            response = {'findings': [{'belegg': evidence, 'kommentar': 'Task-relevant audit statement.'}],
-                        'sider_lest': [s.nr for s in package.sider], 'merknader': []}
-            if broken and package.dokument_navn == 'a.txt':
-                response['sider_lest'] = []
-        else:
-            if not package.sider:
-                chunks = json.loads(package.brukermelding)['chunks']
-                evidence = [e for c in chunks for f in c['findings'] for e in f['belegg']]
-            result = [{'navn': 'Audit', 'passage': e['sitat'], 'unit': e['side']} for e in evidence] if structured else '# Findings\n\n' + QUOTE
-            response = {'result': result, 'source_units_read': [s.nr for s in package.sider], 'limitations': []}
-            if broken and package.dokument_navn == 'a.txt':
-                response['result'] = 42  # wrong task schema
+        result = [{'navn': 'Audit', 'passage': e['sitat'], 'unit': e['side']} for e in evidence] if structured else '# Findings\n\n' + QUOTE
+        response = {'result': result, 'source_units_read': [s.nr for s in package.sider], 'limitations': []}
+        if broken and package.dokument_navn == 'a.txt':
+            response['result'] = 42  # wrong task schema
         return Motorsvar(json.dumps(response), response, sesjon_id=package.forsok_id,
                          modell_rapportert='fake-model', motorinfo={'test_fixture': True})
     monkeypatch.setattr(ADAPTERE[engine], 'sjekk_stotte', lambda self: Stotte(True))
     monkeypatch.setattr(ADAPTERE[engine], 'kjor', read)
-    settings = {'input_budget_bytes': 9000 if large else 60000}
+    settings = {'input_budget_bytes': 200000 if large else 60000}
     if engine == 'kompatibel_api':
         settings['base_url'] = 'https://example.org/v1'
     if engine == 'azure_foundry_api':
@@ -68,10 +60,10 @@ def fixture(tmp_path, monkeypatch, *, engine='claude_cli', structured=False, lar
 @pytest.mark.parametrize('engine', ['claude_cli', 'codex_cli', 'openai_api', 'anthropic_api',
                                    'openrouter_api', 'kompatibel_api', 'azure_foundry_api'])
 @pytest.mark.parametrize('large', [False, True])
-def test_task_execution_and_map_reduce_all_readers(tmp_path, monkeypatch, engine, large):
+def test_task_execution_all_readers(tmp_path, monkeypatch, engine, large):
     store, aid, runs, seen = fixture(tmp_path, monkeypatch, engine=engine, structured=True, large=large)
     preview = tjeneste.vis_inputpakke(store, runs[0]['id'])['pakke']
-    assert (preview['processing']['mode'] == 'chunked') == large
+    assert preview['processing']['calls'] == 1
     tjeneste.godkjenn_plan(store, aid, 'Fixture reviewer')
     report = tjeneste.start(store, aid)
     assert not report['run_issues'], report
@@ -84,22 +76,19 @@ def test_task_execution_and_map_reduce_all_readers(tmp_path, monkeypatch, engine
         assert attempt['validering']['checks']['exact_quotes_checked'] >= 1
         assert attempt['validering']['checks']['semantic_accuracy'] == 'not_checked'
         assert public_result(detail)['attempts'][0]['result'][0]['navn'] == 'Audit'
-        if large:
-            assert len(attempt['model_calls']) > 2
-            assert json.loads(attempt['forsok']['raasvar'])['source_units_read'] == []
-            assert attempt['validering']['lesedekning']['fullstendig']
-            assert 'Aggregate' in attempt['validering']['lesedekning']['basis']
         assert attempt['forsok']['input_hash'] != ''
     assert len({p.dokument_id for p in seen}) == 2
     assert len({p.systeminstruks for p in seen if 'STAGE:' not in p.systeminstruks}) <= 1
     output = tjeneste.eksporter(store, aid)
     folder = Path(output['mappe'])
-    assert not list(folder.glob('*.xlsx'))
-    for run in runs:
-        assert QUOTE in (folder / 'results' / f'{run["id"]}.md').read_text(encoding='utf-8')
-        assert (folder / 'audit' / 'attempts' / f'{run["id"]}.f1' / 'input.json').is_file()
-    assert (folder / 'Plan.md').is_file()
-    assert len(list((folder / 'sources').iterdir())) == 2
+    assert Path(output['workbook']).is_file()
+    assert len(list(folder.iterdir())) == 3
+    with zipfile.ZipFile(output['documentation_archive']) as archive:
+        for run in runs:
+            assert QUOTE in archive.read(f'results/{run["id"]}.md').decode('utf-8')
+            assert f'audit/attempts/{run["id"]}.f1/input.json' in archive.namelist()
+        assert 'Plan.md' in archive.namelist()
+        assert len([n for n in archive.namelist() if n.startswith('sources/')]) == 2
 
 
 @pytest.mark.parametrize('large', [False, True])
@@ -111,22 +100,18 @@ def test_failure_is_local_and_intermediate_work_is_preserved(tmp_path, monkeypat
     assert not report['workflow_block']
     assert store.kjoring(runs[1]['id'])['status'] == KJ_FULLFORT
     first = tjeneste.vis_kjoring(store, runs[0]['id'])['forsok'][0]
-    if large:
-        assert len(first['model_calls']) == 1
-        assert first['forsok']['status'] == 'feilet'
-    else:
-        assert first['forsok']['status'] == 'valideringsfeil'
-        with pytest.raises(tjeneste.TjenesteFeil, match='invalid'):
-            tjeneste.registrer_kontroll(store, first['forsok']['id'], 'Reviewer', 'godkjent', 'Inspected')
+    assert first['forsok']['status'] == 'valideringsfeil'
+    with pytest.raises(tjeneste.TjenesteFeil, match='invalid'):
+        tjeneste.registrer_kontroll(store, first['forsok']['id'], 'Reviewer', 'godkjent', 'Inspected')
     output = tjeneste.eksporter(store, aid, med_kilder=False)
-    assert (Path(output['mappe']) / 'audit' / 'attempts' / first['forsok']['id'] / 'raasvar.txt').is_file()
+    with zipfile.ZipFile(output['documentation_archive']) as archive:
+        assert f'audit/attempts/{first["forsok"]["id"]}/raasvar.txt' in archive.namelist()
 
 
 def test_default_result_review_correction_retry_and_snapshot(tmp_path, monkeypatch):
     store, aid, runs, seen = fixture(tmp_path, monkeypatch)
     plan = tjeneste.vis_plan(store, aid)
     assert 'task_path' in plan and 'criteria_path' not in plan
-    assert plan['gjeldende']['plan'].kriterier == []
     tjeneste.godkjenn_plan(store, aid, 'Fixture reviewer')
     tjeneste.start(store, aid)
     attempt = store.forsok_for_kjoring(runs[0]['id'])[0]
@@ -137,7 +122,8 @@ def test_default_result_review_correction_retry_and_snapshot(tmp_path, monkeypat
     assert review['result'] == correction['result']
     assert store.forsok(attempt['id'])['raasvar'] == old
     out = tjeneste.eksporter(store, aid)
-    assert 'Actual corrected' in (Path(out['mappe']) / 'results' / f'{runs[0]["id"]}.md').read_text(encoding='utf-8')
+    with zipfile.ZipFile(out['documentation_archive']) as archive:
+        assert 'Actual corrected' in archive.read(f'results/{runs[0]["id"]}.md').decode('utf-8')
     assert 'Extract passages' in visning.md_plan(tjeneste.vis_plan(store, aid))
     assert 'Actual corrected' in visning.md_kjoring(tjeneste.vis_kjoring(store, runs[0]['id']))
     assert out['entrypoint'] in visning.md_eksport(out)
@@ -148,7 +134,8 @@ def test_default_result_review_correction_retry_and_snapshot(tmp_path, monkeypat
     assert len(store.forsok_for_kjoring(runs[0]['id'])) == 2
     out2 = tjeneste.eksporter(store, aid)
     assert out['mappe'] != out2['mappe']
-    assert len(list((Path(out2['mappe']) / 'audit' / 'attempts').iterdir())) == 3
+    with zipfile.ZipFile(out2['documentation_archive']) as archive:
+        assert len({p.split('/')[2] for p in archive.namelist() if p.startswith('audit/attempts/')}) == 3
 
 
 def test_versioning_and_mcp_preserve_custom_contract(tmp_path, monkeypatch):
@@ -214,19 +201,3 @@ def test_generic_plan_approval_and_contract_revision_are_enforced(tmp_path, monk
     assert 'Describe disagreements.' in Path(preview['plan_path']).read_text(encoding='utf-8')
     new = tjeneste.legg_til_kjoringer(store, aid)['nye'][0]
     assert tjeneste.vis_inputpakke(store, new['id'])['pakke']['input_hash'] != first
-
-
-def test_invalid_reduction_quote_is_not_accepted(tmp_path, monkeypatch):
-    store, aid, runs, seen = fixture(tmp_path, monkeypatch, structured=True, large=True)
-    original = ADAPTERE['claude_cli'].kjor
-    def invented(self, package, *args):
-        reply = original(self, package, *args)
-        if not package.sider:
-            reply.svar['result'][0]['passage'] = 'Background.'  # in source, but not in checked map findings
-            reply.raasvar = json.dumps(reply.svar)
-        return reply
-    monkeypatch.setattr(ADAPTERE['claude_cli'], 'kjor', invented)
-    tjeneste.godkjenn_plan(store, aid, 'Fixture reviewer')
-    report = tjeneste.start(store, aid)
-    assert len(report['run_issues']) == 2
-    assert all('absent from' in i['reason'] for i in report['run_issues'])

@@ -5,7 +5,7 @@ import json
 from typing import Any
 from .parametre import fra_plan, MODELLER, TENKENIVAA, STANDARD_TENKENIVAA
 from .api_oppsett import API_MOTORER
-from .source_formats import location, metadata
+from .source_formats import metadata
 
 SIMULERT_MERKE = "⚠ SIMULERT"
 
@@ -74,17 +74,12 @@ def md_plan(d: dict[str, Any]) -> str:
                f"- Språk / Language: {'English' if p.sprak == 'en' else 'Norsk bokmål'}. Sitater beholdes på originalspråket.",
                f"- Tenkenivå: **{fra_plan(p)['tenkenivaa']}**. Tidsgrense per dokument: {fra_plan(p)['tidsavbrudd_sek']:g} sekunder.",
                '- Dokumentbehandling: ' + json.dumps(fra_plan(p)['document_processing'], ensure_ascii=False),
-               f"- Analyseenhet: {p.analyseenhet}. Sider uten tekst: {'tillatt (lesedekning merkes)' if p.tillat_sider_uten_tekst else 'stopper kjøringen'}.",
+               f"- Analyseenhet: én fil per kjøring. Sider uten tekst: {'tillatt (lesedekning merkes)' if p.tillat_sider_uten_tekst else 'stopper kjøringen'}.",
                "**Bestilling (oppgavetekst):**", "", v["oppgavetekst"], "", f"**Formål:** {p.formaal}", ""]
-        if p.is_task:
-            from .task_contract import schema
-            ut += ['**Oppgave:**', '', p.task_instructions, '', '**Resultatkontrakt:**', '',
-                   '```json', json.dumps(schema(p), ensure_ascii=False, indent=2), '```', '',
-                   'Sitatkontroller: ' + json.dumps(p.quote_checks, ensure_ascii=False)]
-        else:
-            ut += [f"- Kriteriesett: {p.kriteriesett_navn} {p.kriteriesett_versjon}. {p.kriteriesett_merknad}", "",
-                   "| ID | Navn | Spørsmål | Tillatte svar | Belegg kreves ved | Regel |", "|---|---|---|---|---|---|"]
-            ut += [f"| {k.id} | {k.navn} | {k.sporsmal} | {', '.join(k.tillatte_svar)} | {', '.join(k.krever_belegg_ved)} | {k.regel} |" for k in p.kriterier]
+        from .task_contract import schema
+        ut += ['**Oppgave:**', '', p.task_instructions, '', '**Resultatkontrakt:**', '',
+               '```json', json.dumps(schema(p), ensure_ascii=False, indent=2), '```', '',
+               'Sitatkontroller: ' + json.dumps(p.quote_checks, ensure_ascii=False)]
         if p.tilleggsinstruks:
             ut += ["", f"**Tilleggsinstruks:** {p.tilleggsinstruks}"]
         if p.motor in API_MOTORER:
@@ -195,17 +190,10 @@ def md_kjoring(d: dict[str, Any]) -> str:
         if 'result' in fd:
             from .task_export import readable
             ut += ['', readable(fd['result']), '', f"Kontroll: {fd['review_status']}"]
-        if fd.get("vurderinger"):
-            ut += ["", "| Kriterium | Svar | Kilde | Validering | Kontroll | Belegg (kildeplassering: sitat) |", "|---|---|---|---|---|---|"]
-            for kid, v in fd["vurderinger"].items():
-                belegg = "<br>".join(f"{location(dok, b.get('side'))['location']}: «{str(b.get('sitat', ''))[:160]}»" for b in v["belegg"]) or "–"
-                valid = "ok" if v["validering_gyldig"] else ("FEIL: " + "; ".join(v["valideringsfeil"]))
-                kontroll = v["kontrollstatus"] + (f" ({v['kontroll']['ansvarlig']}, {v['kontroll']['tid'][:16]})" if v["kontroll"] else "")
-                ut.append(f"| {kid} {v['kriterium']} | **{v['svar']}** | {v['kilde']} | {valid} | {kontroll} | {belegg} |")
         if fd["kontroller"]:
             ut += ["", "Kontrollhistorikk:"]
             for ko in fd["kontroller"]:
-                ut.append(f"- {ko['tid']} {ko['handling']} {ko['kriterium_id'] or '(hele forsøket)'} av {ko['ansvarlig']}: {ko['begrunnelse']}"
+                ut.append(f"- {ko['tid']} {ko['handling']} av {ko['ansvarlig']}: {ko['begrunnelse']}"
                           + (f" — opprinnelig {json.dumps(ko['opprinnelig'], ensure_ascii=False)[:200]} → nytt {json.dumps(ko['nytt'], ensure_ascii=False)[:200]}" if ko["handling"] == "rettet" else ""))
         m = fd.get("manifest") or {}
         forbruk = m.get("forbruk") or {}
@@ -233,11 +221,4 @@ def md_startrapport(d: dict[str, Any]) -> str:
 
 
 def md_eksport(d: dict[str, Any]) -> str:
-    if d.get('format') == 'task_results':
-        return f"# Eksport ferdig\n\nStart her: {d['entrypoint']}\n\nResultater per fil: {d['results_directory']}\n\nKjøringer: {d['antall_kjoringer']}."
-    return "\n".join([f"# Eksport ferdig", "", f"- Mappe: `{d['mappe']}`", f"- Filer: {', '.join(d['filer'])}",
-                      f"- Kjøringer: {d['antall_kjoringer']} ({', '.join(f'{k}: {v}' for k, v in sorted(d['teller'].items()))})",
-                      f"- Kontrollerte vurderinger: {d['kontrollert_av_totalt']}",
-                      f"- Innhold: {'SIMULERT' if d['simulert'] and not d['ekte'] else 'blandet simulert/ekte' if d['simulert'] else 'ekte'}",
-                      "", f"Start her: {d.get('entrypoint', 'LESMEG.md')}",
-                      f"Arbeidsbok: {d['workbook']}" if d.get('workbook') else ""])
+    return f"# Eksport ferdig\n\nRegneark: {d['workbook']}\n\nÉn rad per kjøring, variabler i kolonnene.\n\nStart her: {d['entrypoint']}\n\nDokumentasjon: {d['documentation_archive']}\n\nKjøringer: {d['antall_kjoringer']}."

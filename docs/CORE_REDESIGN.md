@@ -1,28 +1,22 @@
 # A controlled for-loop over files
 
-The core applies one agreed task independently to each file through a CLI or API worker. It preserves the task version, source, exact input, settings, response, errors and review history for each attempt. It does not prescribe a research method or a final presentation.
+The core applies one agreed task independently to each selected file through a CLI or API worker:
 
-## Implementation plan
+```text
+Agree task, files, reader and result variables
+For each file:
+    Create a fresh worker context
+    Execute the same task with the chosen CLI/API
+    Record the result or error
+Collect results into a dataset and relevant auxiliary sheets
+```
 
-1. Add an instruction-first plan without required classification criteria. Allow an optional JSON Schema for the task result; default to readable Markdown. Keep execution metadata separate from the result.
-2. Reuse the existing queue, source hashes, isolated CLI sessions/API requests, immutable attempts and approval/version boundaries. Give large files task-aware map–reduce, preserving intermediate findings and their source locations.
-3. Validate the declared contract and reported source coverage. Offer optional exact-quotation checks against extracted source units. State explicitly which checks ran and what they cannot establish.
-4. Expose the actual task result in run inspection and portable per-file exports. Keep original responses and all attempts alongside derived presentation; preserve legacy classification exports.
-5. Rewrite the skill and onboarding around scope, task, execution and flexible follow-up. Test arbitrary result structures, defaults, failures, versioning, isolation, review and backwards compatibility.
+One main row means one run. Objects become columns; repeated collections become linked detail sheets. Failed or rejected results retain their row, with empty variables and separate diagnostic information. The default is readable without presentation instructions; users can choose variables, labels and alternative layouts.
 
-## Principles
+The task is flexible. A small envelope carries its result, reported source-unit coverage and limitations. No classification taxonomy, automatic quotation-extraction stage or per-file synthesis method is imposed. CLI workers can use file tools; APIs receive a bounded input. Oversized input fails explicitly when it cannot be handled within the chosen mode.
 
-- **Repeatability:** the same instruction and settings apply to a selected list of files. Material changes create a new plan version.
-- **Separation:** one file per run, a fresh worker context per attempt, no other file's answers as hidden context.
-- **Traceability:** a result links to source identity, plan version, exact input, requested/reported settings, raw response and errors. Unknown telemetry stays unknown.
-- **Readability:** expose the actual deliverable, not merely status, counts or a path into technical logs.
-- **Validation:** choose checks appropriate to the task. Passing a schema is not proof of factual accuracy, completeness or human review.
-- **Flexibility:** the host can prepare the task and derive tables, reports or further analyses afterward. Retain links to originating run/attempt IDs and distinguish transformations from original worker output.
+The queue retains task versions, immutable attempts, source hashes, exact inputs, raw responses, errors and actual reviews. A new adapter and fresh CLI session/API request are created for every iteration. Another file's answers are never passed to the worker. Context isolation is tested; CLI permissions are not full OS-level filesystem isolation.
 
-## Deliberate boundaries
+There is one public MCP interface and one task/validation/export path. This development refactor deliberately removes criteria-based plans, their exporters and Norwegian MCP aliases; it provides no legacy reader or migration layer. Existing exported files are not modified. Use a fresh analysis store when testing the new task model against plan records from v0.9.0 or earlier.
 
-The default Markdown result is a fallback, not a prescribed report layout. A small wire envelope carries result, reported source coverage and limitations; users choose the result's content and optional schema. No task-type enum or fixed workbook is required. Existing criteria-based plans remain supported.
-
-General tasks use a single call when the file fits and task-aware map–reduce when it does not. All fragments retain the same task, source IDs and overlap ranges. Checked intermediate findings go to synthesis with the task-defined final contract. Explicit budgets/timeouts remain binding, and no findings are silently truncated. Legacy criteria plans retain their classification-specific checks.
-
-This change does not claim OS-level isolation, automated semantic verification, or provider access validated by offline tests.
+Implementation: `task_contract.py` defines the task, `execution.py` prepares one call, `kjoring.py` runs the queue, and `task_dataset.py`/`task_workbook.py`/`task_export.py` present results. The host skill describes the workflow; tool descriptions only describe their operation.

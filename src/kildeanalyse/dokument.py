@@ -1,4 +1,4 @@
-"""Dokumentbehandling: import, bevart kopi, tekstuttrekk per fysisk side og sitatkontroll.
+"""Dokumentbehandling: import, bevart kopi, tekstuttrekk per fysisk side.
 
 Første prototype leser PDF med tekstlag via pypdf. Sider uten tekst oppdages og gjør
 dokumentet «uleselig» eller «delvis» lesbart; tekstuttrekk beviser ikke at innholdet er
@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-import shutil
-import unicodedata
+from .file_io import copy_file
 from pathlib import Path
 from typing import Any
 
@@ -88,7 +87,7 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path, *, ocr_mo
         return lager.dokument(eksisterende['id']), False
     kopi = undermappe("dokumenter", lager.mappe) / f"{sha}{kilde.suffix.lower()}"
     if not kopi.exists():
-        shutil.copy2(kilde, kopi)
+        copy_file(kilde, kopi)
     source_metadata = {}
     if kilde.suffix.lower() == '.pdf':
         sider, lesbarhet, metode = trekk_ut_tekst(kopi)
@@ -130,51 +129,3 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path, *, ocr_mo
 
 def sider_uten_tekst(dokument: dict[str, Any]) -> list[int]:
     return [s["nr"] for s in dokument["sider"] if not s.get('readable', s["tegn"] >= MIN_TEGN_PER_SIDE)]
-
-
-# --- sitatkontroll -------------------------------------------------------------------
-
-_BINDESTREKER = dict.fromkeys(map(ord, "‐‑‒–—―−"), "-")
-_SITATTEGN = {ord(c): '"' for c in "“”„«»"} | {ord(c): "'" for c in "‘’‚"}
-
-
-def normaliser(tekst: str) -> str:
-    """Gjør tekst sammenlignbar: NFKC, myke bindestreker bort, ens strek- og sitattegn, ett mellomrom, små bokstaver."""
-    t = unicodedata.normalize("NFKC", tekst)
-    t = t.replace("­", "")
-    t = t.translate(_BINDESTREKER).translate(_SITATTEGN)
-    t = re.sub(r"\s+", " ", t).strip()
-    return t.casefold()
-
-
-def sitat_finnes(sitat: str, sidetekst: str) -> bool:
-    s = normaliser(sitat)
-    if not s:
-        return False
-    if s in normaliser(sidetekst):
-        return True
-    # Tillat at et linjeskift i PDF-en har delt et ord med bindestrek: «arbeids-\ntrening».
-    uten_orddeling = re.sub(r"-\s+", "", normaliser(sidetekst))
-    return s in uten_orddeling
-
-
-def belegg_finnes(sitat: str, enhet: dict) -> bool:
-    """Short non-PDF evidence must match a complete value, not a coordinate digit."""
-    if not enhet.get('source') or len(sitat.strip()) >= MIN_TEGN_PER_SIDE:
-        return sitat_finnes(sitat, enhet['tekst'])
-    values = []
-    for cell in enhet['source'].get('cells', []):
-        if isinstance(cell, dict):
-            values.extend(str(cell[k]) for k in ('value','cached_value','formula') if cell.get(k) is not None)
-        else:
-            values.append(str(cell))
-    if not values:
-        return sitat_finnes(sitat, enhet['tekst'])
-    return any(normaliser(sitat) == normaliser(value) for value in values) or sitat_finnes(sitat, enhet['tekst']) and len(sitat.strip()) >= 10
-
-
-def finn_sitat_side(sitat: str, sider: list[dict[str, Any]]) -> int | None:
-    for side in sider:
-        if sitat_finnes(sitat, side["tekst"]):
-            return side["nr"]
-    return None

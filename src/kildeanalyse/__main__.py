@@ -24,7 +24,6 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("analyse", help="opprett analyse med planversjon 1")
     for a in ("prosjekt_id", "navn", "oppgavetekst"):
         s.add_argument(a)
-    s.add_argument('kriteriefil', nargs='?', help='Valgfri eldre kriteriefil; uten denne brukes oppgaven direkte.')
     s.add_argument('--task-instructions', default=None)
     s.add_argument('--output-schema', help='JSON Schema as JSON text, describing result only.')
     s.add_argument('--quote-checks', help='Optional exact quote checks as a JSON list.')
@@ -43,10 +42,10 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("kjoring", help="vis kjøring"); s.add_argument("kjoring_id")
     s = sub.add_parser("nytt-forsok", help="bestill nytt forsøk"); s.add_argument("kjoring_id"); s.add_argument("begrunnelse")
     s = sub.add_parser("kontroll", help="registrer kontroll"); s.add_argument("forsok_id"); s.add_argument("ansvarlig"); s.add_argument("handling")
-    s.add_argument("begrunnelse"); s.add_argument("--kriterium"); s.add_argument("--nytt-svar"); s.add_argument("--nytt-belegg", help="JSON-liste")
+    s.add_argument("begrunnelse"); s.add_argument("--replacement-response", help="JSON result envelope")
     s = sub.add_parser("eksporter", help="eksporter resultatpakke"); s.add_argument("analyse_id")
     s.add_argument("--med-kilder", action=argparse.BooleanOptionalAction, default=True)
-    s.add_argument("--med-csv", action="store_true"); s.add_argument("--gammelt-format", action="store_true")
+    s.add_argument("--med-csv", action="store_true"); s.add_argument("--list-layout", choices=("sheets", "inline"), default="sheets")
     args = p.parse_args(argv)
     lager = Lager(datamappe())
     try:
@@ -70,7 +69,7 @@ def _utfor(lager: Lager, a: argparse.Namespace) -> str:
     if k == "importer":
         return visning.md_import(tjeneste.importer_dokumenter(lager, a.prosjekt_id, a.stier))
     if k == "analyse":
-        r = tjeneste.opprett_analyse(lager, a.prosjekt_id, a.navn, a.oppgavetekst, a.kriteriefil, formaal=a.formaal, motor=a.motor,
+        r = tjeneste.opprett_analyse(lager, a.prosjekt_id, a.navn, a.oppgavetekst, formaal=a.formaal, motor=a.motor,
                                      modell=a.modell, tilleggsinstruks=a.tilleggsinstruks, tillat_sider_uten_tekst=a.tillat_sider_uten_tekst,
                                      motorinnstillinger=json.loads(a.motorinnstillinger) if a.motorinnstillinger else None,
                                      tenkenivaa=a.tenkenivaa, task_instructions=a.task_instructions,
@@ -100,11 +99,10 @@ def _utfor(lager: Lager, a: argparse.Namespace) -> str:
     if k == "nytt-forsok":
         return tjeneste.nytt_forsok(lager, a.kjoring_id, a.begrunnelse)["melding"]
     if k == "kontroll":
-        r = tjeneste.registrer_kontroll(lager, a.forsok_id, a.ansvarlig, a.handling, a.begrunnelse, kriterium_id=a.kriterium,
-                                        nytt_svar=a.nytt_svar, nytt_belegg=json.loads(a.nytt_belegg) if a.nytt_belegg else None)
-        return f"Kontroll {r['kontroll']['id']} registrert."
+        return json.dumps(tjeneste.registrer_kontroll(lager, a.forsok_id, a.ansvarlig, a.handling, a.begrunnelse,
+            replacement_response=json.loads(a.replacement_response) if a.replacement_response else None), ensure_ascii=False)
     if k == "eksporter":
-        return visning.md_eksport(tjeneste.eksporter(lager, a.analyse_id, a.med_kilder, include_csv=a.med_csv, legacy_format=a.gammelt_format))
+        return visning.md_eksport(tjeneste.eksporter(lager, a.analyse_id, a.med_kilder, include_csv=a.med_csv, list_layout=a.list_layout))
     raise TjenesteFeil(f"Ukjent kommando {k}")
 
 

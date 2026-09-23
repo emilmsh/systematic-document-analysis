@@ -16,27 +16,21 @@ FIX = Path(__file__).parent/'fixtures/syntetisk'
 CACHE = 'ERROR failed to load models cache: missing field supports_parallel_tool_calls'
 
 
-def test_historical_chunks_have_separate_proof_without_double_counting_or_inferred_telemetry():
-    chunks = [{'stage': stage, 'sesjon_id': f'session-{i}', 'modell_rapportert': None,
-               'forbruk': {'usage': {'input_tokens': 10*i, 'output_tokens': i}},
-               'motorinfo': {'returkode': 0, 'varighet_sek': i, 'stderr': CACHE}}
-              for i, stage in enumerate(['extract','extract','synthesis'], 1)]
-    manifest = {'startet': 'parent-start', 'avsluttet': 'parent-end',
-                'kjoreparametre': {'modell': 'requested', 'tenkenivaa': 'high'},
-                'motorinfo': {**chunks[-1]['motorinfo'], 'calls': chunks}}
-    attempt = {'id':'kj1.f1','kjoring_id':'kj1','motor':'codex_cli','simulert':False,
-               'input_sti':'attempts/kj1.f1','manifest_json':json.dumps(manifest)}
+def test_single_call_preserves_evidence_without_inferred_telemetry():
+    manifest = {'startet':'start', 'avsluttet':'end', 'sesjon_id':'session-1',
+                'kjoreparametre':{'modell':'requested', 'tenkenivaa':'high'},
+                'forbruk':{'usage':{'input_tokens':30, 'output_tokens':3}},
+                'motorinfo':{'returkode':0, 'varighet_sek':1, 'stderr':CACHE}}
+    attempt = {'id':'kj1.f1', 'kjoring_id':'kj1', 'motor':'codex_cli', 'simulert':False,
+               'input_sti':'attempts/kj1.f1', 'manifest_json':json.dumps(manifest)}
     original = copy.deepcopy(attempt)
     records = call_records(attempt, 'source.pdf')
-    assert len(records) == 3
-    assert sum(r['input_tokens'] for r in records) == 60
-    assert [r['session_id'] for r in records] == ['session-1','session-2','session-3']
-    assert all(r['started_at'] is None and r['reported_model'] is None for r in records)
-    assert all(r['reported_effort'] is None and r['requested_effort'] == 'high' for r in records)
-    assert all(r['exit_code'] == 0 and not r['simulated'] for r in records)
-    assert len(call_warnings(records)) == 3  # no duplicated synthesis diagnostic from parent
-    assert all(w['code'] == 'CLI_MODEL_CACHE' for w in call_warnings(records))
-    assert records[-1]['artifact_subdirectory'] == 'calls/0003-synthesis'
+    row, = records
+    assert row['input_tokens'] == 30 and row['session_id'] == 'session-1'
+    assert row['reported_model'] is None and row['reported_effort'] is None
+    assert row['requested_effort'] == 'high' and row['exit_code'] == 0
+    assert row['started_at'] == 'start' and row['artifact_subdirectory'] == ''
+    assert [w['code'] for w in call_warnings(records)] == ['CLI_MODEL_CACHE']
     assert attempt == original
 
 
@@ -45,18 +39,15 @@ def test_historical_chunks_have_separate_proof_without_double_counting_or_inferr
     {'prompt_tokens':0, 'completion_tokens':5, 'prompt_tokens_details':{'cached_tokens':0}},
 ])
 def test_missing_and_zero_usage_are_distinct_and_pre_dispatch_failure_is_not_success(usage):
-    manifest = {'motorinfo': {'calls': [
-        {'stage':'extract','dispatched':False,'feil':'Stopped before dispatch','motorinfo':{}},
-        {'stage':'extract','forbruk':{'usage':usage},'modell_rapportert':'actual-model',
-         'motorinfo':{'http_status':200,'stderr':'diagnostic '+('x'*1000)}},
-    ]}}
-    records = call_records({'id':'f1','manifest_json':json.dumps(manifest)})
-    assert records[0]['status'] == 'not_dispatched'
-    assert records[0]['input_tokens'] is None and records[0]['exit_code'] is None
-    assert records[1]['input_tokens'] == 0 and records[1]['cached_input_tokens'] == 0
-    assert records[1]['output_tokens'] == 5 and records[1]['reported_model'] == 'actual-model'
-    assert records[1]['warnings'][0]['truncated']
-    assert len(records[1]['warnings'][0]['message']) == 800
+    stopped = {'dispatched':False, 'avsluttet':'end', 'feil':'Stopped before dispatch', 'motorinfo':{}}
+    row, = call_records({'id':'f1', 'manifest_json':json.dumps(stopped)})
+    assert row['status'] == 'not_dispatched' and row['input_tokens'] is None and row['exit_code'] is None
+    success = {'forbruk':{'usage':usage}, 'modell_rapportert':'actual-model',
+               'motorinfo':{'http_status':200, 'stderr':'diagnostic '+('x'*1000)}}
+    row, = call_records({'id':'f2', 'manifest_json':json.dumps(success)})
+    assert row['input_tokens'] == 0 and row['cached_input_tokens'] == 0
+    assert row['output_tokens'] == 5 and row['reported_model'] == 'actual-model'
+    assert row['warnings'][0]['truncated'] and len(row['warnings'][0]['message']) == 800
     assert call_records({'id':'not-started'}) == []
 
 
@@ -65,7 +56,7 @@ def test_warnings_do_not_block_queue_and_call_export_preserves_all_attempts(tmp_
     store = Lager(tmp_path/'data')
     project = tjeneste.opprett_prosjekt(store,'Evidence',str(tmp_path/'visible'))
     tjeneste.importer_dokumenter(store, project['id'], [str(FIX/'fjordblikk_2025.pdf'),str(FIX/'steinbukk_2025.pdf')])
-    result = tjeneste.opprett_analyse(store,project['id'],'Evidence','Read',str(FIX/'eksempelkriterier.json'),
+    result = tjeneste.opprett_analyse(store,project['id'],'Evidence','Read',
                                      motor='simulert',sprak=language)
     aid = result['analyse']['id']
     runs = tjeneste.legg_til_kjoringer(store,aid)['nye']
@@ -106,23 +97,16 @@ def test_warnings_do_not_block_queue_and_call_export_preserves_all_attempts(tmp_
     export = tjeneste.eksporter(store,aid)
     root = Path(export['mappe'])
     book = load_workbook(export['workbook'])
-    sheet = book['Modellkall' if language == 'nb' else 'Model calls']
-    assert sheet.max_row == 4
-    assert {sheet.cell(i,2).value for i in range(2,5)} == {runs[0]['id']+'.f1',runs[0]['id']+'.f2',runs[1]['id']+'.f1'}
-    assert all(sheet.cell(i,7).value is True for i in range(2,5))  # never present doubles as real calls
-    assert all(sheet.cell(i,11).value == ('Ikke rapportert' if language == 'nb' else 'Not reported') for i in range(2,5))
-    assert all(sheet.cell(i,17).value == 0 for i in range(2,5))
-    assert all(CACHE in sheet.cell(i,24).value for i in range(2,5))
-    for row in range(2,5):
-        for column in (26,27,28):
-            link = sheet.cell(row,column).hyperlink.target
-            assert not Path(unquote(link)).is_absolute()
-            assert (root/unquote(link)).is_file()
-    assert CACHE in book['Resultater' if language == 'nb' else 'Results']['J2'].value
-    book.close()
-    audit = json.loads((root/('Dokumentasjon' if language == 'nb' else 'Documentation')/'analyse.json').read_text(encoding='utf-8'))
-    assert len(audit['model_calls']) == 3 and len(audit['run_warnings']) == 3
-    for run in runs:
-        for attempt in store.forsok_for_kjoring(run['id']):
-            exported = root/('Dokumentasjon' if language == 'nb' else 'Documentation')/'modellkall'/attempt['id']
-            assert (exported/'manifest.json').read_bytes() == (Path(attempt['input_sti'])/'manifest.json').read_bytes()
+    import zipfile
+    assert book['Resultater' if language == 'nb' else 'Results'].max_row == 3
+    with zipfile.ZipFile(export['documentation_archive']) as archive:
+        records = []
+        for run in runs:
+            audit = json.loads(archive.read(f'audit/{run["id"]}.json'))
+            for detail in audit['forsok']:
+                records.extend(detail['model_calls'])
+            for attempt in store.forsok_for_kjoring(run['id']):
+                original = Path(attempt['input_sti'])/'manifest.json'
+                assert archive.read(f'audit/attempts/{attempt["id"]}/manifest.json') == original.read_bytes()
+        assert len(records) == 3
+        assert all(CACHE in json.dumps(r) for r in records)
