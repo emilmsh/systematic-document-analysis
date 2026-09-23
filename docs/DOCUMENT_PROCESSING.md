@@ -44,6 +44,9 @@ and Codex's workspace-write policy is primarily a write boundary.
 
 The source checksum, initial file hashes, workspace guide, helper identity, raw
 tool transcript and generated workfiles are retained with the attempt/export.
+If the host execution policy blocks Codex CLI shell commands, the plugin marks the
+file-reading attempt failed even if Codex returns a schema-valid answer. A successful
+`show_setup` checks availability and login, not permission to use the reader's shell.
 The original source remains unchanged; changing the working source copy rejects
 the result. Export never follows worker-created symlinks or junctions. Omitting
 sources from export also omits `workfiles/source.*`; transcripts, OCR and rendered

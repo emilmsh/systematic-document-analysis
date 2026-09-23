@@ -1,7 +1,7 @@
 {
   "name": "systematic-document-analysis",
   "description": "A controlled for-loop over files: repeatable tasks, independent CLI/API workers and an audit trail.",
-  "version": "0.10.4",
+  "version": "0.10.5",
   "author": {
     "name": "Emil Mathias Strøm Halseth"
   }

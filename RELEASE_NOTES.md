@@ -1,3 +1,9 @@
+# 0.10.5 — Codex output schema and shell-policy failures
+
+- Remove unsupported `uniqueItems` from the schema sent to Codex CLI while keeping the original schema and its post-run validation unchanged.
+- Treat a Codex file-reading attempt whose shell was blocked by execution policy as a failed run, even if the model returned valid JSON with limitations.
+- A live synthetic Claude Code file read succeeded. A live Codex CLI attempt passed schema validation but its shell was blocked by the local execution policy, including in a direct CLI run without this plugin. Codex file reading remains unverified in that environment.
+
 # 0.10.4 — Reader-specific file tools
 
 - Tell Claude Code to use native Glob, Grep and Read for the searchable source chunks, with its fixed helper for parsing and OCR.

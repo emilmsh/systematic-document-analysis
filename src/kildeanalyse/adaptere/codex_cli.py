@@ -34,11 +34,14 @@ KONFIG = (
 
 
 def strengt_skjema(skjema):
-    """Codex krever lukkede objekter og alle felter i required."""
+    """Adapt the transport schema; the original contract is validated after the run."""
     s = copy.deepcopy(skjema)
     def besok(node):
         if not isinstance(node, dict):
             return
+        # Codex's strict output transport rejects uniqueItems. Keep that
+        # constraint in the authoritative schema and check it after generation.
+        node.pop('uniqueItems', None)
         if node.get('type') == 'object':
             node['additionalProperties'] = False
             node['required'] = list(node.get('properties', {}))
@@ -46,8 +49,19 @@ def strengt_skjema(skjema):
                 besok(child)
         if 'items' in node:
             besok(node['items'])
+        for branch in node.get('anyOf', []):
+            besok(branch)
     besok(s)
     return s
+
+
+def file_tool_policy_error(stderr: str, *, file_tools: bool) -> str | None:
+    """A model answer cannot count as a file read when its shell was blocked."""
+    if file_tools and 'blocked by policy' in stderr.casefold() and 'exec_command failed' in stderr.casefold():
+        return ('Codex CLI could not read the assigned source: its shell command was blocked by the '
+                'execution policy. This attempt was not accepted; inspect the CLI environment or use '
+                'an approved reader before retrying.')
+    return None
 
 
 def les_hendelser(stdout, returkode, *, file_tools=False):
@@ -224,6 +238,10 @@ class CodexCliAdapter(Adapter):
                             'stderr': err.decode('utf-8', 'replace')[:3000],
                             'svarskjema_sendt': strengt_skjema(pakke.svarskjema), 'innlogging': 'chatgpt',
                             'file_workspace': workspace}
+        policy_error = file_tool_policy_error(err.decode('utf-8', 'replace'), file_tools=bool(workspace))
+        if policy_error:
+            result.svar = None
+            result.feil = policy_error
         result.motorinfo['auth_gate'] = auth_gate('codex', True)
         # Legacy metadata only; the queue now blocks on confirmed missing auth,
         # while ordinary CLI failures remain individual run issues.

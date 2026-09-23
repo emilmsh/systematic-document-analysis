@@ -1,6 +1,6 @@
 import json
 import pytest
-from kildeanalyse.adaptere.codex_cli import les_hendelser, strengt_skjema, CodexCliAdapter
+from kildeanalyse.adaptere.codex_cli import les_hendelser, strengt_skjema, file_tool_policy_error, CodexCliAdapter
 
 def stream(extra=None):
     events=[{'type':'thread.started','thread_id':'new-session'}, {'type':'item.completed','item':{'type':'agent_message','text':'{"vurderinger": []}'}}]
@@ -23,11 +23,20 @@ def test_codex_invalid_response(raw):
     assert les_hendelser(raw,0).feil
 
 def test_strict_schema_preserves_original():
-    original={'type':'object','properties':{'vurderinger':{'type':'array','items':{'type':'object','properties':{'svar':{'type':'string'}}}}}}
+    original={'type':'object','properties':{'vurderinger':{'type':'array','uniqueItems':True,'items':{'type':'object','properties':{'svar':{'type':'string'}}}}}}
     result=strengt_skjema(original)
     assert 'additionalProperties' not in original
+    assert original['properties']['vurderinger']['uniqueItems'] is True
     assert result['required']==['vurderinger']
+    assert 'uniqueItems' not in result['properties']['vurderinger']
     assert result['properties']['vurderinger']['items']['additionalProperties'] is False
+
+
+def test_shell_policy_block_is_file_run_failure():
+    stderr = 'ERROR codex_core::tools::router: error=exec_command failed: CreateProcess Rejected: blocked by policy'
+    assert 'could not read the assigned source' in file_tool_policy_error(stderr, file_tools=True)
+    assert file_tool_policy_error(stderr, file_tools=False) is None
+    assert file_tool_policy_error('', file_tools=True) is None
 
 def test_no_api_fallback(monkeypatch):
     monkeypatch.setenv('OPENAI_API_KEY','not-a-real-key')
@@ -43,15 +52,17 @@ def test_no_api_fallback(monkeypatch):
     monkeypatch.setattr('subprocess.run', lambda *a, **kw: SimpleNamespace(returncode=0, stdout=b'Logged in using API key', stderr=b''))
     assert not CodexCliAdapter().sjekk_stotte().ok
 
-def test_codex_input_schema_is_the_sent_schema():
+def test_codex_input_schema_uses_transport_subset_and_plan_keeps_validation():
     from kildeanalyse.modell import Plan
     from kildeanalyse.prompt import bygg_inputpakke
+    from kildeanalyse.task_contract import schema
     from pathlib import Path
     raw=json.loads((Path(__file__).parent/'fixtures/syntetisk/eksempelkriterier.json').read_text(encoding='utf-8'))
     plan=Plan(formaal='Test',task_instructions='Read',motor='codex_cli',modell='')
     doc={'id':'d','navn':'test','sha256':'test','antall_sider':1,'sider':[{'nr':1,'tegn':20,'tekst':'syntetisk dokument'}]}
     pakke=bygg_inputpakke(plan,doc,forsok_id='f',kjoring_id='k')
-    assert pakke.svarskjema==strengt_skjema(pakke.svarskjema)
+    assert schema(plan)['properties']['source_units_read']['uniqueItems'] is True
+    assert 'uniqueItems' not in pakke.svarskjema['properties']['source_units_read']
     assert pakke.til_dict()['svarskjema']==pakke.svarskjema
 
 def test_quota_reports_each_run_without_retry(tmp_path, monkeypatch):
