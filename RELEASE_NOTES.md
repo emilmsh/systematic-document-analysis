@@ -1,3 +1,12 @@
+# 0.10.10 — Explicit execution-settings sign-off
+
+- Present the worker engine, exact requested model or deployment, and reasoning effort before execution; distinguish these from the host conversation's model.
+- Propose missing choices and explain relevant quality, time and cost tradeoffs. Include consequential limits and supported settings, with provider defaults and unsupported controls identified.
+- Obtain one user sign-off covering the task, file scope and settings. Reuse approval for an unchanged plan; obtain approval of a revised plan before running changed settings.
+- Update English and Norwegian usage guidance. No runtime, dependency or data-format changes.
+
+Verification: skill validator passed; 3 distribution tests and 5 selected installer package/version tests passed. Built and validated the release ZIP from fresh staging. No live reader calls or active installation changes; the full runtime suite was not rerun for this instruction-only change.
+
 # 0.10.9 — Native CLI tool freedom with neutral per-file context
 
 - Give each file-enabled Claude/Codex worker its CLI's built-in tools, including general shell and web tools when offered. Remove the fixed Claude shell-command allowlist, Codex workspace sandbox/network block, and the Claude 60-turn cap. Keep explicit text-only plans tool-free.

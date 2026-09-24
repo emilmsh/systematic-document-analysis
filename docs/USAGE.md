@@ -100,7 +100,7 @@ Runs execute independently per file, with one fresh worker per attempt. Large CL
 
 ### Hosts and readers
 
-The app you talk to and the model that reads the documents are chosen separately.
+The app you talk to and the model that reads the documents are chosen separately. Before execution, the assistant presents the reader, exact requested model ID or deployment name, and reasoning effort for your sign-off together with the task and file scope. Missing choices are proposed explicitly, including relevant time, cost or quality tradeoffs. Material settings such as timeout, output-token limit, input-byte budget, file-tool access and API endpoint/format are included when applicable; provider defaults and unsupported controls are identified. One approval covers the concrete plan and settings. Existing approval remains sufficient for the same plan; changes require approval of the revised plan before execution.
 
 | Host (conversation) | Reader (reads each document) |
 |---|---|
