@@ -130,7 +130,8 @@ def test_oversized_api_file_is_visible_in_status_and_workbook_and_next_file_runs
         values = list(book[sheet].values)
         return [dict(zip(values[0], row)) for row in values[1:]]
     row = next(r for r in records('Results') if r['Run'] == failed['id'])
-    assert all(value is None for key, value in row.items() if key not in ('Run', 'Document', 'Status', 'Human review'))
+    assert all(value is None for key, value in row.items()
+               if key not in ('Run', 'Document', 'Status', 'Dataset', 'Validation', 'Human review'))
     assert 'feilet' in row['Status']
     assert any(r['Run'] == failed['id'] and 'input_budget_bytes' in r['Message']
                for r in records('Errors and notes'))

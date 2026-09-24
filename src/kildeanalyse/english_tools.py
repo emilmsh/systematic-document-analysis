@@ -39,7 +39,7 @@ def register(server, get_store):
     def set_project_directory(project_id: str, directory: str) -> str:
         return call(tjeneste.set_project_directory, project_id, directory)
 
-    @server.tool(description='Import PDF, DOCX, XLSX, CSV/TSV, TXT or Markdown files. Folders are non-recursive. Returns imports and exclusions.')
+    @server.tool(description='Import selected files or a non-recursive folder. Common document and text formats are extracted; other files are preserved for file-capable CLI workers without automatic extraction. Returns imports and exclusions.')
     def import_documents(project_id: str, paths: list[str], ocr_mode: str = 'auto', ocr_languages: str = 'eng+nor') -> str:
         return call(tjeneste.importer_dokumenter, project_id, paths, ocr_mode=ocr_mode, ocr_languages=ocr_languages)
 
@@ -131,6 +131,6 @@ def register(server, get_store):
         return call(tjeneste.registrer_kontroll, attempt_id, reviewer, actions[action], reason,
                     replacement_response=replacement_response)
 
-    @server.tool(description='Export a readable workbook and documentation ZIP. Default: one row per document, using its newest planned run (no fallback on failure). row_scope=runs includes history. output_directory selects a shorter export parent when needed. Nested records default to detail sheets; list_layout=inline also shows numbered lists in the main row. include_csv adds data tables inside the ZIP.')
-    def export_results(analysis_id: str, include_sources: bool = True, include_csv: bool = False, list_layout: str = 'sheets', row_scope: str = 'documents', output_directory: str | None = None) -> str:
+    @server.tool(description='Export a readable workbook and documentation ZIP. Default: one row per run; row_scope=documents selects the newest planned run per document, including failures. output_directory selects a shorter export parent when needed. Nested records use detail sheets; include_csv adds data tables inside the ZIP.')
+    def export_results(analysis_id: str, include_sources: bool = True, include_csv: bool = False, list_layout: str = 'sheets', row_scope: str = 'runs', output_directory: str | None = None) -> str:
         return call(tjeneste.eksporter, analysis_id, include_sources, include_csv=include_csv, list_layout=list_layout, row_scope=row_scope, output_directory=output_directory)

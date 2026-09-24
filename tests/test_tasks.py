@@ -31,10 +31,12 @@ def test_file_reader_instructions_match_cli_tools():
     assert 'rg --files' not in claude
     plan.motor = 'codex_cli'
     codex = instruction(plan)
-    assert 'rg --files, rg -n' in codex
-    assert 'Get-Content' in codex
-    assert 'no extra MCP tool is required' in codex
-    assert 'only the exact bundled helper prefix' not in codex
+    assert 'available file and shell tools' in codex
+    assert 'Choose a method suited to the agreed task' in codex
+    assert 'one simple read-only command' not in codex
+    assert 'Preserve requested quotations exactly' not in codex
+    plan.quote_checks = CHECKS
+    assert 'Preserve requested quotations exactly' in instruction(plan)
 
 
 def fixture(tmp_path, monkeypatch, *, engine='claude_cli', structured=False, large=False, broken=False):

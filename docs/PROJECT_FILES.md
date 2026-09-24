@@ -30,7 +30,7 @@ an1-<unique-id>/
   Documentation.zip          # Dokumentasjon.zip for Norwegian
 ```
 
-The first sheet has **exactly one row per document by default**, with the run ID, document and generated variables. Nested objects become columns. Repeated records default to detail sheets linked by run and parent IDs, with counts in the main row. Set `list_layout="inline"` to additionally display numbered lists in main cells. Independent lists never multiply the main rows or create a Cartesian product. Errors have a sheet only when relevant; run history and variable definitions remain in the ZIP. Long text uses a linked sheet inside the same workbook.
+The first sheet has **one row per run by default**, with the document, run ID, status and generated variables. Nested objects become columns. Repeated records default to detail sheets linked by run and parent IDs, with counts in the main row. Set `list_layout="inline"` to additionally display numbered lists in main cells. Independent lists never multiply the main rows or create a Cartesian product. Errors and retries have sheets only when relevant. Variable definitions have a readable sheet. Long text uses a linked sheet inside the same workbook.
 
 Failed, unstarted and rejected runs retain their row with blank result variables; their status is visible in the main sheet and reasons appear in the notes sheet. Prose-only results remain a text variable; export does not invent new findings. Plan approval and automatic validation do not count as human result review.
 
@@ -46,6 +46,6 @@ CLI equivalents include `sda eksporter an1`, `--med-csv`, `--list-layout inline`
 
 ## Delivery selection and Excel paths
 
-Agree the format, row unit, fields and repeated-record layout before reader execution; retain that agreement in the plan purpose. The default `row_scope="documents"` chooses the newest planned run per document by plan version, creation time and numeric run ID. A failed or pending latest run stays visible and is never replaced by an older success. Identical output schemas share columns; different definitions stay separate. Empty detail sheets are omitted. The reader workbook omits overview, telemetry and variable-dictionary tabs; definitions and full history remain in the ZIP. `row_scope="runs"` explicitly requests the full historical workbook.
+Agree the format, row unit, fields and repeated-record layout before reader execution; retain that agreement in the plan purpose. The default `row_scope="runs"` keeps one row per run, including failures and unstarted work. `row_scope="documents"` selects the newest planned run per document by plan version, creation time and numeric run ID; it never falls back to an older success. Identical output schemas share columns; different definitions stay separate. Empty detail sheets are omitted. Error and retry sheets appear only when relevant. Full telemetry and attempt history remain in the ZIP.
 
 Exports use short unique folder names. On Windows the complete XLSX path is checked against a conservative 218-character compatibility budget before files are written. `output_directory` (CLI: `--output-directory`) chooses an absolute parent for this export without moving the project or previous exports. A longer path requires a shorter destination, even if Python can write it.

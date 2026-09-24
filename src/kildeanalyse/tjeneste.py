@@ -88,15 +88,15 @@ def importer_dokumenter(lager: Lager, prosjekt_id: str, stier: list[str], *, ocr
                 if entry.is_dir():
                     skipped.append({'path': str(entry), 'reason': 'subdirectory',
                                     'message': 'Subfolders are not imported automatically. Select this folder explicitly if it belongs in scope.'})
-                elif entry.is_file() and entry.suffix.lower() in SUPPORTED:
+                elif entry.is_file():
                     kandidater.append(entry)
                 else:
-                    skipped.append({'path': str(entry), 'reason': 'unsupported_format',
-                                    'message': 'Not a supported source file. Resolve relevant exclusions before starting the analysis.'})
+                    skipped.append({'path': str(entry), 'reason': 'not_a_file',
+                                    'message': 'Only regular files in the selected folder are imported.'})
         else:
             kandidater = [p]
         if not kandidater:
-            resultater.append({"sti": sti, "feil": "No supported files in this directory."})
+            resultater.append({"sti": sti, "feil": "No files in this directory."})
         for fil in kandidater:
             try:
                 dok, nytt = importer_dokument(lager, prosjekt_id, fil, ocr_mode=ocr_mode, ocr_languages=ocr_languages)
@@ -534,7 +534,7 @@ def registrer_kontroll(lager: Lager, forsok_id: str, ansvarlig: str, handling: s
     return review(lager, forsok, plan, ansvarlig, handling, begrunnelse, replacement_response)
 
 
-def eksporter(lager, analyse_id, med_kilder=True, *, include_csv=False, list_layout='sheets', row_scope='documents', output_directory=None):
+def eksporter(lager, analyse_id, med_kilder=True, *, include_csv=False, list_layout='sheets', row_scope='runs', output_directory=None):
     from .task_export import export
     return export(lager, analyse_id, med_kilder, include_csv=include_csv, list_layout=list_layout, row_scope=row_scope, output_directory=output_directory)
 

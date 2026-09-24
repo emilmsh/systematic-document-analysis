@@ -48,7 +48,7 @@ def readable(value, depth=1):
     return json.dumps(value, ensure_ascii=False)
 
 
-def export(store, analysis_id, include_sources=True, *, include_csv=False, list_layout='sheets', row_scope='documents', output_directory=None):
+def export(store, analysis_id, include_sources=True, *, include_csv=False, list_layout='sheets', row_scope='runs', output_directory=None):
     from .tjeneste import vis_kjoring
     from .reader_files import copy_artifacts
     from .dokument import sha256_fil
@@ -162,8 +162,9 @@ def export(store, analysis_id, include_sources=True, *, include_csv=False, list_
             for record in sorted(records, key=lambda r: (ranks[r['run']['planversjon_id']], r['run']['opprettet'], int(r['run']['id'][2:]))):
                 latest[record['document']['id']] = record
             selected = list(latest.values())
-        workbook, datasets = write_workbook(published, analysis, versions, selected, archive_name,
-                                            include_csv=include_csv, csv_directory=stage / 'datasets', list_layout=list_layout, compact=row_scope == 'documents')
+        workbook, datasets = write_workbook(published, versions, selected,
+                                            include_csv=include_csv, csv_directory=stage / 'datasets',
+                                            list_layout=list_layout, row_scope=row_scope)
         with zipfile.ZipFile(published / archive_name, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
             for path in sorted(stage.rglob('*')):
                 if path.is_file() and not path.is_relative_to(published):
@@ -173,9 +174,10 @@ def export(store, analysis_id, include_sources=True, *, include_csv=False, list_
             f'[{"Åpne resultatene" if nb else "Open results"}]({workbook})', '',
             (('Én rad per dokument: nyeste planlagte kjøring, også ved feil. Ingen automatisk bruk av eldre resultater.' if nb else
               'One row per document: newest planned run, including failures. No automatic fallback to older results.') if row_scope == 'documents' else
-             ('Historikk: én rad per kjøring.' if nb else 'History: one row per run.')), '',
-            ('Tekststykker og andre gjentatte poster har detaljfaner. Plan, variabeldefinisjoner og full historikk ligger i arkivet.' if nb else
-             'Excerpts and other repeated records have detail sheets. The plan, variable definitions and full history are in the archive.'), '',
+             ('Én rad per kjøring; tidligere forsøk vises i egen fane når en kjøring er prøvd igjen.' if nb else
+              'One row per run; earlier attempts have a separate sheet when a run was retried.')), '',
+            ('Tekststykker og andre gjentatte poster har detaljfaner. Variablene forklares i regnearket; plan og full historikk ligger i arkivet.' if nb else
+             'Excerpts and other repeated records have detail sheets. The workbook explains its variables; the plan and full history are in the archive.'), '',
             ('Dette regnearket er laget automatisk fra de bevarte resultatene, uten nye modellkall. Excel-endringer oppdaterer ikke originalene og registrerer ikke menneskelig kontroll.' if nb else
              'This workbook is generated automatically from preserved results, without new model calls. Excel edits neither update originals nor record human review.'), '',
             f'[{"Dokumentasjonsarkiv" if nb else "Documentation archive"}]({archive_name})', '',

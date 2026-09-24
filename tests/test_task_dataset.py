@@ -44,7 +44,7 @@ def test_object_variables_keep_types_and_one_row_per_run(tmp_path, monkeypatch):
         [{'entity': 'A', 'metrics': {'score': 0, 'count': 0, 'positive': False}},
          {'entity': 'B', 'metrics': {'score': None, 'count': 3, 'positive': True}}])
     preview = tjeneste.vis_plan(store, aid)['dataset_preview']
-    assert preview['structured'] and 'One row per document' in preview['row_unit']
+    assert preview['structured'] and 'One row per run' in preview['row_unit']
     out = tjeneste.eksporter(store, aid, row_scope='runs', include_csv=True)
     book = load_workbook(out['workbook'])
     result = rows(book['Results'])
@@ -57,7 +57,7 @@ def test_object_variables_keep_types_and_one_row_per_run(tmp_path, monkeypatch):
     assert [r[positive] for r in active] == [False, True]
     assert book.sheetnames[0] == 'Results'
     assert 'Score on a 0–10 scale.' in str(list(book['Variables'].values))
-    assert '/metrics/score' in str(list(book['Runs'].values))
+    assert '/metrics/score' in str(list(book['Variables'].values))
     with zipfile.ZipFile(out['documentation_archive']) as archive:
         assert 'datasets/Results.csv' in archive.namelist()
         assert json.loads(archive.read(f'results/{runs[1]["id"]}.json'))['metrics']['score'] is None
@@ -87,7 +87,7 @@ def test_nested_arrays_never_multiply_main_rows_or_cross_join(tmp_path, monkeypa
     issues = rows(book['Errors and notes'])
     assert len(issues) == 2
     assert all(r['Message'] == 'Limited evidence.' for r in issues)
-    assert "['Limited evidence.']" not in str(list(book['Runs'].values))
+    assert "['Limited evidence.']" not in str(list(book['Results'].values))
 
 
 def test_root_list_quotes_have_main_row_and_source_located_detail(tmp_path, monkeypatch):
@@ -114,7 +114,7 @@ def test_failure_and_rejection_retain_blank_main_rows(tmp_path, monkeypatch):
     assert len(rows(book['Results'])) == 2
     assert all(r['Result'] is None for r in rows(book['Results']))
     assert 'Errors and notes' in book.sheetnames
-    assert 'Rejected' in str(list(book['Runs'].values))
+    assert 'Rejected' in str(list(book['Results'].values))
     with zipfile.ZipFile(out['documentation_archive']) as archive:
         assert archive.read(f'audit/attempts/{attempt["id"]}/raasvar.txt').decode('utf-8') == attempt['raasvar']
 
@@ -151,13 +151,13 @@ def test_empty_root_lists_and_null_results_are_not_failed_or_negative(tmp_path, 
     out = tjeneste.eksporter(store, aid, row_scope='runs')
     book = load_workbook(out['workbook'])
     assert book['Results'].max_row - 1 == len(store.kjoringer(aid))
-    states = [r['Dataset'] for r in rows(book['Runs'])]
+    states = [r['Dataset'] for r in rows(book['Results'])]
     assert 'Empty result' in states and 'Result is null' in states
     active = {r['Run']: r for r in rows(book['Results'])}
     count_key = next(k for k in active[runs[0]['id']] if 'Result items (count)' in k)
     assert active[runs[0]['id']][count_key] == 0
     assert active[runs[1]['id']][count_key] is None
-    assert not rows(book['Findings'])  # null must not invent a detail record
+    assert 'Findings' not in book.sheetnames  # Null must not invent an empty detail sheet.
 
 
 

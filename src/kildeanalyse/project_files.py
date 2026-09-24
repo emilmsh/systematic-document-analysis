@@ -87,8 +87,8 @@ def plan_text(analysis: dict, versions: list[dict], language: str) -> str:
         from .task_dataset import plan_preview
         preview = plan_preview(plan)
         lines += [f'### {"Datasett" if nb else "Dataset"}', '',
-                  ('Standard: én rad per dokument fra nyeste planlagte kjøring, med synlig status. Historikk kan eksporteres eksplisitt.' if nb else
-                   'Default: one row per document from its newest planned run, with visible status. History is an explicit export option.'), '',
+                  ('Standard: én rad per kjøring, med synlig status. Eksporten kan begrenses til nyeste planlagte kjøring per dokument.' if nb else
+                   'Default: one row per run, with visible status. Export can select the newest planned run per document.'), '',
                   ('Nested objekter utvides til kolonner. Gjentatte poster bevares i koblede detaljfaner.' if nb else
                    'Nested objects expand into columns. Repeated records have linked detail sheets.'), '']
         for table in preview['tables']:

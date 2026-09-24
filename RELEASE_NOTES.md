@@ -1,3 +1,10 @@
+# 0.10.8 — General file-loop harness and readable per-run results
+
+- Keep the worker instruction task-neutral: each run gets one assigned file, a fresh CLI/API context, relevant source copies and available tools. Exact quotation checks apply only when requested; no task method such as map–reduce is mandated or excluded.
+- Preserve other regular file types for file-capable CLI workers without claiming automatic extraction. An API reader fails visibly before dispatch when no usable content was extracted. CLI readers may inspect image-only PDFs when the plan explicitly permits pages without text.
+- Default the workbook to one row per run, with status, result variables and variable definitions visible in the workbook. Repeated records, errors and retry attempts get separate sheets only when useful; `row_scope="documents"` remains an explicit latest-run-per-file view. Remove the unused expanded workbook path.
+- Keep earlier attempts and raw responses in the documentation archive. No existing source or analysis records are rewritten, and export makes no model calls.
+
 # 0.10.7 — Source-grounded quotation whitespace and blank-page checks
 
 - Restore only source whitespace in declared quotations when the non-whitespace tokens identify exactly one extracted source span. Preserve the raw reply and record the original text, restored text, source position and hash; ambiguous or substantive changes still fail validation. This does not constitute human review.

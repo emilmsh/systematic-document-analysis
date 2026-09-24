@@ -4,9 +4,10 @@ import json
 import pytest
 
 from kildeanalyse import tjeneste
+from kildeanalyse.adaptere import ADAPTERE
 from kildeanalyse.dokument import sider_uten_tekst
 from kildeanalyse.lager import Lager
-from kildeanalyse.modell import Plan
+from kildeanalyse.modell import Plan, Motorsvar, Stotte
 from kildeanalyse.task_contract import validate
 from kildeanalyse.task_results import current
 
@@ -98,3 +99,72 @@ def test_export_destination_is_checkable_before_reader_execution(tmp_path):
     long = tjeneste.preview_export_destination(store, analysis['id'], str(long_parent))
     assert not long['ready']
     assert long['path_characters'] > long['windows_excel_budget']
+
+
+def test_explicit_cli_file_inspection_can_run_on_image_only_pdf(tmp_path, monkeypatch):
+    fitz = pytest.importorskip('fitz')
+    path = tmp_path / 'visual.pdf'
+    pdf = fitz.open()
+    page = pdf.new_page()
+    page.draw_rect(fitz.Rect(40, 40, 400, 400), fill=(0, 0, 0))
+    pdf.save(path)
+    pdf.close()
+    store = Lager(tmp_path / 'data')
+    project = tjeneste.opprett_prosjekt(store, 'Visual task')
+    document = tjeneste.importer_dokumenter(store, project['id'], [str(path)], ocr_mode='off')['resultater'][0]['dokument']
+    assert document['lesbarhet'] == 'uleselig'
+    created = tjeneste.opprett_analyse(store, project['id'], 'Visual inspection', 'Describe the image.',
+        task_instructions='Describe the image in this file.', motor='claude_cli',
+        tillat_sider_uten_tekst=True)
+    aid = created['analyse']['id']
+    run = tjeneste.legg_til_kjoringer(store, aid)['nye'][0]
+    def reply(self, package, *args):
+        response = {'result': 'A black rectangle.', 'source_units_read': [],
+                    'limitations': ['No text was extracted; the original page needs visual inspection.']}
+        return Motorsvar(json.dumps(response), response, sesjon_id=package.forsok_id,
+                         modell_rapportert='fake-model', motorinfo={'test_fixture': True})
+    monkeypatch.setattr(ADAPTERE['claude_cli'], 'sjekk_stotte', lambda self: Stotte(True))
+    monkeypatch.setattr(ADAPTERE['claude_cli'], 'kjor', reply)
+    tjeneste.godkjenn_plan(store, aid, 'Fixture reviewer')
+    assert not tjeneste.start(store, aid)['run_issues']
+    shown = tjeneste.vis_kjoring(store, run['id'])['forsok'][0]
+    assert shown['result'] == 'A black rectangle.'
+    assert not shown['validering']['lesedekning']['fullstendig']
+
+
+def test_unparsed_file_is_available_to_cli_but_api_stops_before_dispatch(tmp_path, monkeypatch):
+    source = tmp_path / 'item.custom'
+    source.write_text('A task-relevant custom file.', encoding='utf-8')
+    store = Lager(tmp_path / 'data')
+    project = tjeneste.opprett_prosjekt(store, 'Custom file')
+    document = tjeneste.importer_dokumenter(store, project['id'], [str(source)])['resultater'][0]['dokument']
+    assert document['source_metadata']['format'] == 'opaque'
+    assert document['sha256']
+    seen = []
+    def reply(self, package, *args):
+        seen.append(package)
+        response = {'result': 'Task completed on the assigned original.', 'source_units_read': [],
+                    'limitations': ['No automatic extraction was available.']}
+        return Motorsvar(json.dumps(response), response, sesjon_id=package.forsok_id,
+                         modell_rapportert='fake-model', motorinfo={'test_fixture': True})
+    monkeypatch.setattr(ADAPTERE['claude_cli'], 'sjekk_stotte', lambda self: Stotte(True))
+    monkeypatch.setattr(ADAPTERE['claude_cli'], 'kjor', reply)
+    cli = tjeneste.opprett_analyse(store, project['id'], 'Task', 'Work on this file.', motor='claude_cli')
+    cli_id = cli['analyse']['id']
+    run = tjeneste.legg_til_kjoringer(store, cli_id)['nye'][0]
+    tjeneste.godkjenn_plan(store, cli_id, 'Fixture reviewer')
+    assert not tjeneste.start(store, cli_id)['run_issues']
+    assert seen[0].local_source_path == document['lagret_kopi']
+    assert tjeneste.vis_kjoring(store, run['id'])['forsok'][0]['result'] == 'Task completed on the assigned original.'
+
+    called = []
+    monkeypatch.setattr(ADAPTERE['openai_api'], 'sjekk_stotte', lambda self: Stotte(True))
+    monkeypatch.setattr(ADAPTERE['openai_api'], 'kjor', lambda *args: called.append(True))
+    api = tjeneste.opprett_analyse(store, project['id'], 'API task', 'Work on this file.',
+                                    motor='openai_api', modell='test-model')
+    api_id = api['analyse']['id']
+    api_run = tjeneste.legg_til_kjoringer(store, api_id)['nye'][0]
+    tjeneste.godkjenn_plan(store, api_id, 'Fixture reviewer')
+    assert tjeneste.start(store, api_id)['run_issues']
+    assert not called
+    assert 'no automatically extracted content' in store.kjoring(api_run['id'])['merknad']

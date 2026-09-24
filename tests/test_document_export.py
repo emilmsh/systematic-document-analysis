@@ -18,20 +18,22 @@ def test_latest_failed_run_does_not_fall_back_and_full_history_survives(tmp_path
     for _ in range(5):
         tjeneste.ny_planversjon(store, aid, 'Same task, changed reader settings')
         latest = tjeneste.legg_til_kjoringer(store, aid)['nye']
-    out = tjeneste.eksporter(store, aid, include_csv=True)
+    out = tjeneste.eksporter(store, aid, row_scope='documents', include_csv=True)
     book = load_workbook(out['workbook'])
     main = rows(book['Results'])
     assert len(main) == 2
     assert {r['Run'] for r in main} == {r['id'] for r in latest}
     assert all('planlagt' in r['Status'] for r in main)
     assert all(r['Result items (count)'] is None for r in main)
-    assert book.sheetnames == ['Results']  # no empty findings, definitions or telemetry tabs
+    assert book.sheetnames == ['Results', 'Variables']  # No empty findings or telemetry tabs.
     with zipfile.ZipFile(out['documentation_archive']) as z:
         assert f'results/{old[0]["id"]}.json' in z.namelist()
-        assert 'datasets/variables.json' in z.namelist()
+        assert 'datasets/Results.csv' in z.namelist()
         assert len(json.loads(z.read('audit/analysis.json'))['runs']) == 12
-    historical = tjeneste.eksporter(store, aid, row_scope='runs')
+    historical = tjeneste.eksporter(store, aid)
     assert load_workbook(historical['workbook'])['Results'].max_row == 13
+    assert historical['row_scope'] == 'runs'
+    assert load_workbook(historical['workbook']).sheetnames == ['Results', 'Findings', 'Variables']
 
 
 def test_same_schema_across_selected_versions_shares_columns_and_details(tmp_path, monkeypatch):
@@ -42,10 +44,10 @@ def test_same_schema_across_selected_versions_shares_columns_and_details(tmp_pat
     new = tjeneste.legg_til_kjoringer(store, aid, [original[0]['dokument_id']])['nye']
     tjeneste.godkjenn_plan(store, aid, 'Test')
     tjeneste.start(store, aid, kjoring_ider=[r['id'] for r in new])
-    out = tjeneste.eksporter(store, aid)
+    out = tjeneste.eksporter(store, aid, row_scope='documents')
     book = load_workbook(out['workbook'])
-    assert book.sheetnames == ['Results', 'Findings']
-    assert book['Results'].max_column == 5
+    assert book.sheetnames == ['Results', 'Findings', 'Variables']
+    assert book['Results'].max_column == 7
     assert [r['Result items (count)'] for r in rows(book['Results'])] == [1, 1]
     assert len(rows(book['Findings'])) == 2
     assert all('Record ID' in r for r in rows(book['Findings']))
@@ -64,12 +66,28 @@ def test_latest_invalid_result_has_visible_status_and_reason(tmp_path, monkeypat
     assert by_doc['b.txt']['Result']
 
 
+def test_retry_history_gets_a_readable_sheet_only_when_needed(tmp_path, monkeypatch):
+    store, aid, runs, _ = fixture(tmp_path, monkeypatch, structured=True)
+    tjeneste.godkjenn_plan(store, aid, 'Test')
+    tjeneste.start(store, aid)
+    before = load_workbook(tjeneste.eksporter(store, aid)['workbook'])
+    assert 'Attempts' not in before.sheetnames
+    tjeneste.nytt_forsok(store, runs[0]['id'], 'Repeat after inspecting first result')
+    tjeneste.start(store, aid, kjoring_ider=[runs[0]['id']])
+    output = tjeneste.eksporter(store, aid)
+    book = load_workbook(output['workbook'])
+    assert 'Attempts' in book.sheetnames
+    entries = rows(book['Attempts'])
+    assert [item['Role'] for item in entries if item['Run'] == runs[0]['id']] == ['Earlier', 'Current']
+    assert len(rows(book['Results'])) == 2
+
+
 def test_changed_definitions_are_not_merged(tmp_path, monkeypatch):
     store, aid, runs, _ = fixture(tmp_path, monkeypatch)
     tjeneste.ny_planversjon(store, aid, 'Different definition', output_schema={'type':'string', 'description':'New meaning'})
     tjeneste.legg_til_kjoringer(store, aid, [runs[0]['dokument_id']])
     book = load_workbook(tjeneste.eksporter(store, aid)['workbook'])
-    assert book['Results'].max_column == 6
+    assert book['Results'].max_column == 8
     assert len([c.value for c in book['Results'][1] if ': Result' in str(c.value)]) == 2
 
 

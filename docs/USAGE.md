@@ -20,9 +20,9 @@ First-time setup requires internet access. The installer provides Python and ins
 ## Project folder and results
 
 Choose a visible project folder in the conversation. Plans and input previews are saved there
-before execution. The default result is a workbook: one row per document by default, with generated variables
+before execution. The default result is a workbook: one row per run, with generated variables
 in columns. Nested objects become columns; repeated records have linked detail sheets.
-Errors have a sheet when relevant; variable definitions and run history remain in the ZIP. Start in `START_HERE.md`.
+Errors and retries have sheets when relevant; variables are explained in the workbook. Start in `START_HERE.md`.
 One documentation ZIP preserves the plan, original results, source copies and audit trail.
 Export edits do not update recorded results. See [Project files and exports](PROJECT_FILES.md).
 
@@ -32,12 +32,12 @@ When one task is repeated across forty reports, offers or workbooks, you need to
 
 ## What it does
 
-- **Reads files from a folder you choose.** PDF, DOCX, XLSX, CSV/TSV, TXT and Markdown. Scanned PDFs can be OCR-processed locally. Large files are read in bounded pieces and the findings are then combined in one further call, with every call recorded.
+- **Works on files from a folder you choose.** PDF, DOCX, XLSX, CSV/TSV, TXT and Markdown have automatic extraction; other files are preserved for file-capable CLI workers. Scanned PDFs can be OCR-processed locally. A large CLI file remains available to one worker with searchable source copies; oversized API input fails visibly.
 - **Repeats the task you define.** A plain instruction is enough; task-defined result schemas and relevant checks are optional. The assistant helps make the instruction repeatable.
 - **Runs one document per attempt with fixed settings.** The plan records reader, model, reasoning effort, language and instructions. The assistant can inspect source text during preparation; a named person approves the plan before the reader runs. Changing it creates a new version; earlier attempts are untouched.
 - **Stores execution evidence.** Every attempt retains exact input, raw answer, declared checks and their outcomes. Source units have PDF page, Word block, sheet/cell, text line or CSV record locations. Exact-quote checks are optional for general tasks.
 - **Records human review.** A person approves, corrects or rejects each assessment with a reason. Automatic checks are never recorded as human review.
-- **Delivers a dataset automatically.** One workbook row per run, task-specific variables in columns, and separate sheets for repeated records and auxiliary information. Original results and the full audit trail are preserved in one documentation ZIP. Legacy criteria analyses retain their existing exports.
+- **Delivers a dataset automatically.** One workbook row per run, task-specific variables in columns, and separate sheets for repeated records, errors and retries when relevant. Original results and the full audit trail are preserved in one documentation ZIP.
 
 The conversation stays in Claude Code or Codex. The plugin adds the record keeping and the repeatable reading; the assistant still helps you think about the question, the criteria and problem files.
 
@@ -45,7 +45,7 @@ The conversation stays in Claude Code or Codex. The plugin adds the record keepi
 
 - It does not summarise across documents. Each file is one unit; comparison is your job, or the assistant's, using the exported results.
 - It does not retry, switch model or fall back to a paid API on its own. Errors and timeouts are reported per run while other runs finish.
-- It does not read charts, photographs or embedded objects, and does not recalculate spreadsheet formulas.
+- Automatic extraction does not interpret charts, photographs or embedded objects, and does not recalculate spreadsheet formulas. A file-capable CLI worker may inspect the original when its available tools support the task.
 - It runs on Windows only and needs a local Python runtime, which the installer provides.
 
 ## Installation
@@ -92,9 +92,9 @@ Open an ordinary project folder in the app and put your own source files in a `d
 
 > Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in the documents folder.
 
-You do not need a schema or technical settings. The assistant helps turn your intent into one repeatable instruction, inspects the files and proposes a useful deliverable and checks. It asks about consequential choices, distinguishes your requirements from suggestions and flags missing/unsupported sources. A small agreed pilot is optional.
+You do not need a schema or technical settings. The assistant helps turn your intent into one repeatable instruction, inspects the files and proposes a useful deliverable and checks. It asks about consequential choices, distinguishes your requirements from suggestions and flags files that need a file-capable reader. A small agreed pilot is optional.
 
-Before the reader starts, you receive a short plan covering the task, file selection, generated variables and definitions, checks, uncertainty, reader/model and result location. Approve the concrete plan and identify the responsible person. The assistant normally defines typed task-specific variables before execution. The default deliverable is a workbook with one row per document by default and generated variables in columns. Nested objects become columns and repeated values can have linked detail sheets. Errors and other auxiliary information have separate sheets. After completion, export the workbook without waiting for a separate spreadsheet request. Raw responses and JSON are kept in one documentation ZIP. Prose-only or historical unstructured tasks retain a text result column.
+Before the reader starts, you receive a short plan covering the task, file selection, generated variables and definitions, checks, uncertainty, reader/model and result location. Approve the concrete plan and identify the responsible person. The assistant normally defines typed task-specific variables before execution. The default deliverable is a workbook with one row per run and generated variables in columns. Nested objects become columns and repeated values can have linked detail sheets. Errors and other auxiliary information have separate sheets when relevant. After completion, export the workbook without waiting for a separate spreadsheet request. Raw responses and JSON are kept in one documentation ZIP. Prose-only tasks retain a text result column.
 
 Runs execute independently per file, with one fresh worker per attempt. Large CLI inputs use file tools; oversized API inputs fail explicitly. You can stop, resume, inspect attempts, record actual human review, and export. Changed tasks/contracts/settings require a new plan version. Afterward, use the host flexibly for tables, reports or further analysis while preserving originating run/attempt references.
 

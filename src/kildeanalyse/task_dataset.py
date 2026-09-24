@@ -72,7 +72,7 @@ def plan_preview(plan):
     return {
         'workbook': 'Resultater.xlsx' if plan.sprak == 'nb' else 'Results.xlsx',
         'structured': plan.output_schema is not None,
-        'row_unit': 'One row per document in Results, using its newest planned run, including failures; row_scope=runs includes history.',
+        'row_unit': 'One row per run in Results, including failures; row_scope=documents selects the newest planned run per document.',
         'tables': [{'path': pointer(t.path), 'name': t.schema.get('title'),
                     'row_unit': t.schema.get('description') or ('One result item per file' if t.repeated else 'One result per file'),
                     'variables': [{'path': pointer(c.path), 'role': c.role,

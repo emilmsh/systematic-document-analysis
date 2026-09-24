@@ -273,10 +273,19 @@ class Koer:
         if sha256_fil(Path(dok['lagret_kopi'])) != dok['sha256']:
             raise KoFeil('The stored source has changed. Reimport it and approve a new plan before analysis.')
         uten = sider_uten_tekst(dok)
-        if dok["lesbarhet"] == ULESELIG or (uten and not plan.tillat_sider_uten_tekst):
-            merknad = (f"Dokumentet «{dok['navn']}» har {len(uten)} av {dok['antall_sider']} sider uten tekstlag "
-                       f"(fysisk side {', '.join(map(str, uten))}). Ingen vurdering er gjort, og resultatet er ikke «ikke omtalt». "
-                       "Skaff en versjon med tekst (for eksempel OCR) og importer den på nytt, eller tillat sider uten tekst i planen.")
+        opaque = dok.get('source_metadata', {}).get('format') == 'opaque'
+        can_inspect_without_text = (plan.motor in ('claude_cli', 'codex_cli')
+                                    and plan.motorinnstillinger.get('file_tools')
+                                    and (plan.tillat_sider_uten_tekst or opaque))
+        if (uten and not plan.tillat_sider_uten_tekst and not opaque) or (dok["lesbarhet"] == ULESELIG and not can_inspect_without_text):
+            if opaque:
+                merknad = (f"File «{dok['navn']}» has no automatically extracted content. No finding was made. "
+                           "Use a file-capable CLI reader that can inspect the original.")
+            else:
+                merknad = (f"Dokumentet «{dok['navn']}» har {len(uten)} av {dok['antall_sider']} sider uten tekstlag "
+                           f"(fysisk side {', '.join(map(str, uten))}). Ingen vurdering er gjort, og resultatet er ikke «ikke omtalt». "
+                           "Skaff en versjon med tekst (for eksempel OCR) og importer den på nytt, "
+                           "eller tillat sider uten tekst i planen for en CLI-leser som kan inspisere originalfilen.")
             self.lager.oppdater_kjoring(kj["id"], status=KJ_ULESELIG, merknad=merknad)
             self.lager.logg("kjoring_stoppet_uleselig", analyse_id=analyse_id, kjoring_id=kj["id"], sider_uten_tekst=uten)
             return KJ_ULESELIG
@@ -335,8 +344,9 @@ class Koer:
             if dok.get('source_metadata', {}).get('ocr', {}).get('pages'):
                 validering['advarsler'].append({'type':'ocr', 'melding':'Quotes were checked against OCR text. Verify important evidence against original page images.'})
             if uten:
-                validering["advarsler"].append({"type": "sider_uten_tekst",
-                                                "melding": f"Fysisk side {', '.join(map(str, uten))} har ikke tekstlag og kunne ikke leses."})
+                message = ('Original file has no automatic extraction; the worker must inspect it with file tools.'
+                           if opaque else f"Physical PDF page {', '.join(map(str, uten))} has no extracted text; review the worker's limitations and tool record.")
+                validering["advarsler"].append({"type": "source_not_extracted", "melding": message})
             status, kj_status = (FS_FULLFORT, KJ_FULLFORT) if validering["gyldig"] else (FS_VALIDERINGSFEIL, KJ_VALIDERINGSFEIL)
         manifest["status"] = status
         (mappe / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")

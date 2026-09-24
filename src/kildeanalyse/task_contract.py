@@ -77,7 +77,7 @@ def instruction(plan):
         'Return the supplied JSON envelope: result, source_units_read and limitations.',
         file_instruction if plan.motorinnstillinger.get('file_tools') else
         'Use only the supplied source; no tools or other files.',
-        'Preserve quotations exactly. Report uncertainty and missing information rather than inventing values. '
+        'Report uncertainty and missing information rather than inventing values. '
         'source_units_read lists extracted units actually read; it is a self-report, not verified comprehension.',
         'Write the result in ' + ('English.' if plan.sprak == 'en' else 'Norwegian Bokmål.'),
         plan.task_instructions,
@@ -85,7 +85,8 @@ def instruction(plan):
     if plan.tilleggsinstruks:
         parts.append(plan.tilleggsinstruks)
     if plan.quote_checks:
-        parts.append('Exact quote checks: ' + json.dumps(plan.quote_checks, ensure_ascii=False))
+        parts.append('Preserve requested quotations exactly. Exact quote checks: '
+                     + json.dumps(plan.quote_checks, ensure_ascii=False))
     return '\n\n'.join(parts)
 
 

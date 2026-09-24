@@ -73,8 +73,6 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path, *, ocr_mo
     kilde = Path(sti)
     if not kilde.is_file():
         raise DokumentFeil(f"Finner ikke filen «{kilde}».")
-    if kilde.suffix.lower() not in SUPPORTED:
-        raise DokumentFeil(f"Unsupported format «{kilde.suffix}». Supported: {', '.join(sorted(SUPPORTED))}.")
     sha = sha256_fil(kilde)
     if ocr_mode not in ('off', 'auto', 'force'):
         raise DokumentFeil('ocr_mode must be off, auto or force.')
@@ -103,7 +101,7 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path, *, ocr_mo
                                'ocr':ocr, 'structure':{}}
             if ocr['pages']:
                 metode += ' + ' + ocr['engine']
-    else:
+    elif kilde.suffix.lower() in SUPPORTED:
         try:
             sider, source_metadata, metode = extract(kopi)
         except Exception as exc:
@@ -111,6 +109,14 @@ def importer_dokument(lager: Lager, prosjekt_id: str, sti: str | Path, *, ocr_mo
         if not sider:
             raise DokumentFeil(f'No readable source units in {kilde.name}. The file was not analysed.')
         lesbarhet = LESBAR if all(s['readable'] for s in sider) else DELVIS
+    else:
+        sider = [{'nr': 1, 'tegn': 0, 'tekst': '', 'readable': False,
+                  'source': {'kind': 'original_file', 'location': 'Original file'}}]
+        source_metadata = {'format': 'opaque', 'extension': kilde.suffix.lower(),
+                           'scope': 'No automatic extraction. A file-capable CLI worker must inspect the preserved original.',
+                           'structure': {}}
+        metode = 'preserved original only'
+        lesbarhet = ULESELIG
     dok = lager.legg_til_dokument(
         prosjekt_id,
         navn=kilde.name,

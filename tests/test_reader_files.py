@@ -66,7 +66,7 @@ def test_large_source_uses_searchable_chunks_with_stable_unit_locations(package,
     assert b'first line\r\nword' not in (root/chunks[0]['file']).read_bytes()
     assert 'source-chunks/' in (root/'SOURCE_GUIDE.md').read_text(encoding='utf-8')
     guide = (root/'SOURCE_GUIDE.md').read_text(encoding='utf-8')
-    assert 'Codex CLI: use its shell tool' in guide
+    assert 'Codex CLI may use its available workspace file and shell tools' in guide
     assert 'Claude Code: use native Glob, Grep and Read' in guide
     assert all(item['file'] in work['initial_files'] for item in chunks)
 

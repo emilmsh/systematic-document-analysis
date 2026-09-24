@@ -25,9 +25,9 @@ Du kan klargjøre og være innlogget i begge lesermotorene samtidig. Hver analys
 
 Velg en synlig prosjektmappe i samtalen. Planer og inputforhåndsvisninger lagres der før kjøring.
 Hver eksport får en ny mappe med **Resultater.xlsx**, en kort startfil og **Dokumentasjon.zip**.
-Hovedarket har én rad per dokument som standard og resultatvariabler i kolonnene. Nested objekter blir kolonner;
-gjentatte verdier har detaljfaner. Feil vises ved behov i en egen fane. Variabeldefinisjoner og
-full kjøringshistorikk ligger i arkivet. Arkivet samler plan, originale JSON-resultater, råsvar,
+Hovedarket har én rad per kjøring og resultatvariabler i kolonnene. Nestede objekter blir kolonner;
+gjentatte verdier har detaljfaner. Feil og omkjøringer vises ved behov i egne faner. Variablene forklares
+i regnearket; full kjøringshistorikk ligger i arkivet. Arkivet samler plan, originale JSON-resultater, råsvar,
 historiske forsøk og eventuelle kildekopier. Du trenger ikke åpne JSON for å bruke resultatene.
 Begynn i `START_HERE.md` i prosjektmappen. Redigering av eksport registrerer ikke menneskelig kontroll.
 Se [Prosjektfiler og eksportformater](PROJECT_FILES.md).
@@ -38,12 +38,12 @@ Når samme oppgave gjentas over førti rapporter, tilbud eller regneark, trenger
 
 ## Hva den gjør
 
-- **Leser filer fra en mappe du velger.** PDF, DOCX, XLSX, CSV/TSV, TXT og Markdown. Skannede PDF-er kan OCR-behandles lokalt. Store filer leses i avgrensede deler før funnene settes sammen i ett ekstra kall, og alle kallene lagres.
+- **Arbeider på filer fra en mappe du velger.** PDF, DOCX, XLSX, CSV/TSV, TXT og Markdown har automatisk tekstuttrekk; andre filer bevares for CLI-lesere med filverktøy. Skannede PDF-er kan OCR-behandles lokalt. En stor CLI-fil er tilgjengelig for én arbeider med søkbare tekstkopier; for stor API-input gir synlig feil.
 - **Gjentar oppgaven du definerer.** En vanlig instruks er nok; et egendefinert resultatskjema og relevante kontroller er valgfrie. Assistenten hjelper deg å gjøre oppgaven repeterbar.
 - **Kjører ett dokument per forsøk med faste innstillinger.** Planen lagrer lesemotor, modell, tenkenivå, språk og instruks. Assistenten kan inspisere kildetekst under forberedelsen; en navngitt person godkjenner planen før lesemotoren starter. Endringer gir en ny versjon; tidligere forsøk står urørt.
 - **Lagrer kontrollsporet.** Hvert forsøk bevarer eksakt input, råsvar og resultatene av avtalte kontroller. Kildeenheter har PDF-side, Word-blokk, ark/celle, tekstlinje eller CSV-post. Ordrett sitatkontroll er valgfri for generelle oppgaver.
 - **Registrerer menneskelig kontroll.** En person godkjenner, korrigerer eller avviser hver vurdering med begrunnelse. Automatiske kontroller registreres aldri som menneskelig kontroll.
-- **Leverer et datasett automatisk.** Regnearket har én rad per dokument som standard og variabler som passer oppgaven, for eksempel entiteter, temaer, skårer, beregninger eller tekstutdrag. Feil og øvrig informasjon vises separat. Kontrollsporet er samlet i ett arkiv.
+- **Leverer et datasett automatisk.** Regnearket har én rad per kjøring og variabler som passer oppgaven. Gjentatte poster, feil og omkjøringer får egne faner når de er relevante. Kontrollsporet er samlet i ett arkiv.
 
 Samtalen foregår i Claude Code eller Codex. Pluginen legger til bokføringen og den repeterbare lesingen; assistenten hjelper fortsatt med spørsmålet, kriteriene og vanskelige filer.
 
@@ -51,7 +51,7 @@ Samtalen foregår i Claude Code eller Codex. Pluginen legger til bokføringen og
 
 - Den sammenstiller ikke på tvers av dokumenter. Hver fil er én enhet; sammenligningen gjør du eller assistenten ut fra eksporten.
 - Den prøver ikke på nytt, bytter ikke modell og faller ikke tilbake til betalt API på egen hånd. Feil og tidsavbrudd rapporteres per kjøring mens de øvrige kjøringene fullføres.
-- Den leser ikke diagrammer, bilder eller innebygde objekter, og beregner ikke regnearkformler.
+- Automatisk tekstuttrekk tolker ikke diagrammer, bilder eller innebygde objekter og beregner ikke regnearkformler. En CLI-leser med passende filverktøy kan undersøke originalen når oppgaven krever det.
 - Den kjører bare på Windows og trenger et lokalt Python-miljø, som installasjonsprogrammet ordner.
 
 ## Installasjon
@@ -100,7 +100,7 @@ Tillatte svar som «uklart» eller «ikke omtalt» er gyldige funn når kravene 
 
 Du trenger ikke ferdig skjema eller tekniske innstillinger. Assistenten hjelper deg å formulere én repeterbar instruks, inspiserer filene og foreslår en nyttig leveranse og relevante kontroller. Den spør om vesentlige valg og skiller dine krav fra egne forslag. En liten pilot er valgfri.
 
-Før kjøring foreslår assistenten oppgave, filutvalg, resultatvariabler med forklaringer, kontroller, usikkerhet, lesemotor/modell og resultatmappe. Du kan inspisere detaljert plan og eksakt input. Godkjenn den konkrete planen og oppgi ansvarlig person. Standardleveransen er et regneark med én rad per dokument som standard. Skårskalaer, måleenheter og håndtering av manglende verdier avklares før kjøring. Rene tekstoppgaver og gamle ustrukturerte resultater får en tekstkolonne; eksporten finner ikke på nye analysevariabler i etterkant.
+Før kjøring foreslår assistenten oppgave, filutvalg, resultatvariabler med forklaringer, kontroller, usikkerhet, lesemotor/modell og resultatmappe. Du kan inspisere detaljert plan og eksakt input. Godkjenn den konkrete planen og oppgi ansvarlig person. Standardleveransen er et regneark med én rad per kjøring. Skårskalaer, måleenheter og håndtering av manglende verdier avklares før kjøring. Rene tekstoppgaver får en tekstkolonne; eksporten finner ikke på nye analysevariabler i etterkant.
 
 Filene kjøres uavhengig med én ny arbeider per forsøk. Store CLI-input leses med filverktøy; for store API-input gir en tydelig feil. Du kan stoppe, gjenoppta, se enkeltforsøk, registrere faktisk menneskelig kontroll og eksportere. Endret oppgave, resultatskjema eller kjøreinnstilling gir ny planversjon. Etterpå kan dere lage tabeller, rapporter og videre analyser i samtalen og beholde referanser til opprinnelige kjøringer.
 

@@ -53,8 +53,8 @@ sources from export also omits `workfiles/source.*`; transcripts, OCR and render
 pages still contain source-derived content, just like recorded text input.
 
 Tool reading can inspect the complete original document and its source-unit map.
-The reader should search the plain-text chunks, read matching and neighboring chunks,
-and inspect all chunks when the agreed task requires full coverage. For Claude file
+The reader chooses a method for the agreed task. For text work it can search the plain-text chunks,
+read relevant neighboring chunks, and inspect all chunks when full text coverage is required. For Claude file
 sessions, the maximum is 60 tool turns. A reported list of units read is still a
 self-report, not proof of complete reading or semantic accuracy.
 The inline byte budget does not cap tool output or total model context. CLI calls

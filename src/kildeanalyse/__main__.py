@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("oppsett", help="vis oppsett og motorstatus")
     s = sub.add_parser("prosjekt", help="opprett prosjekt"); s.add_argument("navn"); s.add_argument("--mappe")
     s = sub.add_parser("prosjektmappe", help="velg synlig prosjektmappe"); s.add_argument("prosjekt_id"); s.add_argument("mappe")
-    s = sub.add_parser("importer", help="importer støttede filer eller mapper"); s.add_argument("prosjekt_id"); s.add_argument("stier", nargs="+")
+    s = sub.add_parser("importer", help="importer filer eller mapper"); s.add_argument("prosjekt_id"); s.add_argument("stier", nargs="+")
     s = sub.add_parser("analyse", help="opprett analyse med planversjon 1")
     for a in ("prosjekt_id", "navn", "oppgavetekst"):
         s.add_argument(a)
@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("eksporter", help="eksporter resultatpakke"); s.add_argument("analyse_id")
     s.add_argument("--med-kilder", action=argparse.BooleanOptionalAction, default=True)
     s.add_argument("--med-csv", action="store_true"); s.add_argument("--list-layout", choices=("sheets", "inline"), default="sheets")
-    s.add_argument("--row-scope", choices=("documents", "runs"), default="documents")
+    s.add_argument("--row-scope", choices=("documents", "runs"), default="runs")
     s.add_argument("--output-directory", help="Short absolute directory for this export only.")
     args = p.parse_args(argv)
     lager = Lager(datamappe())

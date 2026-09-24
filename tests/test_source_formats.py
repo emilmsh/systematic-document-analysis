@@ -92,12 +92,15 @@ def test_csv_record_ids_handle_multiline_quotes_and_single_columns(tmp_path):
     assert len(extract(file)[0]) == 2
 
 
-def test_explicit_unsupported_and_empty_files_fail_visibly(tmp_path):
+def test_unparsed_files_are_preserved_but_empty_or_invalid_known_text_fails(tmp_path):
     store=Lager(tmp_path/'data'); project=store.opprett_prosjekt('Files')
-    for extension, data in [('doc',b'unsupported'),('txt',b''),('txt',b'\xffbad encoding')]:
+    opaque=tmp_path/'bad.doc'; opaque.write_bytes(b'unsupported')
+    imported,_=importer_dokument(store,project['id'],opaque)
+    assert imported['source_metadata']['format'] == 'opaque'
+    for extension, data in [('txt',b''),('txt',b'\xffbad encoding')]:
         file=tmp_path/f'bad.{extension}'; file.write_bytes(data)
         with pytest.raises(DokumentFeil): importer_dokument(store,project['id'],file)
-    assert store.dokumenter(project['id']) == []
+    assert len(store.dokumenter(project['id'])) == 1
 
 
 def test_folder_import_reports_exclusions_failures_and_duplicates(tmp_path):
@@ -106,24 +109,25 @@ def test_folder_import_reports_exclusions_failures_and_duplicates(tmp_path):
     sources = tmp_path/'sources'; sources.mkdir()
     good = sources/'report.TXT'; good.write_text(QUOTE, encoding='utf-8')
     empty = sources/'empty.txt'; empty.write_text('', encoding='utf-8')
-    unsupported = sources/'slides.pptx'; unsupported.write_bytes(b'not supported')
+    opaque = sources/'slides.pptx'; opaque.write_bytes(b'not supported')
     nested = sources/'earlier-years'; nested.mkdir()
     (nested/'older.txt').write_text('Older annual report.', encoding='utf-8')
     before = {p: sha256_fil(p) for p in sources.rglob('*') if p.is_file()}
 
     result = tjeneste.importer_dokumenter(store, project['id'], [str(sources)])
     rows = {Path(r['sti']).name: r for r in result['resultater']}
-    assert set(rows) == {'report.TXT', 'empty.txt'}
+    assert set(rows) == {'report.TXT', 'empty.txt', 'slides.pptx'}
     assert rows['report.TXT']['nytt'] is True and 'feil' in rows['empty.txt']
+    assert rows['slides.pptx']['dokument']['source_metadata']['format'] == 'opaque'
     assert {r['path']: r['reason'] for r in result['skipped']} == {
-        str(unsupported): 'unsupported_format', str(nested): 'subdirectory'}
+        str(nested): 'subdirectory'}
     # Both MCP presentations expose the exact exclusions; no silent traversal.
     english = public_result(result)
     norwegian = visning.md_import(result)
-    for path in (unsupported, nested):
+    for path in (nested,):
         assert any(r['path'] == str(path) for r in english['skipped'])
         assert str(path) in norwegian
-    assert len(store.dokumenter(project['id'])) == 1
+    assert len(store.dokumenter(project['id'])) == 2
     again = tjeneste.importer_dokumenter(store, project['id'], [str(sources)])
     assert next(r for r in again['resultater'] if 'dokument' in r)['nytt'] is False
     assert {p: sha256_fil(p) for p in before} == before
@@ -131,18 +135,18 @@ def test_folder_import_reports_exclusions_failures_and_duplicates(tmp_path):
     # A reported subfolder can be selected explicitly without reimporting its parent.
     selected = tjeneste.importer_dokumenter(store, project['id'], [str(nested)])
     assert not selected['skipped'] and selected['resultater'][0]['nytt']
-    assert len(store.dokumenter(project['id'])) == 2
+    assert len(store.dokumenter(project['id'])) == 3
 
 
-def test_folder_with_no_supported_files_still_reports_exclusions(tmp_path):
+def test_folder_imports_unparsed_files_and_reports_subfolders(tmp_path):
     store = Lager(tmp_path/'data'); project = store.opprett_prosjekt('Scope')
     sources = tmp_path/'sources'; sources.mkdir()
     (sources/'data.json').write_text('{}', encoding='utf-8')
     (sources/'appendices').mkdir()
     result = tjeneste.importer_dokumenter(store, project['id'], [str(sources)])
-    assert len(result['resultater']) == 1 and 'feil' in result['resultater'][0]
-    assert {r['reason'] for r in result['skipped']} == {'unsupported_format', 'subdirectory'}
-    assert not store.dokumenter(project['id'])
+    assert result['resultater'][0]['dokument']['source_metadata']['format'] == 'opaque'
+    assert {r['reason'] for r in result['skipped']} == {'subdirectory'}
+    assert len(store.dokumenter(project['id'])) == 1
 
 
 def test_explicit_children_are_not_also_reported_as_skipped(tmp_path):
@@ -151,13 +155,12 @@ def test_explicit_children_are_not_also_reported_as_skipped(tmp_path):
     (sources/'report.txt').write_text(QUOTE, encoding='utf-8')
     nested = sources/'earlier-years'; nested.mkdir()
     (nested/'older.txt').write_text('Older report.', encoding='utf-8')
-    unsupported = sources/'data.json'; unsupported.write_text('{}', encoding='utf-8')
+    opaque = sources/'data.json'; opaque.write_text('{}', encoding='utf-8')
     result = tjeneste.importer_dokumenter(store, project['id'],
-                                        [str(sources), str(nested), str(unsupported)])
+                                        [str(sources), str(nested), str(opaque)])
     assert not result['skipped']
-    assert len(store.dokumenter(project['id'])) == 2
-    assert len([r for r in result['resultater'] if 'feil' in r]) == 1
-    assert next(r['sti'] for r in result['resultater'] if 'feil' in r) == str(unsupported)
+    assert len(store.dokumenter(project['id'])) == 3
+    assert not [r for r in result['resultater'] if 'feil' in r]
 
 
 def test_identical_bytes_with_different_formats_keep_distinct_interpretations(tmp_path):
