@@ -106,7 +106,7 @@ The app you talk to and the model that reads the documents are chosen separately
 |---|---|
 | Claude Code, Codex desktop | `claude_cli` (default `sonnet`, high), `codex_cli` (default `gpt-5.6-terra`, high), or `openai_api`, `azure_foundry_api`, `anthropic_api`, `openrouter_api`, `kompatibel_api` with an explicit model ID |
 
-CLI readers use your subscription sign-in and the vendor's agent harness with restricted context and tools. API readers make direct calls and are billed by the provider. The requested model and effort are recorded; whether a provider honoured the effort is only known if it reports it.
+CLI readers use your subscription sign-in and the vendor's agent harness with a fresh context per file and access to their built-in tools. API readers make direct calls and are billed by the provider. The requested model and effort are recorded; whether a provider honoured the effort is only known if it reports it.
 
 ### API keys (optional)
 
@@ -145,4 +145,4 @@ This supports API-key authentication on the listed public Azure resource domains
 - [OCR, large documents and the audit trail](DOCUMENT_PROCESSING.md)
 - [Five example folders](https://github.com/emilmsh/systematic-document-analysis/tree/main/examples/README.md) with fictional files, draft criteria and prompts. Optional; the plugin is meant for your own documents.
 
-Agree delivery format, row unit, columns and location before execution; reuse explicit preferences. The default selects the newest planned run per document, even when it failed; never silently substitute an older success. `row_scope="runs"` explicitly includes history. Use `output_directory` for a shorter export parent without moving the project.
+Agree delivery format, row unit, columns and location before execution; reuse explicit preferences. The default workbook has one row per run. `row_scope="documents"` selects the newest planned run per document, even when it failed; never silently substitute an older success. Use `output_directory` for a shorter export parent without moving the project.

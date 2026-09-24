@@ -23,24 +23,22 @@ their recorded settings; enabling tools for one requires a new plan version.
 Each reading call starts a fresh CLI session in a new `workfiles` directory with
 one original source copy, assigned source units and `SOURCE_GUIDE.md`. The plugin also
 writes the extracted units into small, numbered plain-text files under `source-chunks/`
-and lists them in `source-index.txt`. Claude Code searches them with native Glob/Grep
-and reads them with Read. Codex CLI searches and reads them with its shell tool,
-for example `rg` and PowerShell `Get-Content`. No extra MCP tool is installed in
+and lists them in `source-index.txt`. Either CLI can use its available tools to inspect
+the original, search the copies, and create derived work. No extra MCP tool is installed in
 the reader session. These reading copies work regardless of whether the original
 is PDF, Word, Excel, CSV or text. `source-units.json` remains the exact evidence map. A source unit larger
 than the target chunk size stays whole, so readers may need line-range reads for it.
 User and project instructions, memory, plugins, other MCP servers and previous conversations are
 disabled. No previous file results are included.
 
-Readers have their respective native file tools plus an explicit bundled Python interpreter and
-helper for PDF, Word, Excel, CSV/TSV, text/Markdown, PDF page rendering and per-page
-Tesseract OCR. No parser installation by the model is needed. The guide records
-the available commands. Web search is disabled. Codex uses workspace-write with
-network disabled; Claude scopes native file tools with `--restricted` and grants
-unattended shell access only to the fixed parser helper. Other shell operations
-remain subject to CLI permission checks. This is context control, not a claim of
-full filesystem read isolation: native Windows Claude lacks an OS shell sandbox,
-and Codex's workspace-write policy is primarily a write boundary.
+Readers have their respective built-in tools, including shell and web where their CLI offers them.
+A bundled Python interpreter and optional helper remain available for PDF, Word, Excel,
+CSV/TSV, text/Markdown, PDF page rendering and per-page Tesseract OCR. The worker may
+choose another method. Claude runs in safe mode with its default built-in tools and
+permission checks bypassed. Codex runs with `danger-full-access` and no approval prompts.
+Both still start without inherited user/project instructions, plugins, MCP servers or
+previous conversations. Their native tool sets are not identical, and managed policies
+may still deny an action. This is context separation, not OS-level file or network isolation.
 
 The source checksum, initial file hashes, workspace guide, helper identity, raw
 tool transcript and generated workfiles are retained with the attempt/export.
@@ -54,8 +52,7 @@ pages still contain source-derived content, just like recorded text input.
 
 Tool reading can inspect the complete original document and its source-unit map.
 The reader chooses a method for the agreed task. For text work it can search the plain-text chunks,
-read relevant neighboring chunks, and inspect all chunks when full text coverage is required. For Claude file
-sessions, the maximum is 60 tool turns. A reported list of units read is still a
+read relevant neighboring chunks, and inspect all chunks when full text coverage is required. A reported list of units read is still a
 self-report, not proof of complete reading or semantic accuracy.
 The inline byte budget does not cap tool output or total model context. CLI calls
 can include multiple tool turns. Visual/OCR findings do not silently change the

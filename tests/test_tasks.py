@@ -26,14 +26,11 @@ def test_file_reader_instructions_match_cli_tools():
     plan = Plan('Read', task_instructions='Find relevant passages.', motorinnstillinger={'file_tools': True})
     plan.motor = 'claude_cli'
     claude = instruction(plan)
-    assert 'native Glob, Grep and Read' in claude
-    assert 'only the exact bundled helper prefix' in claude
-    assert 'rg --files' not in claude
     plan.motor = 'codex_cli'
     codex = instruction(plan)
-    assert 'available file and shell tools' in codex
-    assert 'Choose a method suited to the agreed task' in codex
-    assert 'one simple read-only command' not in codex
+    assert claude == codex
+    assert 'Use the available tools and a method suited to the task' in codex
+    assert 'Do not inspect other runs' in codex
     assert 'Preserve requested quotations exactly' not in codex
     plan.quote_checks = CHECKS
     assert 'Preserve requested quotations exactly' in instruction(plan)

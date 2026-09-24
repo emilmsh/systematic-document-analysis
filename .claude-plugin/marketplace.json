@@ -9,7 +9,7 @@
       "name": "systematic-document-analysis",
       "description": "Repeat one task independently per file, with traceable inputs and task-defined results.",
       "source": "./",
-      "version": "0.10.8"
+      "version": "0.10.9"
     }
   ]
 }

@@ -1,15 +1,10 @@
-"""Codex CLI med ChatGPT-innlogging. Eksperimentell lokal lesemotor.
-
-Ny sesjon, fast instruks og stdin per forsøk. Flagg begrenser automatisk kontekst;
-read-only er ikke en generell lesesperre på operativsystemnivå. Se TESTLOGG.md.
-"""
+"""Codex CLI with a fresh, neutral session per file and native tools available."""
 from __future__ import annotations
 
 import copy
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import time
 
@@ -20,15 +15,16 @@ from ..reader_files import prepare as prepare_files, check_source
 
 STANDARD_MODELL = 'gpt-5.6-terra'
 FORBUDTE_ENV = ('OPENAI_API_KEY', 'CODEX_API_KEY', 'OPENAI_BASE_URL', 'AZURE_OPENAI_API_KEY', 'CODEX_ACCESS_TOKEN')
-DEAKTIVERTE_FUNKSJONER = (
-    'shell_tool', 'unified_exec', 'apps', 'plugins', 'hooks', 'memories', 'multi_agent',
-    'multi_agent_v2', 'browser_use', 'browser_use_external', 'in_app_browser', 'computer_use',
-    'image_generation', 'view_image', 'code_mode', 'code_mode_only', 'skill_search',
-    'workspace_dependencies', 'goals', 'tool_suggest', 'shell_snapshot',
+DEAKTIVERTE_KONTEKSTKILDER = ('apps', 'plugins', 'hooks', 'memories', 'skill_search')
+TEKSTMODUS_UTEN_VERKTOY = (
+    'shell_tool', 'unified_exec', 'multi_agent', 'multi_agent_v2', 'browser_use',
+    'browser_use_external', 'in_app_browser', 'computer_use', 'image_generation',
+    'view_image', 'code_mode', 'code_mode_only', 'workspace_dependencies',
+    'goals', 'tool_suggest', 'shell_snapshot',
 )
 KONFIG = (
     'project_doc_max_bytes=0', 'skills.include_instructions=false', 'skills.bundled.enabled=false',
-    'web_search="disabled"', 'forced_login_method="chatgpt"', 'model_provider="openai"',
+    'forced_login_method="chatgpt"', 'model_provider="openai"',
     'approval_policy="never"',
 )
 
@@ -89,7 +85,7 @@ def les_hendelser(stdout, returkode, *, file_tools=False):
         item = event.get('item') or {}
         if item.get('type') == 'error':
             feil.append(str(item.get('message', 'Verktøyfeil')))
-        forbidden = ('mcp_tool_call', 'web_search') if file_tools else ('command_execution', 'mcp_tool_call', 'web_search', 'file_change')
+        forbidden = () if file_tools else ('command_execution', 'mcp_tool_call', 'web_search', 'file_change')
         if item.get('type') in forbidden:
             feil.append('Uventet verktøyhendelse i lesekjøring: ' + item['type'])
         if typ == 'item.completed' and item.get('type') == 'agent_message':
@@ -148,7 +144,7 @@ class CodexCliAdapter(Adapter):
                                         auth.stderr.decode('utf-8', 'replace'))
         except (OSError, subprocess.SubprocessError):
             return blocked_support('codex')
-        meldinger = ['Lesekjøringer bruker avgrenset kontekst. Full OS-isolasjon er ikke implementert.',
+        meldinger = ['Lesekjøringer bruker separat kontekst per fil. Full OS-isolasjon er ikke implementert.',
                      'Kvote og eventuell ekstraforbruksordning er ukjent. Ingen automatisk overgang til API.']
         if not ok:
             return blocked_support('codex')
@@ -156,8 +152,8 @@ class CodexCliAdapter(Adapter):
                     'cli_versjon': self._versjon, 'innlogging': {'authMethod': 'chatgpt' if ok else 'ukjent'},
                     'filtyper': ['pdf', 'docx', 'xlsx', 'csv', 'tsv', 'txt', 'md'], 'strukturert_svar': True, 'ny_sesjon_per_forsok': True,
                     'file_tools_enabled': bool(self.innstillinger.get('file_tools')),
-                    'kontrollnivaa': 'eksperimentell', 'deaktiverte_funksjoner': [feature for feature in DEAKTIVERTE_FUNKSJONER
-                        if not self.innstillinger.get('file_tools') or feature not in ('shell_tool', 'unified_exec', 'view_image')],
+                    'kontrollnivaa': 'eksperimentell', 'deaktiverte_kontekstkilder': list(DEAKTIVERTE_KONTEKSTKILDER),
+                    'file_tools_policy': 'Native CLI tools available without approval prompts; managed policy still applies.',
                     'konfigurasjon': list(KONFIG), 'modell_standard': STANDARD_MODELL})
 
     def avbryt(self):
@@ -182,20 +178,17 @@ class CodexCliAdapter(Adapter):
         schema.write_text(json.dumps(strengt_skjema(pakke.svarskjema), ensure_ascii=False), encoding='utf-8')
         modell = modell or STANDARD_MODELL
         args = [self._bin(), 'exec', '--ignore-user-config', '--ignore-rules', '--ephemeral', '--skip-git-repo-check',
-                '--sandbox', 'workspace-write' if workspace else 'read-only', '--json', '--model', modell, '--output-schema', str(schema), '-C', str(cwd)]
+                '--sandbox', 'danger-full-access' if workspace else 'read-only', '--json', '--model', modell, '--output-schema', str(schema), '-C', str(cwd)]
         nivaa = self.innstillinger.get('tenkenivaa', 'low')  # eldre planer beholder low
-        for config in (*KONFIG, 'model_reasoning_effort=' + json.dumps(nivaa), 'model_instructions_file=' + json.dumps(str(instruks))):
+        for config in (*KONFIG, 'web_search="live"' if workspace else 'web_search="disabled"',
+                       'model_reasoning_effort=' + json.dumps(nivaa),
+                       'model_instructions_file=' + json.dumps(str(instruks))):
             args += ['-c', config]
-        for feature in DEAKTIVERTE_FUNKSJONER:
-            if workspace and feature in ('shell_tool', 'unified_exec', 'view_image'):
-                continue
+        for feature in (*DEAKTIVERTE_KONTEKSTKILDER, *(TEKSTMODUS_UTEN_VERKTOY if not workspace else ())):
             args += ['--disable', feature]
         if workspace:
             for feature in ('shell_tool', 'unified_exec', 'view_image'):
                 args += ['--enable', feature]
-            args += ['-c', 'sandbox_workspace_write.network_access=false',
-                     '-c', 'sandbox_workspace_write.exclude_slash_tmp=true',
-                     '-c', 'sandbox_workspace_write.exclude_tmpdir_env_var=true']
         args.append('-')
         start = time.monotonic()
         timeout = float(self.innstillinger.get('tidsavbrudd_sek', 600))

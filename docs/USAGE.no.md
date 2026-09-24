@@ -120,4 +120,4 @@ Se også den [engelske veiledningen](USAGE.md). Utviklingsmateriale ligger i [re
 
 Skapt og utviklet av Emil Mathias Strøm Halseth, med utviklingshjelp fra OpenAI Codex og Anthropic Claude Code.
 
-Avklar leveranseformat, radenhet, kolonner og plassering før kjøring. Gjenbruk brukerens eksplisitte ønsker. Standard er nyeste planlagte kjøring per dokument, også ved feil; eldre vellykkede resultater brukes ikke automatisk. `row_scope="runs"` viser historikken eksplisitt. Ved lang Excel-sti kan `output_directory` velge en kortere eksportmappe uten å flytte prosjektet.
+Avklar leveranseformat, radenhet, kolonner og plassering før kjøring. Gjenbruk brukerens eksplisitte ønsker. Standardregnearket har én rad per kjøring. `row_scope="documents"` velger nyeste planlagte kjøring per dokument, også ved feil; eldre vellykkede resultater brukes ikke automatisk. Ved lang Excel-sti kan `output_directory` velge en kortere eksportmappe uten å flytte prosjektet.

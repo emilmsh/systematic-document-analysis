@@ -1,3 +1,9 @@
+# 0.10.9 — Native CLI tool freedom with neutral per-file context
+
+- Give each file-enabled Claude/Codex worker its CLI's built-in tools, including general shell and web tools when offered. Remove the fixed Claude shell-command allowlist, Codex workspace sandbox/network block, and the Claude 60-turn cap. Keep explicit text-only plans tool-free.
+- Keep fresh sessions and separate workspaces per file. Neither worker receives another run's result, previous conversations, project instructions, skills, memories, plugins or MCP integrations from the orchestrator. Both receive the same task-level file instruction and may choose their own method within a run.
+- Preserve the assigned original and reject a result if its working copy changes. Keep the tool transcript and derived files in the attempt audit. Managed CLI policies can still deny actions, and tool availability differs between products.
+
 # 0.10.8 — General file-loop harness and readable per-run results
 
 - Keep the worker instruction task-neutral: each run gets one assigned file, a fresh CLI/API context, relevant source copies and available tools. Exact quotation checks apply only when requested; no task method such as map–reduce is mandated or excluded.

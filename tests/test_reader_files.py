@@ -66,8 +66,8 @@ def test_large_source_uses_searchable_chunks_with_stable_unit_locations(package,
     assert b'first line\r\nword' not in (root/chunks[0]['file']).read_bytes()
     assert 'source-chunks/' in (root/'SOURCE_GUIDE.md').read_text(encoding='utf-8')
     guide = (root/'SOURCE_GUIDE.md').read_text(encoding='utf-8')
-    assert 'Codex CLI may use its available workspace file and shell tools' in guide
-    assert 'Claude Code: use native Glob, Grep and Read' in guide
+    assert 'Use any available file or shell tools' in guide
+    assert 'Do not inspect another run' in guide
     assert all(item['file'] in work['initial_files'] for item in chunks)
 
 
@@ -184,25 +184,31 @@ def test_cli_file_tools_preserve_context_isolation_and_audit(package, tmp_path, 
     command, options = commands[0]
     assert '--resume' not in command and '--continue' not in command
     if adapter is ClaudeCliAdapter:
-        assert all(flag in command for flag in ('--safe-mode', '--restricted', '--strict-mcp-config', '--no-session-persistence'))
-        assert command[command.index('--tools')+1] == 'Read,Write,Edit,Glob,Grep,Bash,PowerShell'
-        assert 'Bash' not in command[command.index('--allowedTools')+1:command.index('--disallowedTools')]
-        assert command[command.index('--max-turns')+1] == '60'
+        assert all(flag in command for flag in ('--safe-mode', '--strict-mcp-config', '--no-session-persistence'))
+        assert command[command.index('--tools')+1] == 'default'
+        assert '--dangerously-skip-permissions' in command
+        assert '--restricted' not in command and '--allowedTools' not in command
+        assert '--max-turns' not in command
         assert options['cwd'] == str(tmp_path/'workfiles')
     else:
         assert all(flag in command for flag in ('--ignore-user-config', '--ignore-rules', '--ephemeral'))
-        assert command[command.index('--sandbox')+1] == 'workspace-write'
-        assert 'web_search="disabled"' in command and 'sandbox_workspace_write.network_access=false' in command
-        for feature in ('plugins', 'memories', 'apps'):
+        assert command[command.index('--sandbox')+1] == 'danger-full-access'
+        assert 'web_search="live"' in command and 'sandbox_workspace_write.network_access=false' not in command
+        for feature in ('apps', 'plugins', 'hooks', 'memories', 'skill_search'):
             assert command[command.index(feature)-1] == '--disable'
+        for feature in ('multi_agent', 'browser_use', 'computer_use', 'image_generation'):
+            assert feature not in command
         assert command[command.index('view_image')-1] == '--enable'
     assert result.motorinfo['file_workspace']['initial_files']
 
 
-def test_unexpected_network_events_still_rejected_with_file_tools():
+def test_native_network_events_are_available_only_with_file_tools():
     raw = '\n'.join(json.dumps(event) for event in [
-        {'type': 'item.completed', 'item': {'type': 'web_search'}}, {'type': 'turn.completed'}])
-    assert les_hendelser(raw, 0, file_tools=True).feil
+        {'type': 'item.completed', 'item': {'type': 'web_search'}},
+        {'type': 'item.completed', 'item': {'type': 'agent_message', 'text': '{"vurderinger": []}'}},
+        {'type': 'turn.completed'}])
+    assert not les_hendelser(raw, 0, file_tools=True).feil
+    assert les_hendelser(raw, 0, file_tools=False).feil
     with pytest.raises(ValueError):
         result_events('{"type":"assistant"}\n{"type":"system"}')
 

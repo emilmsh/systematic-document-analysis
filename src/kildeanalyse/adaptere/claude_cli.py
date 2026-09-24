@@ -3,7 +3,7 @@
 Hvert forsøk er en ny, isolert sesjon:
   --safe-mode              ingen CLAUDE.md, skills, plugins, hooks, MCP-servere (innlogging beholdes)
   --setting-sources ""     ingen bruker-/prosjekt-/lokale innstillinger
-  Nye planer har filverktøy i egen arbeidsmappe. Eldre planer beholder tekst-only-modus.
+  Filaktiverte planer bruker CLI-ens innebygde verktøy i en fersk arbeidsmappe.
   --strict-mcp-config      ingen MCP-servere utenom eksplisitt oppgitte (ingen oppgis)
   --disable-slash-commands ingen skills
   --no-session-persistence sesjonen lagres ikke
@@ -37,23 +37,15 @@ ISOLASJONSFLAGG = [
 ]
 STANDARD_MODELL = "sonnet"
 STANDARD_TIDSAVBRUDD_SEK = 600
-FILE_MAX_TURNS = 60
 
 
-def file_flags(workspace):
-    """Native file tools, with unattended shell grants only for the fixed parser helper.
-
-    --restricted confines native file tools, not arbitrary shell processes. Never
-    grant Bash/PowerShell wholesale or claim an OS sandbox on native Windows.
-    """
+def file_flags():
+    """Fresh, neutral session with the CLI's built-in tools available."""
     return [
-        '--safe-mode', '--restricted', '--setting-sources', '',
-        '--tools', 'Read,Write,Edit,Glob,Grep,Bash,PowerShell',
+        '--safe-mode', '--setting-sources', '', '--tools', 'default',
         '--strict-mcp-config', '--disable-slash-commands', '--no-session-persistence',
-        '--permission-mode', 'dontAsk', '--allowedTools', 'Read', 'Write', 'Edit', 'Glob', 'Grep',
-        f"Bash({workspace['bash_prefix']} *)", f"PowerShell({workspace['powershell_prefix']} *)",
-        '--disallowedTools', 'WebSearch', 'WebFetch',
-        '--output-format', 'stream-json', '--verbose', '--max-turns', str(FILE_MAX_TURNS),
+        '--dangerously-skip-permissions', '--permission-prompts', 'none',
+        '--output-format', 'stream-json', '--verbose',
     ]
 
 
@@ -83,7 +75,7 @@ def cli_failure(result: dict, returncode: int) -> str | None:
         return f'Claude Code reached its maximum number of tool turns before answering.{detail}'
     if denials:
         names = sorted({str(item.get('tool_name', 'tool')) for item in denials if isinstance(item, dict)})
-        return ('Claude Code used a command outside the permitted reader tools'
+        return ('Claude Code was denied a tool call by its CLI or managed policy'
                 + (f" ({', '.join(names)})" if names else '')
                 + '; the response was retained in the raw audit but was not accepted.')
     if result.get('is_error') or returncode != 0:
@@ -176,10 +168,6 @@ class ClaudeCliAdapter(Adapter):
             if code != 0:
                 return blocked_support('claude')
             self._cli_versjon = ut.strip() or "ukjent"
-            if self.innstillinger.get('file_tools'):
-                _, help_text, _ = self._kommando(['--help'])
-                if '--restricted' not in help_text:
-                    return Stotte(False, ['This Claude Code version lacks scoped file tools (--restricted). Update Claude Code before using a file-enabled plan.'])
         except Exception:  # noqa: BLE001
             return blocked_support('claude')
         try:
@@ -198,13 +186,13 @@ class ClaudeCliAdapter(Adapter):
             "claude_bin": bin,
             "cli_versjon": self._cli_versjon,
             "innlogging": {k: self._auth.get(k) for k in ("loggedIn", "authMethod", "apiProvider", "subscriptionType", "email", "orgName")},
-            "isolasjonsflagg": ['--safe-mode', '--restricted', '--strict-mcp-config', '--no-session-persistence'] if self.innstillinger.get('file_tools') else ISOLASJONSFLAGG,
+            "isolasjonsflagg": ['--safe-mode', '--strict-mcp-config', '--no-session-persistence'] if self.innstillinger.get('file_tools') else ISOLASJONSFLAGG,
             "filtyper": ['pdf', 'docx', 'xlsx', 'csv', 'tsv', 'txt', 'md'],
             'file_tools_enabled': bool(self.innstillinger.get('file_tools')),
             "strukturert_svar": True,
-            "nettilgang": False,
-            "verktoy": ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'PowerShell'] if self.innstillinger.get('file_tools') else [],
-            'file_tools_policy': 'Native file tools scoped to working directory; fixed parsing helper allowed. Other shell commands use CLI permissions; not an OS sandbox.',
+            "nettilgang": 'CLI and managed-policy dependent',
+            "verktoy": ['default built-in tools'] if self.innstillinger.get('file_tools') else [],
+            'file_tools_policy': 'Built-in tools enabled without plugin permission prompts; managed policy still applies. This is not an OS sandbox.',
             "ny_sesjon_per_forsok": True,
         }
         return Stotte(ok, meldinger, egenskaper)
@@ -237,7 +225,7 @@ class ClaudeCliAdapter(Adapter):
         modell = modell or STANDARD_MODELL
         tidsavbrudd = float(self.innstillinger.get("tidsavbrudd_sek") or STANDARD_TIDSAVBRUDD_SEK)
         kommando = [
-            bin, "-p", *(file_flags(workspace) if workspace else ISOLASJONSFLAGG), "--model", modell,
+            bin, "-p", *(file_flags() if workspace else ISOLASJONSFLAGG), "--model", modell,
             "--system-prompt-file", str(sysfil),
             "--json-schema", json.dumps(pakke.svarskjema, ensure_ascii=True),
         ]
