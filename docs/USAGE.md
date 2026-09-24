@@ -8,7 +8,7 @@ A controlled for-loop over files in Claude Code or Codex: one agreed task, one i
 
 **You only need to double-click `installer.cmd`.** It installs the plugin and any missing command-line tool (CLI), lets you choose a reader, and checks subscription sign-in. If the CLI is not signed in with a subscription, it starts sign-in for you to complete in your browser. Existing subscription sign-in is reused. Being signed in to the desktop app does not confirm that the CLI is signed in.
 
-1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. See the [latest published release](https://github.com/emilmsh/systematic-document-analysis/releases/latest). Private repository: sign in with access, or use a ZIP shared by a colleague.
+1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. See the [latest published release](https://github.com/emilmsh/systematic-document-analysis/releases/latest).
 2. Open the extracted folder in File Explorer, double-click **installer.cmd**, choose **1 = Install**, then **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Codex terminal.
 3. **Continue in the same installer window:** choose your reader, **1 = Codex / ChatGPT, 2 = Claude Code or 3 = Both**, and complete any required browser sign-in with the intended account. Wait for the installer to confirm sign-in. Choose **4 = Skip** if you will use an API or set up the reader later. The reader is independent of the app selected in step 2.
 4. Open your working folder in Claude Code's **Code tab** or in Codex, start a **new local conversation**, and describe your task: **“Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in [folder].”**
@@ -50,7 +50,7 @@ The conversation stays in Claude Code or Codex. The plugin adds the record keepi
 
 ## Installation
 
-The repository is private. Downloading from GitHub needs repository access; a colleague can also be given the ZIP directly.
+The repository and its releases are public on GitHub.
 
 ### Let your assistant do it
 
@@ -58,11 +58,11 @@ Paste one of these into a new conversation. The assistant downloads and verifies
 
 Claude Code:
 
-> Install Systematic Document Analysis for Claude Code. Release page: https://github.com/emilmsh/systematic-document-analysis/releases/latest (private repository; use the existing gh login, or ask me to download the ZIP if you cannot). Download systematic-document-analysis-windows.zip and SHA256SUMS.txt, verify the checksum, extract the ZIP to a folder under my Downloads, run `installer.cmd claude --non-interactive` from that folder and show me the output. Then run `claude plugin list` and confirm that systematic-document-analysis is enabled. Do not change other plugins, settings or files, and do not run installer.cmd reader or installer.cmd settings unless I ask.
+> Install Systematic Document Analysis for Claude Code. Release page: https://github.com/emilmsh/systematic-document-analysis/releases/latest. Download systematic-document-analysis-windows.zip and SHA256SUMS.txt, verify the checksum, extract the ZIP to a folder under my Downloads, run `installer.cmd claude --non-interactive` from that folder and show me the output. Then run `claude plugin list` and confirm that systematic-document-analysis is enabled. Do not change other plugins, settings or files, and do not run installer.cmd reader or installer.cmd settings unless I ask.
 
 ChatGPT desktop / Codex:
 
-> Install Systematic Document Analysis for Codex. Release page: https://github.com/emilmsh/systematic-document-analysis/releases/latest (private repository; use the existing gh login, or ask me to download the ZIP if you cannot). Download systematic-document-analysis-windows.zip and SHA256SUMS.txt, verify the checksum and extract the ZIP to a folder under my Downloads. Show me the folder path so I can double-click installer.cmd in File Explorer and choose Codex. Leave that installation step to me. When I confirm, run `codex plugin list` and check that systematic-document-analysis is enabled. Do not change other plugins, settings or files.
+> Install Systematic Document Analysis for Codex. Release page: https://github.com/emilmsh/systematic-document-analysis/releases/latest. Download systematic-document-analysis-windows.zip and SHA256SUMS.txt, verify the checksum and extract the ZIP to a folder under my Downloads. Show me the folder path so I can double-click installer.cmd in File Explorer and choose Codex. Leave that installation step to me. When I confirm, run `codex plugin list` and check that systematic-document-analysis is enabled. Do not change other plugins, settings or files.
 
 If sign-in was skipped, open **installer.cmd**, choose Sign-in and settings → Reader sign-in, then choose your reader. The helper reuses existing subscription sign-in or starts sign-in if needed. Then start a new conversation so the app loads the plugin.
 

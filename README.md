@@ -8,7 +8,7 @@ If one task can be standardized and repeated across a file list, this plugin fit
 
 [Task contracts and examples](docs/TASKS.md) · [Core principles and implementation plan](docs/CORE_REDESIGN.md)
 
-**[Download for Windows / Last ned for Windows](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** — private repository; sign in with access or use a ZIP shared by a colleague.
+**[Download for Windows / Last ned for Windows](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** — public download from the latest release.
 
 ## Start here
 

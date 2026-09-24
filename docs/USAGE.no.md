@@ -8,7 +8,7 @@ En kontrollert for-løkke over filer i Claude Code eller Codex: én standardiser
 
 **Du trenger bare å dobbeltklikke `installer.cmd`.** Det installerer pluginen og eventuelt manglende kommandolinjeverktøy (CLI), lar deg velge lesemotor og sjekker abonnementsinnloggingen. Er CLI-et ikke innlogget med abonnement, starter innloggingen, og du fullfører den i nettleseren. Eksisterende abonnementsinnlogging brukes videre. At du er innlogget i skrivebordsappen, er ikke en bekreftelse på at CLI-et er innlogget.
 
-1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Se [siste publiserte utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest). Privat repo: logg inn med tilgang, eller bruk en ZIP du har fått fra en kollega.
+1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Se [siste publiserte utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest).
 2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, velg **1 = Installer**, deretter **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor terminalen i Codex.
 3. **Fortsett i samme installasjonsvindu:** velg lesemotor, **1 = Codex / ChatGPT, 2 = Claude Code eller 3 = begge**, og fullfør eventuell innlogging med riktig konto i nettleseren. Vent til installasjonsvinduet bekrefter innloggingen. Velg **4 = hopp over** hvis du skal bruke API eller sette opp lesemotoren senere. Valg av lesemotor er uavhengig av appen du valgte i steg 2.
 4. Åpne arbeidsmappen i **Code-fanen** i Claude eller i Codex, start en **ny lokal samtale**, og beskriv oppgaven: **«Bruk Systematic Document Analysis. Jeg vil undersøke hvordan disse årsrapportene omtaler egen bruk av KI. Filene ligger i [mappe].»**
@@ -56,7 +56,7 @@ Samtalen foregår i Claude Code eller Codex. Pluginen legger til bokføringen og
 
 ## Installasjon
 
-Repoet er privat. Nedlasting fra GitHub krever tilgang; en kollega kan også få ZIP-filen direkte.
+Repoet og utgivelsene er offentlige på GitHub.
 
 ### La assistenten gjøre det
 
@@ -64,11 +64,11 @@ Lim én av disse inn i en ny samtale. Assistenten laster ned og verifiserer utga
 
 Claude Code:
 
-> Installer Systematic Document Analysis for Claude Code. Utgivelsesside: https://github.com/emilmsh/systematic-document-analysis/releases/latest (privat repo; bruk eksisterende gh-innlogging, eller be meg laste ned ZIP-en hvis du ikke får tilgang). Last ned systematic-document-analysis-windows.zip og SHA256SUMS.txt, verifiser sjekksummen, pakk ut ZIP-en i en mappe under Nedlastinger, kjør `installer.cmd claude --non-interactive` fra den mappen og vis meg utskriften. Kjør deretter `claude plugin list` og bekreft at systematic-document-analysis er aktivert. Ikke endre andre plugins, innstillinger eller filer, og ikke kjør installer.cmd reader eller installer.cmd settings uten at jeg ber om det.
+> Installer Systematic Document Analysis for Claude Code. Utgivelsesside: https://github.com/emilmsh/systematic-document-analysis/releases/latest. Last ned systematic-document-analysis-windows.zip og SHA256SUMS.txt, verifiser sjekksummen, pakk ut ZIP-en i en mappe under Nedlastinger, kjør `installer.cmd claude --non-interactive` fra den mappen og vis meg utskriften. Kjør deretter `claude plugin list` og bekreft at systematic-document-analysis er aktivert. Ikke endre andre plugins, innstillinger eller filer, og ikke kjør installer.cmd reader eller installer.cmd settings uten at jeg ber om det.
 
 ChatGPT-appen / Codex:
 
-> Installer Systematic Document Analysis for Codex. Utgivelsesside: https://github.com/emilmsh/systematic-document-analysis/releases/latest (privat repo; bruk eksisterende gh-innlogging, eller be meg laste ned ZIP-en hvis du ikke får tilgang). Last ned systematic-document-analysis-windows.zip og SHA256SUMS.txt, verifiser sjekksummen og pakk ut ZIP-en i en mappe under Nedlastinger. Vis meg mappestien, slik at jeg kan dobbeltklikke installer.cmd i Filutforsker og velge Codex. Overlat selve installasjonssteget til meg. Når jeg bekrefter, kjør `codex plugin list` og sjekk at systematic-document-analysis er aktivert. Ikke endre andre plugins, innstillinger eller filer.
+> Installer Systematic Document Analysis for Codex. Utgivelsesside: https://github.com/emilmsh/systematic-document-analysis/releases/latest. Last ned systematic-document-analysis-windows.zip og SHA256SUMS.txt, verifiser sjekksummen og pakk ut ZIP-en i en mappe under Nedlastinger. Vis meg mappestien, slik at jeg kan dobbeltklikke installer.cmd i Filutforsker og velge Codex. Overlat selve installasjonssteget til meg. Når jeg bekrefter, kjør `codex plugin list` og sjekk at systematic-document-analysis er aktivert. Ikke endre andre plugins, innstillinger eller filer.
 
 Hvis innloggingen ble hoppet over, åpne **installer.cmd**, velg Innlogging og innstillinger → Lesermotor og innlogging, deretter ønsket lesemotor. Hjelperen bruker eksisterende abonnementsinnlogging eller starter innlogging ved behov. Start deretter en ny samtale, slik at appen laster pluginen.
 
