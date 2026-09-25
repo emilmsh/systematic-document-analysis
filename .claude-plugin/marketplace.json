@@ -1,5 +1,5 @@
 {
-  "name": "systematic-document-analysis-local",
+  "name": "systematic-document-analysis",
   "description": "A controlled for-loop over files with independent CLI/API workers and an audit trail.",
   "owner": {
     "name": "Emil Mathias Strøm Halseth"
@@ -9,7 +9,7 @@
       "name": "systematic-document-analysis",
       "description": "Repeat one task independently per file, with traceable inputs and task-defined results.",
       "source": "./",
-      "version": "0.11.1"
+      "version": "0.12.0"
     }
   ]
 }

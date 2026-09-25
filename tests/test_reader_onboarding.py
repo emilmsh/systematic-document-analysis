@@ -191,7 +191,7 @@ def test_failed_login_process_does_not_claim_success(cli, monkeypatch, capsys):
 def main_setup(monkeypatch, tmp_path):
     state = {'locked': False, 'installs': [], 'readers': [], 'updates': [], 'ocr': 0}
     monkeypatch.setattr(sys, 'stdin', type('Terminal', (io.StringIO,), {'isatty': lambda self: True})())
-    monkeypatch.setattr(sys, 'argv', ['installer.py', 'claude', '--base-dir', str(tmp_path / 'installed')])
+    monkeypatch.setattr(sys, 'argv', ['installer.py', 'claude', '--base-dir', str(tmp_path / 'installed'), '--local-copy'])
     monkeypatch.setattr(installer, 'packaged_process', lambda: False)
 
     @contextmanager

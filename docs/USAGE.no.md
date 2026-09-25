@@ -9,7 +9,7 @@ En kontrollert for-løkke over filer i Claude Code eller Codex: én standardiser
 **Du trenger bare å dobbeltklikke `installer.cmd`.** Det installerer pluginen og eventuelt manglende kommandolinjeverktøy (CLI), lar deg velge lesemotor og sjekker abonnementsinnloggingen. Er CLI-et ikke innlogget med abonnement, starter innloggingen, og du fullfører den i nettleseren. Eksisterende abonnementsinnlogging brukes videre. At du er innlogget i skrivebordsappen, er ikke en bekreftelse på at CLI-et er innlogget.
 
 1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Se [siste publiserte utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest).
-2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, velg **1 = Installer**, deretter **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor terminalen i Codex.
+2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, velg **1 = Installer**, deretter **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor Claude- og Codex-appene.
 3. **Fortsett i samme installasjonsvindu:** velg lesemotor, **1 = Codex / ChatGPT, 2 = Claude Code eller 3 = begge**, og fullfør eventuell innlogging med riktig konto i nettleseren. Vent til installasjonsvinduet bekrefter innloggingen. Velg **4 = hopp over** hvis du skal bruke API eller sette opp lesemotoren senere. Valg av lesemotor er uavhengig av appen du valgte i steg 2.
 4. Åpne arbeidsmappen i **Code-fanen** i Claude eller i Codex, start en **ny lokal samtale**, og beskriv oppgaven: **«Bruk Systematic Document Analysis. Jeg vil undersøke hvordan disse årsrapportene omtaler egen bruk av KI. Filene ligger i [mappe].»**
 
@@ -75,14 +75,14 @@ Hvis innloggingen ble hoppet over, åpne **installer.cmd**, velg Innlogging og i
 ### Manuelt
 
 1. Last ned [Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) fra [siste utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest) og pakk den ut.
-2. Dobbeltklikk `installer.cmd` i Filutforsker og velg Claude Code, Codex eller begge. Programmet klargjør Python 3.12 eller nyere, installerer et manglende kommandolinjeverktøy for appen, registrerer pluginen og viser installasjonsmappen.
+2. Dobbeltklikk `installer.cmd` i Filutforsker og velg Claude Code, Codex eller begge. Programmet klargjør Python 3.12 eller nyere, installerer et manglende kommandolinjeverktøy for appen og registrerer pluginens utgivelseskanal, slik at appen holder den oppdatert.
 3. I samme vindu velger du lesemotor, **1 = Codex / ChatGPT, 2 = Claude Code eller 3 = begge**, og fullfører eventuell innlogging i nettleseren. Installeringen sjekker innloggingen før den melder at oppsettet er ferdig. **4 = hopp over** utsetter dette steget eller lar deg bruke API. Start deretter en ny lokal samtale. Første oppstart installerer Python-avhengighetene.
 
 Lesing med abonnementet ditt bruker appens egen CLI. Normalinstallasjonen klargjør valgt CLI og lokal OCR med norsk og engelsk språkstøtte; innloggingen fullfører du selv. PATH håndteres automatisk. Lesesesjonene får filverktøy, parsere, PDF-sidebilder og OCR i en egen arbeidsmappe per kjøring. `installer.cmd reader` og `installer.cmd ocr` brukes ved senere oppsett eller reparasjon. `installer.cmd settings` åpner en lokal fil for valgfrie API-nøkler.
 
 ### Oppdateringer
 
-Kjør `installer.cmd update` fra den installerte mappen for å se etter en nyere utgave, installere den eller velge bare varsle (standard), automatisk eller av. Start en ny samtale etter oppdatering. Se [installasjon og oppdateringer](UPDATES.md) for innstillinger og feilsøking.
+Claude Code og Codex holder pluginen oppdatert fra utgivelseskanalen og laster en ny versjon i en ny samtale. `installer.cmd update` sjekker eller oppdaterer med en gang og slår automatisk oppdatering av eller på. Se [installasjon og oppdateringer](UPDATES.md) for innstillinger og feilsøking.
 
 ## Bruk
 

@@ -5,4 +5,4 @@ og eksport. Claude Code er vert og gir dialog; pluginens MCP-server (kildeanalys
 eksponerer operasjonene som verktøy.
 """
 
-VERSJON = "0.11.1"
+VERSJON = "0.12.0"

@@ -10,7 +10,7 @@ import json
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
-FILER=('pyproject.toml','.mcp.json','installer.cmd','README.md','LICENSE',
+FILER=('pyproject.toml','.mcp.json','.codex-mcp.json','.gitattributes','installer.cmd','README.md','LICENSE',
        'docs/USAGE.md','docs/USAGE.no.md','docs/UPDATES.md','docs/SETUP_AND_SHARING.md',
        'docs/DOCUMENT_PROCESSING.md','docs/SOURCE_FORMATS.md','docs/PROJECT_FILES.md',
        'docs/providers.env.example','docs/TASKS.md','docs/CORE_REDESIGN.md',
@@ -41,20 +41,21 @@ def pakk(maal, codex=False, root=ROOT):
     print(f'Plugin copy: {maal}')
 
 
+CODEX_MCP='.codex-mcp.json'
+
+
 def configure_codex(maal, launch_root=None):
+    """Local-copy installation only: launch the managed copy with an explicit Python.
+
+    GitHub installations use the package's relative .codex-mcp.json unchanged.
+    """
     maal = Path(maal)
     launch_root = Path(launch_root or maal)
-    # Lokal Codex-installasjon med eksplisitt Python og plugin-kopi.
-    # Den personlige kildekopien må beholdes etter installasjon.
-    config = {'mcpServers': {'document_analysis': {
-        'command': sys._base_executable,
-        'args': ['-X', 'utf8', str(launch_root/'bin'/'start_server.py')],
-        'env': {'PYTHONUTF8': '1'},
-        'env_vars': ['SDA_DATA', 'SDA_PROJECTS_ROOT', 'CODEX_HOME', 'SDA_CODEX_BIN', 'SDA_CLAUDE_BIN', 'SDA_TESSERACT_BIN', 'SDA_SETTINGS_DIR', 'SDA_MAINTENANCE_DIR',
-                     'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'AZURE_AI_API_KEY', 'SDA_CUSTOM_API_KEY'],
-        'startup_timeout_sec': 300,
-    }}}
-    (maal/'.mcp.json').write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')
+    config = json.loads((maal/CODEX_MCP).read_text(encoding='utf-8'))
+    server = config['mcpServers']['document_analysis']
+    server.pop('cwd', None)
+    server.update(command=sys._base_executable, args=['-X', 'utf8', str(launch_root/'bin'/'start_server.py')])
+    (maal/CODEX_MCP).write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)

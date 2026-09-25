@@ -170,6 +170,9 @@ PACKAGED_MESSAGE = ('This command runs inside the Codex desktop app, where files
 
 def update_status() -> dict:
     """Cached diagnostics only; no network or credentials."""
+    if os.environ.get('SDA_RELEASE_CHANNEL'):
+        return {'mode': 'host', 'message': 'Claude Code and Codex update this plugin from its release channel. '
+                                           'Run installer.cmd update to check now or to turn automatic updates off.'}
     try:
         settings = read_json(state_dir() / 'updates.json')
         status = read_json(state_dir() / 'last-check.json')

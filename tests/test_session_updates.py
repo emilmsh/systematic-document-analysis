@@ -189,7 +189,7 @@ def test_installer_holds_one_gate_for_both_hosts(tmp_path, monkeypatch, recover)
         called.append(host)
         return 'done'
     monkeypatch.setattr(installer, 'recover' if recover else 'install', operate)
-    monkeypatch.setattr(sys, 'argv', ['installer.py', 'both', '--non-interactive',
+    monkeypatch.setattr(sys, 'argv', ['installer.py', 'both', '--non-interactive', '--local-copy',
         '--base-dir', str(tmp_path/'installed')] + (['--recover'] if recover else []))
     assert installer.main() == 0
     assert called == ['claude','codex']

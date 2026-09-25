@@ -20,7 +20,7 @@ If one task can be standardized and repeated across a file list, this plugin fit
 
 The assistant proposes a repeatable task and useful variables, then shows the selected documents, definitions and reader settings for approval before running. After execution it exports the workbook automatically. Start with Results.xlsx; the raw responses, JSON and full audit trail are preserved together in Documentation.zip. Your source files, results and settings stay separate from the plugin installation.
 
-Open **installer.cmd** again and choose **Sign-in and settings** for reader sign-in or API keys, or **Update or repair** for maintenance. For update checks and update policy, use the menu in the **installed plugin folder**; its location is shown after installation. Never paste API keys into chat.
+Open **installer.cmd** again and choose **Sign-in and settings** for reader sign-in or API keys, or **Update or repair** for maintenance. Updates are automatic: Claude Code and Codex fetch new releases themselves and load them in a new conversation. Never paste API keys into chat.
 
 [Detailed guide](docs/USAGE.md) · [Supported formats](docs/SOURCE_FORMATS.md) · [Updates and recovery](docs/UPDATES.md)
 
@@ -34,7 +34,7 @@ Open **installer.cmd** again and choose **Sign-in and settings** for reader sign
 
 Pluginen er en kontrollert for-løkke over filer: én standardisert oppgave og én uavhengig CLI/API-arbeider per fil. Standardleveransen er **et regneark med én rad per kjøring og resultatvariabler i kolonnene**. Oppgaven bestemmer variablene. Nested objekter blir kolonner, mens gjentatte funn kan få koblede detaljfaner. Feil og øvrig tilleggsinformasjon får egne faner. Assistenten foreslår variablene før godkjenning og eksporterer regnearket etter kjøring. Åpne Resultater.xlsx; råsvar, JSON og kontrollsporet ligger samlet i Dokumentasjon.zip. Hver fil får én ny arbeider; store CLI-input leses med filverktøy, mens for store API-input gir en tydelig feil.
 
-Åpne **installer.cmd** igjen og velg **Innlogging og innstillinger** for lesermotor eller API-nøkler, eller **Oppdater eller reparer** for vedlikehold. Oppdateringer styres fra menyen i **den installerte pluginmappen**, som vises etter installasjon. Ikke lim API-nøkler inn i chatten.
+Åpne **installer.cmd** igjen og velg **Innlogging og innstillinger** for lesermotor eller API-nøkler, eller **Oppdater eller reparer** for vedlikehold. Oppdateringer skjer automatisk: Claude Code og Codex henter nye utgaver selv og laster dem i en ny samtale. Ikke lim API-nøkler inn i chatten.
 
 [Utfyllende veiledning](docs/USAGE.no.md) · [Oppsett og deling](docs/SETUP_AND_SHARING.md)
 

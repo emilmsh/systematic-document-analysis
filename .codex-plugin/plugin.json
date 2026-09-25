@@ -1,6 +1,6 @@
 {
   "name": "systematic-document-analysis",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "description": "Repeat one task independently across files with controlled CLI/API workers and an audit trail.",
   "author": {
     "name": "Emil Mathias Strøm Halseth"
@@ -19,5 +19,5 @@
     "capabilities": [],
     "defaultPrompt": "Help me analyse my documents with Systematic Document Analysis."
   },
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.codex-mcp.json"
 }

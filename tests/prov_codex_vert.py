@@ -7,7 +7,7 @@ FIX=ROOT/'tests'/'fixtures'/'syntetisk'
 with tempfile.TemporaryDirectory(prefix='sda-codex-vert-') as temp:
     env=dict(os.environ,SDA_DATA=temp)
     args=['codex','exec','--ephemeral','--skip-git-repo-check','--json',
-          '-c','plugins."systematic-document-analysis@systematic-document-analysis-local".enabled=true','-c','model_reasoning_effort="low"',
+          '-c','plugins."systematic-document-analysis@systematic-document-analysis".enabled=true','-c','model_reasoning_effort="low"',
           '-c','forced_login_method="chatgpt"','-c','skills.bundled.enabled=false',
           '--disable','shell_tool','--disable','browser_use','--disable','memories',
           '--model','gpt-5.6-terra','-C',temp,'-']

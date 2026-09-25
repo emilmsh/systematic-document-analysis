@@ -27,6 +27,7 @@ class Host:
         monkeypatch.setattr(updater, 'find_cli', lambda host:sys.executable)
         monkeypatch.setattr(installer, 'inspect', self.inspect)
         monkeypatch.setattr(installer, 'run', self.run)
+        monkeypatch.setattr(installer, 'remove_legacy', lambda host, exe: False)
 
     def inspect(self, host, exe):
         return ({'name':installer.MARKET} if self.source else None, self.source, self.plugin)
@@ -76,7 +77,7 @@ def test_new_install_noop_and_repair_keep_backup(source, tmp_path, monkeypatch):
     base = tmp_path/'installed'
     assert installer.install('codex',base) == 'installed'
     target = base/'codex'/installer.NAME
-    launcher = read_json(target/'.mcp.json')['mcpServers']['document_analysis']
+    launcher = read_json(target/'.codex-mcp.json')['mcpServers']['document_analysis']
     assert launcher['args'][-1] == str(target/'bin/start_server.py')
     commands = len(host.commands)
     assert installer.install('codex',base) == 'already up to date'
@@ -250,7 +251,7 @@ def test_auto_update_applies_verified_release_and_keeps_old_copy(source,tmp_path
     assert read_json(target/installer.MARKER)['installed_sha256'] == installer.package_hash(target)
 
 
-@pytest.mark.parametrize('changed_file', ['README.md','.mcp.json'])
+@pytest.mark.parametrize('changed_file', ['README.md','.codex-mcp.json'])
 def test_auto_update_refuses_local_changes(source,tmp_path,monkeypatch,changed_file):
     Host(monkeypatch); installer.install('codex',tmp_path/'installed')
     target = tmp_path/'installed/codex'/installer.NAME
@@ -360,7 +361,8 @@ def test_update_command_checks_and_sets_policy_beside_open_sessions(source, tmp_
     monkeypatch.setattr(updater, 'fetch', lambda *args: json.dumps({'tag_name':'v99.0.0', 'body':'notes',
                         'assets':[{'name':updater.ARCHIVE,'id':2},{'name':'SHA256SUMS.txt','id':1}]}).encode())
     monkeypatch.setattr(updater, 'apply_release', lambda *args: pytest.fail('No installation expected'))
-    monkeypatch.setattr(updater.Path, 'resolve', lambda self: target/'bin'/'update_plugin.py' if self.name == 'update_plugin.py' else Path.__new__(Path, self))
+    resolve = Path.resolve
+    monkeypatch.setattr(updater.Path, 'resolve', lambda self, *a: target/'bin'/'update_plugin.py' if self.name == 'update_plugin.py' else resolve(self, *a))
     with maintenance_lock(shared=True):  # Another plugin session is open.
         monkeypatch.setattr(sys, 'argv', ['update_plugin.py', '--check', '--mode', 'auto'])
         assert updater.main() == 0

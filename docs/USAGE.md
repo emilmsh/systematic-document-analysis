@@ -9,7 +9,7 @@ A controlled for-loop over files in Claude Code or Codex: one agreed task, one i
 **You only need to double-click `installer.cmd`.** It installs the plugin and any missing command-line tool (CLI), lets you choose a reader, and checks subscription sign-in. If the CLI is not signed in with a subscription, it starts sign-in for you to complete in your browser. Existing subscription sign-in is reused. Being signed in to the desktop app does not confirm that the CLI is signed in.
 
 1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. See the [latest published release](https://github.com/emilmsh/systematic-document-analysis/releases/latest).
-2. Open the extracted folder in File Explorer, double-click **installer.cmd**, choose **1 = Install**, then **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Codex terminal.
+2. Open the extracted folder in File Explorer, double-click **installer.cmd**, choose **1 = Install**, then **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Claude and Codex desktop apps.
 3. **Continue in the same installer window:** choose your reader, **1 = Codex / ChatGPT, 2 = Claude Code or 3 = Both**, and complete any required browser sign-in with the intended account. Wait for the installer to confirm sign-in. Choose **4 = Skip** if you will use an API or set up the reader later. The reader is independent of the app selected in step 2.
 4. Open your working folder in Claude Code's **Code tab** or in Codex, start a **new local conversation**, and describe your task: **“Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in [folder].”**
 
@@ -69,14 +69,14 @@ If sign-in was skipped, open **installer.cmd**, choose Sign-in and settings → 
 ### By hand
 
 1. Download the [Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) from the [latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest) and extract it.
-2. Double-click `installer.cmd` in File Explorer, choose Install, then Claude Code, Codex or both. It prepares Python 3.12 or newer, installs a missing host CLI, registers the plugin and reports the installation folder.
+2. Double-click `installer.cmd` in File Explorer, choose Install, then Claude Code, Codex or both. It prepares Python 3.12 or newer, installs a missing host CLI and registers the plugin's release channel, so the app keeps it updated.
 3. In the same window, choose your reader, **1 = Codex / ChatGPT, 2 = Claude Code or 3 = Both**, and complete any required browser sign-in. The installer checks sign-in before reporting setup complete. **4 = Skip** postpones this step or lets you use an API. Then start a new local conversation. The first start installs the Python dependencies.
 
 Subscription reading uses the app's CLI. Normal installation sets up the selected CLI and local OCR with English/Norwegian language data; you complete the vendor's sign-in yourself. CLI discovery handles stale PATH automatically. Reader sessions get file tools, parsers, PDF page images and OCR in a fresh workspace per call. `installer.cmd reader` and `installer.cmd ocr` remain available for later setup or repair. `installer.cmd settings` opens a local file for optional API keys.
 
 ### Updates
 
-Run `installer.cmd update` from the installed folder to check for a newer release, install it, or choose notify only (default), automatic or off. Start a new conversation after updating. See [installation and updates](UPDATES.md) for settings and troubleshooting.
+Claude Code and Codex keep the plugin updated from its release channel and load a new version in a new conversation. `installer.cmd update` checks or updates now and turns automatic updates on or off. See [installation and updates](UPDATES.md) for settings and troubleshooting.
 
 ## Using it
 

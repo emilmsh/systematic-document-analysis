@@ -74,8 +74,8 @@ def check(*, force=False):
                       notes=str(release.get('body') or '')[:4000], message='Release information available.')
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         # Do not make offline startup fail or try again on every new conversation.
-        result['message'] = (f'Update check unavailable ({type(exc).__name__}). Private repository access needs '
-                             'an existing GitHub CLI login with repository access. Use gh auth login, or install a shared ZIP.')
+        result['message'] = (f'Update check unavailable ({type(exc).__name__}). Check the network connection, '
+                             f'or download the latest release from {WEB}/latest.')
     write_json(path, result)
     return result
 
@@ -216,6 +216,62 @@ def startup(root):
         return False
 
 
+def channel_installs():
+    """Hosts that installed this plugin from the GitHub release channel."""
+    import installer
+    found = []
+    for host in ('claude', 'codex'):
+        exe = find_cli(host)
+        if not Path(exe).is_file() and not shutil.which(exe):
+            continue
+        try:
+            _, channel, plugin = installer.github_state(host, exe)
+        except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+            continue
+        if channel and plugin:
+            found.append((host, exe, plugin))
+    return found
+
+
+def channel_updates(args, parser):
+    """Release-channel installations: the hosts update themselves; report and adjust that here."""
+    import installer
+    if not any((args.mode, args.check, args.install)):
+        print('Updates: 1 = check now, 2 = update now, 3 = automatic updates on (default), 4 = automatic updates off')
+        choice = input('Choose 1-4: ').strip()
+        if choice not in ('1', '2', '3', '4'):
+            parser.error('Invalid choice; no changes made.')
+        args.check, args.install = choice == '1', choice == '2'
+        args.mode = {'3': 'auto', '4': 'off'}.get(choice)
+    hosts = channel_installs()
+    if not hosts:
+        raise RuntimeError('No installation from the GitHub release channel was found. Run installer.cmd to install it. '
+                           'For a --local-copy installation, run installer.cmd update in its installed folder.')
+    if args.mode:
+        for host, _, _ in hosts:
+            if host == 'claude':
+                installer.set_claude_auto_update(args.mode == 'auto')
+                print(f'Claude Code: automatic updates {"on" if args.mode == "auto" else "off"}.')
+            else:
+                print('Codex refreshes the release channel each time it starts; this setting does not change that.')
+    if args.check or args.install:
+        release = check(force=True)
+        print(release['message'])
+        if release.get('version'):
+            print(f'Latest stable version: {release["version"]} ({release["url"]})')
+        for host, _, plugin in hosts:
+            print(f'{host}: installed {plugin.get("version", "unknown version")}')
+    if args.install:
+        for host, exe, _ in hosts:
+            if host == 'codex':
+                installer.run([exe, 'plugin', 'marketplace', 'upgrade', installer.MARKET])
+            else:
+                installer.run([exe, 'plugin', 'marketplace', 'update', installer.MARKET])
+                installer.run([exe, 'plugin', 'update', installer.SELECTOR, '--scope', 'user'])
+        print('Up to date. Start a new conversation to load any new version.')
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=('off','notify','auto'), help='Save the policy for future sessions in both apps')
@@ -224,6 +280,10 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     try:
+        if not managed_install(root):
+            # Hosts write their own plugin copies under the user profile, so this also
+            # works inside the packaged desktop apps.
+            return channel_updates(args, parser)
         if not any((args.mode, args.check, args.install)):
             print('Updates: 1 = check now, 2 = update now, 3 = notify only (default), 4 = automatic, 5 = off')
             choice = input('Choose 1-5: ').strip()

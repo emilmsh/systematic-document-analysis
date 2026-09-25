@@ -20,11 +20,11 @@ def test_felles_pakke_uten_maskinstier_og_byggemetadata(tmp_path):
     assert not any('build' in p.relative_to(target).parts for p in files)
     assert str(Path.home()) not in (target/'.mcp.json').read_text(encoding='utf-8')
     assert {p.name for p in target.iterdir() if p.is_file()} == {
-        'installer.cmd', 'README.md', 'LICENSE', 'pyproject.toml', '.mcp.json'}
+        'installer.cmd', 'README.md', 'LICENSE', 'pyproject.toml', '.mcp.json', '.codex-mcp.json', '.gitattributes'}
     assert not any((target/name).exists() for name in (
         'tests', 'examples', 'eksempler', 'DEVELOPMENT.md',
         'oppsett.cmd', 'reader_setup.cmd', 'ocr_setup.cmd', 'settings.cmd', 'update.cmd',
-        'bin/build_examples.py', 'bin/hent_arsrapporter.py', 'bin/lag_release.py'))
+        'bin/build_examples.py', 'bin/hent_arsrapporter.py', 'bin/lag_release.py', 'bin/lag_stable.py'))
 
 
 def test_compact_package_can_repackage_itself_and_has_no_broken_guide_links(tmp_path):
@@ -45,7 +45,7 @@ def test_installer_forbereder_begge_verter_separat(tmp_path):
     claude=prepare('claude',tmp_path)
     codex=prepare('codex',tmp_path)
     a=json.loads((claude/'.mcp.json').read_text(encoding='utf-8'))['mcpServers']['document_analysis']
-    b=json.loads((codex/'.mcp.json').read_text(encoding='utf-8'))['mcpServers']['document_analysis']
+    b=json.loads((codex/'.codex-mcp.json').read_text(encoding='utf-8'))['mcpServers']['document_analysis']
     assert a['command']=='cmd' and '${CLAUDE_PLUGIN_ROOT}' in a['args'][-1]
     assert b['args'][-1]==str(codex/'bin/start_server.py')
     assert Path(b['command']).is_absolute()

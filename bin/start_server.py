@@ -67,6 +67,13 @@ def prepare(root: Path, data: Path) -> Path:
     return python
 
 
+def host_cache(root: Path) -> bool:
+    """A copy Claude Code or Codex installed and updates from the release channel."""
+    homes = (os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude",
+             os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+    return any(root.resolve().is_relative_to((Path(home) / "plugins" / "cache").resolve()) for home in homes)
+
+
 def main() -> int:
     if sys.version_info < (3, 12):
         print("[Systematic Document Analysis] Python 3.12 or newer is required.", file=sys.stderr)
@@ -93,6 +100,8 @@ def main() -> int:
                     os.environ['SDA_PACKAGE_SHA256'] = marker['package_sha256']
                 else:
                     os.environ.pop('SDA_PACKAGE_SHA256', None)
+            elif host_cache(root):
+                os.environ['SDA_RELEASE_CHANNEL'] = '1'
             python = prepare(root, data)
             return subprocess.call([str(python), "-I", "-X", "utf8", "-m", "kildeanalyse.mcp_server"])
     except (OSError, RuntimeError, ValueError, KeyError, subprocess.SubprocessError) as exc:

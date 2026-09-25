@@ -23,9 +23,15 @@ from setup_ocr import install as setup_local_ocr
 from kildeanalyse.maintenance import PACKAGED_MESSAGE, maintenance_lock, installation_lock, packaged_process, read_json, write_json
 
 NAME = 'systematic-document-analysis'
-MARKET = 'systematic-document-analysis-local'
+MARKET = NAME
 SELECTOR = f'{NAME}@{MARKET}'
+# Earlier releases registered a managed local copy under this marketplace name.
+LEGACY_MARKET = 'systematic-document-analysis-local'
 MARKER = '.sda-install.json'
+# The release channel: a branch holding only the release package, moved at each release.
+REPOSITORY = 'emilmsh/systematic-document-analysis'
+STABLE_REF = 'stable'
+GIT_URL = f'https://github.com/{REPOSITORY}.git'
 
 
 def local_path(value):
@@ -125,11 +131,11 @@ def confirm(message, *, allowed=False, interactive=False):
     return input(message + ' [y/N]: ').strip().lower() in ('y', 'yes', 'j', 'ja')
 
 
-def remove_plugin(host, exe):
+def remove_plugin(host, exe, selector=SELECTOR):
     if host == 'codex':
-        run([exe, 'plugin', 'remove', SELECTOR])
+        run([exe, 'plugin', 'remove', selector])
     else:
-        run([exe, 'plugin', 'uninstall', SELECTOR, '--scope', 'user', '--keep-data'])
+        run([exe, 'plugin', 'uninstall', selector, '--scope', 'user', '--keep-data'])
 
 
 def register_plugin(host, exe, *, reinstall=False):
@@ -140,6 +146,122 @@ def register_plugin(host, exe, *, reinstall=False):
     else:
         run([exe, 'plugin', 'install', SELECTOR, '--scope', 'user'])
         run([exe, 'plugin', 'update', SELECTOR, '--scope', 'user'])
+
+
+def claude_settings_path():
+    return Path(os.environ.get('CLAUDE_CONFIG_DIR') or Path.home()/'.claude')/'settings.json'
+
+
+def codex_config_path():
+    return Path(os.environ.get('CODEX_HOME') or Path.home()/'.codex')/'config.toml'
+
+
+def claude_auto_update():
+    entry = read_json(claude_settings_path()).get('extraKnownMarketplaces', {}).get(MARKET)
+    return entry.get('autoUpdate') if isinstance(entry, dict) else None
+
+
+def set_claude_auto_update(enabled):
+    """Claude has no CLI option for this; `autoUpdate` on the declared entry is the documented switch."""
+    path = claude_settings_path()
+    settings = json.loads(path.read_text(encoding='utf-8-sig')) if path.exists() else {}
+    entry = settings.get('extraKnownMarketplaces', {}).get(MARKET)
+    if not isinstance(entry, dict):
+        raise RuntimeError(f'Claude has not declared the {MARKET} marketplace in {path}.')
+    if entry.get('autoUpdate') is not enabled:
+        entry['autoUpdate'] = enabled
+        write_json(path, settings)
+
+
+def github_state(host, exe):
+    """The marketplace and plugin under MARKET, and whether the marketplace follows the release channel."""
+    markets = query([exe, 'plugin', 'marketplace', 'list', '--json'])
+    plugins = query([exe, 'plugin', 'list', '--json'])
+    if host == 'codex':
+        market = next((m for m in markets['marketplaces'] if m['name'] == MARKET), None)
+        plugin = next((p for p in plugins['installed'] if p.get('name') == NAME and
+                       p.get('marketplaceName', p.get('marketplace')) == MARKET), None)
+        path = codex_config_path()
+        entry = (tomllib.loads(path.read_text(encoding='utf-8')) if path.exists() else {}).get('marketplaces', {}).get(MARKET, {})
+        channel = (entry.get('source_type') == 'git' and entry.get('source', '').rstrip('/').removesuffix('.git')
+                   in (REPOSITORY, GIT_URL.removesuffix('.git')) and entry.get('ref') == STABLE_REF)
+    else:
+        market = next((m for m in markets if m['name'] == MARKET), None)
+        plugin = next((p for p in plugins if p.get('id') == SELECTOR and p.get('scope') == 'user'), None)
+        entry = read_json(claude_settings_path()).get('extraKnownMarketplaces', {}).get(MARKET, {})
+        source = entry.get('source', {}) if isinstance(entry, dict) else {}
+        channel = source.get('source') == 'github' and source.get('repo') == REPOSITORY and source.get('ref') == STABLE_REF
+    return market, bool(market and channel), plugin
+
+
+def remove_legacy(host, exe):
+    """Unregister a managed local copy from earlier releases; its files and all analysis data stay."""
+    markets = query([exe, 'plugin', 'marketplace', 'list', '--json'])
+    plugins = query([exe, 'plugin', 'list', '--json'])
+    selector = f'{NAME}@{LEGACY_MARKET}'
+    if host == 'codex':
+        market = next((m for m in markets['marketplaces'] if m['name'] == LEGACY_MARKET), None)
+        plugin = any(p.get('marketplaceName', p.get('marketplace')) == LEGACY_MARKET for p in plugins['installed'])
+    else:
+        market = next((m for m in markets if m['name'] == LEGACY_MARKET), None)
+        plugin = any(p.get('id') == selector for p in plugins)
+    if plugin:
+        remove_plugin(host, exe, selector)
+    if market:
+        run([exe, 'plugin', 'marketplace', 'remove', LEGACY_MARKET])
+        location = market.get('path') or market.get('root')
+        print(f'{host}: replaced the earlier local installation. Its files are no longer used and are kept'
+              + (f' at {location}.' if location else '.'))
+    return bool(plugin or market)
+
+
+def install_github(host, *, replace_source=False, repair=False, auto_update=True, interactive=False):
+    """Register the stable release channel so Claude Code or Codex keeps the plugin updated itself."""
+    exe = ensure_reader(host)
+    remove_legacy(host, exe)
+    market, channel, plugin = github_state(host, exe)
+    if plugin and plugin.get('enabled') is False:
+        print(f'{host}: plugin is disabled. Enable it in the host before updating; installation preserved.')
+        return 'kept disabled installation'
+    if market and not channel:
+        print(f'{host}: the {MARKET} marketplace uses another source (for example a local copy).\nOption: --replace-source')
+        if not confirm('Switch to automatic updates from the GitHub release channel?',
+                       allowed=replace_source, interactive=interactive):
+            return 'kept existing source'
+        if plugin:
+            remove_plugin(host, exe)
+            plugin = None
+        run([exe, 'plugin', 'marketplace', 'remove', MARKET])
+        market = None
+    if not market:
+        if host == 'codex':
+            run([exe, 'plugin', 'marketplace', 'add', REPOSITORY, '--ref', STABLE_REF])
+        else:
+            run([exe, 'plugin', 'marketplace', 'add', f'{REPOSITORY}#{STABLE_REF}'])
+    elif host == 'codex':
+        # Upgrading also reinstalls configured plugins from the refreshed snapshot.
+        run([exe, 'plugin', 'marketplace', 'upgrade', MARKET])
+    else:
+        run([exe, 'plugin', 'marketplace', 'update', MARKET])
+    if host == 'claude':
+        set_claude_auto_update(auto_update)
+    if plugin and repair:
+        remove_plugin(host, exe)
+        plugin = None
+    if plugin and host == 'claude':
+        run([exe, 'plugin', 'update', SELECTOR, '--scope', 'user'])
+    elif not plugin:
+        register_plugin(host, exe)
+    _, channel, actual = github_state(host, exe)
+    if not channel or not actual or actual.get('enabled') is False:
+        raise RuntimeError('The host did not report the enabled plugin from the release channel.')
+    print(f'{host}: installed {actual.get("version", "the latest release")} from the release channel. '
+          'Start a new conversation to load it.')
+    if host == 'claude':
+        print(f'{host}: automatic updates {"on" if auto_update else "off"}; Claude Code applies them in the next session.')
+    else:
+        print(f'{host}: Codex refreshes the release channel when it starts and loads updates in new sessions.')
+    return 'installed'
 
 
 def codex_shadows(target):
@@ -249,6 +371,7 @@ def _install(host, base, *, replace_source, repair, allow_downgrade, move_shadow
             return 'kept shadow copy'
 
     # Complete preflight before copying; stage the full package before switching.
+    remove_legacy(host, exe)
     target.parent.mkdir(parents=True, exist_ok=True)
     backup = target.parent/'backups'/uuid.uuid4().hex/NAME
     if not backup.resolve().is_relative_to(target.parent):
@@ -515,9 +638,12 @@ def finish_reader_setup(reader, *, interactive):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('app', nargs='?', choices=['claude','codex','both','begge'])
+    parser.add_argument('--local-copy', action='store_true',
+                        help='Install this package as a managed local copy instead of the GitHub release channel '
+                             '(offline or development; updates through installer.cmd update)')
     parser.add_argument('--base-dir', type=Path, default=Path(os.environ.get('LOCALAPPDATA',Path.home()))/'systematic-document-analysis'/'plugins')
     parser.add_argument('--prepare-only', action='store_true')
-    parser.add_argument('--replace-source', action='store_true', help='Explicitly replace this plugin\'s local marketplace source')
+    parser.add_argument('--replace-source', action='store_true', help='Explicitly replace this plugin\'s existing marketplace source')
     parser.add_argument('--repair', action='store_true', help='Reinstall even when the version is unchanged')
     parser.add_argument('--allow-downgrade', action='store_true')
     parser.add_argument('--move-shadow', action='store_true',
@@ -532,6 +658,9 @@ def main():
     args = parser.parse_args()
     if args.reader is not None and (args.prepare_only or args.recover):
         parser.error('--reader cannot be combined with --prepare-only or --recover.')
+    local_copy = args.local_copy or args.prepare_only or args.recover
+    if not local_copy and (args.allow_downgrade or args.move_shadow):
+        parser.error('--allow-downgrade and --move-shadow apply to --local-copy installations.')
     if sys.version_info < (3,12) or os.name != 'nt':
         parser.error('This installation package requires Windows and Python 3.12 or newer.')
     interactive = not args.non_interactive and sys.stdin.isatty()
@@ -548,14 +677,22 @@ def main():
     try:
         if not args.prepare_only and packaged_process():
             raise RuntimeError(PACKAGED_MESSAGE)
-        # One gate for both hosts: clients cannot reconnect between installations.
-        with nullcontext() if args.prepare_only else installation_lock(notify=lambda message: print(message, flush=True)):
+        # One gate for both hosts: clients cannot reconnect between local-copy installations.
+        # The hosts manage release-channel copies themselves, so open sessions are left alone.
+        gate = (installation_lock(notify=lambda message: print(message, flush=True))
+                if local_copy and not args.prepare_only else nullcontext())
+        with gate:
             for host in (['claude','codex'] if app in ('both','begge') else [app]):
                 try:
                     if args.prepare_only:
                         print(prepare(host, args.base_dir))
                     elif args.recover:
                         print(f'{host}: {recover(host, args.base_dir, locked=True)}')
+                    elif not local_copy:
+                        result = install_github(host, replace_source=args.replace_source, repair=args.repair,
+                                                interactive=interactive)
+                        print(f'{host}: {result}')
+                        installed = installed or result == 'installed'
                     else:
                         result = install(host, args.base_dir, replace_source=args.replace_source, repair=args.repair,
                                          allow_downgrade=args.allow_downgrade, move_shadow=args.move_shadow,
@@ -565,6 +702,9 @@ def main():
                 except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
                     failures.append(host)
                     print(f'{host}: installation stopped: {exc}', file=sys.stderr)
+                    if not local_copy:
+                        print(f'{host}: if GitHub cannot be reached, install this package with '
+                              f'installer.cmd {host} --local-copy (no automatic updates).', file=sys.stderr)
     except (RuntimeError, OSError, ValueError) as exc:
         print(f'Installation stopped: {exc}', file=sys.stderr)
         return 1

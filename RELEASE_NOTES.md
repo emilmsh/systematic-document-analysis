@@ -1,3 +1,16 @@
+# 0.12.0 — Automatic updates through Claude Code and Codex
+
+- Install the plugin from its release channel: the `stable` branch of the public repository, which holds exactly the release package and moves only at a release. Claude Code and Codex then install and update the plugin themselves, also in the desktop apps, and load a new version in the next conversation.
+- Turn on Claude Code's automatic updates for this marketplace (`autoUpdate` on its entry in the Claude user settings). Codex refreshes the channel whenever it starts. `installer.cmd update` checks, updates now, or turns automatic updates on or off; it works while conversations are open.
+- Rename the marketplace to `systematic-document-analysis`. Installing 0.12.0 once unregisters the earlier `systematic-document-analysis-local` copy in each app, keeps its files, and switches to the channel. Analysis data and settings are untouched.
+- Start Codex through a relative launcher (`.codex-mcp.json`), so the same package runs from the host's own plugin folder. `show_setup` reports host-managed updates.
+- `--local-copy` keeps the managed local copy for offline or development installs, with its previous update menu, backups and recovery.
+- Ship `.gitattributes` in the package, so Windows command files keep their line endings when a host checks out the channel.
+
+Install 0.12.0 once with its installer from File Explorer. Later releases arrive automatically.
+
+Verification: 497 tests passed, with the one known worktree-environment failure; new tests cover channel installation for both hosts, the switch from earlier local copies, the automatic-update switch, the update menu and the channel branch contents. Plugin and skill validators passed. The release ZIP (73 files, 198,743 bytes, SHA-256 `cf5f0dec629d066b1571d56d852c661a17ed08441dcb8addaa4859f3f11770bf`) started through both the Claude launcher and the relative Codex launcher (0.12.0, 21 tools). The live channel check with the real host CLIs in temporary profiles is recorded with the GitHub release.
+
 # 0.11.1 — Icon, MIT license and public repository
 
 - Add the plugin icon: SVG and 512 px PNG under `assets/`, shown at the top of the README and used as the Codex logo and composer icon with brand colour `#1F4E5F`. The Claude manifest has no icon field; it now links to the repository.
