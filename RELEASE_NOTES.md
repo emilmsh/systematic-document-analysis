@@ -1,3 +1,13 @@
+# 0.11.1 — Icon, MIT license and public repository
+
+- Add the plugin icon: SVG and 512 px PNG under `assets/`, shown at the top of the README and used as the Codex logo and composer icon with brand colour `#1F4E5F`. The Claude manifest has no icon field; it now links to the repository.
+- License the plugin under MIT and include `LICENSE` and `assets/` in the release package.
+- The repository is public: update checks and downloads no longer need a GitHub account or `gh` login. The README starts with a download link to the latest release.
+- Document that installation and updates must run outside both the Claude and the Codex desktop apps, which redirect writes below `%LOCALAPPDATA%`. The installer and updater already refused to run inside either app.
+- Internal planning notes and the development test log are no longer part of the repository. No runtime behaviour, dependency or data-format changes.
+
+Verification: 486 tests passed, with the one known worktree-environment failure. Plugin and skill validators passed. Built the release ZIP from fresh staging (71 files, 196,206 bytes, SHA-256 `968011103d4b8bf771cf1c28341ac5de33e5e68147e7a40b01ee61b6dc686f43`) and confirmed that it contains `LICENSE` and the icon but no internal documents; the unpacked package passed the MCP probe with an independent runtime. No live reader calls.
+
 # 0.11.0 — Concurrent runs within an agreed ceiling
 
 - Run several files at once within one analysis. The plan records `max_concurrent_runs` (1–16) as an approved ceiling; plans without it, including existing plans, still run one at a time. Each file keeps its own worker thread, reader, fresh session or request and attempt workspace. The setting is not part of the input package or its hash.
