@@ -22,7 +22,7 @@ def test_felles_pakke_uten_maskinstier_og_byggemetadata(tmp_path):
     assert {p.name for p in target.iterdir() if p.is_file()} == {
         'installer.cmd', 'README.md', 'pyproject.toml', '.mcp.json'}
     assert not any((target/name).exists() for name in (
-        'tests', 'examples', 'eksempler', 'DEVELOPMENT.md', 'UTVIKLINGSSTRATEGI.md',
+        'tests', 'examples', 'eksempler', 'DEVELOPMENT.md',
         'oppsett.cmd', 'reader_setup.cmd', 'ocr_setup.cmd', 'settings.cmd', 'update.cmd',
         'bin/build_examples.py', 'bin/hent_arsrapporter.py', 'bin/lag_release.py'))
 

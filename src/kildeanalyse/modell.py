@@ -1,6 +1,6 @@
 """Datamodell: oppgaveplan, inputpakke og motorsvar.
 
-Begreper (se UTVIKLINGSSTRATEGI.md del 5): et prosjekt rommer analyser; en analyse har en
+Begreper: et prosjekt rommer analyser; en analyse har en
 versjonert arbeidsplan; en kjøring utfører planens instruks på én inputpakke (her: ett
 dokument) og kan ha flere forsøk.
 """

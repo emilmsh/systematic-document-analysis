@@ -9,7 +9,7 @@ Hvert forsøk er en ny, isolert sesjon:
   --no-session-persistence sesjonen lagres ikke
   --system-prompt-file     den fastlagte instruksen (UTF-8-fil, erstatter standardinstruksen)
   --json-schema            strukturert svar
-Dokumentet sendes via stdin (UTF-8). Observert oppførsel er dokumentert i tests/TESTLOGG.md.
+Dokumentet sendes via stdin (UTF-8).
 """
 from __future__ import annotations
 

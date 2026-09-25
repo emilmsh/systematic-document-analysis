@@ -126,7 +126,7 @@ Verification: skill validator passed; 3 distribution tests and 5 selected instal
 - Preserve the exact input, source checksum, workspace manifest, raw CLI events and file artifacts for review. Evidence must still match the approved source extraction. CLI restrictions are not a claim of complete operating-system isolation; see `docs/DOCUMENT_PROCESSING.md`.
 - Block start when required tools, reader access, criteria, document selection or plan approval are missing. Record individual run errors and continue other independent runs; confirmed missing CLI authentication blocks later dependent calls. No automatic retry or alternative reader.
 
-Existing approved plans retain their settings. Create and approve a new CLI plan to use file tools. Install the ZIP or update through `update.cmd`, then start a new conversation. Verification and remaining acceptance limits are recorded in `tests/TESTLOGG.md`.
+Existing approved plans retain their settings. Create and approve a new CLI plan to use file tools. Install the ZIP or update through `update.cmd`, then start a new conversation. Verification and remaining acceptance limits are recorded in the development test log.
 
 # 0.8.6 — Start from an ordinary task description
 
@@ -135,7 +135,7 @@ Existing approved plans retain their settings. Create and approve a new CLI plan
 - Report unsupported files and subfolders omitted during folder import. Explicitly selected children get their own import results; existing source files stay unchanged.
 - Simplify the English and Norwegian quick-start examples around the user's own annual reports. Users do not need to prepare criteria or technical parameters before beginning.
 
-Update through `update.cmd` or install the Windows ZIP, then start a new local conversation. Existing analysis data is retained. Verification and limits are recorded in `tests/TESTLOGG.md`; the conversational guidance has not yet been tested with a first-time user.
+Update through `update.cmd` or install the Windows ZIP, then start a new local conversation. Existing analysis data is retained. Verification and limits are recorded in the development test log; the conversational guidance has not yet been tested with a first-time user.
 
 # 0.8.5 — Visible project folders, Excel exports and controlled session closure
 
@@ -158,7 +158,7 @@ Update through `update.cmd` or install the Windows ZIP, then start a new local c
 
 Upgrading from 0.8.2 or 0.8.3 uses the updater (`update.cmd --install`, or the notify/auto policy). Versions through 0.8.1 still need one ZIP installation. Close plugin sessions in both apps before installing, then start a new conversation.
 
-Verification and limits are recorded in `tests/TESTLOGG.md`. No provider/model calls are required for the local regression and packaging checks.
+Verification and limits are recorded in the development test log. No provider/model calls are required for the local regression and packaging checks.
 
 ---
 
@@ -175,7 +175,7 @@ A forced interruption of `installer.cmd` (a killed process, a closed window, a p
 
 Upgrading from 0.8.2 uses the updater (`update.cmd` or the notify/auto policy). Versions through 0.8.1 still need one ZIP installation. Close existing plugin sessions before installing, then start a new conversation.
 
-Verification and limits are recorded in `tests/TESTLOGG.md`. Interruption at every installer step is tested with a fake host and, for one scenario, with the real Claude Code and Codex CLIs in temporary profiles. A genuine kill of a running installer process is modelled, not executed. No provider/model calls are required for the local regression and packaging checks.
+Verification and limits are recorded in the development test log. Interruption at every installer step is tested with a fake host and, for one scenario, with the real Claude Code and Codex CLIs in temporary profiles. A genuine kill of a running installer process is modelled, not executed. No provider/model calls are required for the local regression and packaging checks.
 
 ---
 
@@ -188,11 +188,10 @@ The Windows installer now detects existing versions and marketplace sources befo
 - Private repository downloads use an existing GitHub CLI login. Shared ZIP installation remains available without repository access.
 - Downloads require the release checksum; package identities/versions and archive paths are validated. Builds use fresh staging and exclude environments, credentials and analysis data.
 - Analysis attempts record the application version and managed package fingerprints.
-- Development handover to Claude Code: start with `docs/CLAUDE_HANDOFF.md` and `docs/CLAUDE_STARTPROMPT.md`.
 
 Install this release once from the ZIP to acquire the updater. Versions through 0.8.1 do not have this update mechanism. Close existing plugin sessions, run `installer.cmd`, then start a new conversation. A forced interruption can leave a recovery record requiring manual resolution; do not remove the record or backups as a shortcut. The next real published-version automatic upgrade still needs an end-to-end acceptance test.
 
-Verification and limits are recorded in `tests/TESTLOGG.md`. No provider/model calls are required for the local regression and packaging checks.
+Verification and limits are recorded in the development test log. No provider/model calls are required for the local regression and packaging checks.
 
 ---
 
