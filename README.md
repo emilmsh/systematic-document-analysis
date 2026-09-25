@@ -1,18 +1,18 @@
 # Systematic Document Analysis
 
+**[⬇ Download for Windows / Last ned for Windows](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** — latest release · [Release notes](https://github.com/emilmsh/systematic-document-analysis/releases/latest) · [Norsk](#start-her)
+
 **A controlled for-loop over files.** Define one task, run an independent CLI or API worker for each file, and trace every result back to its instructions, source, settings and raw response. Works inside Claude Code and Codex, in English and Norwegian.
 
 If one task can be standardized and repeated across a file list, this plugin fits. The default output is a dataset: **one row per iteration/run, with generated variables in columns**, delivered as an Excel workbook. The task determines the variables: extracted entities or passages, scores, topics, sentiment, calculations or other results. Nested objects become meaningful columns; repeated collections can have linked detail sheets. Errors and other auxiliary information have their own sheets. Each file gets one fresh worker; large CLI inputs use file tools, while oversized API inputs fail explicitly.
 
-**v0.10.x is a breaking development series.** Plan records from v0.9.0 and earlier are unsupported. Keep their exported artifacts and use a fresh data store for new work; installation does not delete or migrate old analysis data. See [data location](docs/USAGE.md#data).
+**Since v0.10.0, plan records from v0.9.0 and earlier are unsupported.** Keep their exported artifacts and use a fresh data store for new work; installation does not delete or migrate old analysis data. See [data location](docs/USAGE.md#data).
 
 [Task contracts and examples](docs/TASKS.md) · [Core principles and implementation plan](docs/CORE_REDESIGN.md)
 
-**[Download for Windows / Last ned for Windows](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** — public download from the latest release.
-
 ## Start here
 
-1. Extract the Windows ZIP and double-click **installer.cmd** in File Explorer. Choose **1 — Install**, then Claude Code, Codex or both. Use an ordinary Windows terminal or Explorer, outside the Codex app.
+1. Extract the Windows ZIP and double-click **installer.cmd** in File Explorer. Choose **1 — Install**, then Claude Code, Codex or both. Use Explorer or an ordinary Windows terminal, outside the Claude and Codex desktop apps.
 2. Continue in the same window. Setup prepares the required runtime and file tools, checks OCR and lets you set up Codex, Claude Code or both for subscription reading. Existing sign-ins are reused. The installer then offers to check for and install the latest reader CLI version. No manual PATH setup is needed.
 3. Start a new local conversation with the plugin enabled, open your document folder and describe your task:
 
@@ -28,7 +28,7 @@ Open **installer.cmd** again and choose **Sign-in and settings** for reader sign
 
 ## Start her
 
-1. Pakk ut Windows-ZIP-en og dobbeltklikk **installer.cmd** i Filutforsker. Velg **1 — Installer**, deretter Claude Code, Codex eller begge. Kjør utenfor Codex-appen.
+1. Pakk ut Windows-ZIP-en og dobbeltklikk **installer.cmd** i Filutforsker. Velg **1 — Installer**, deretter Claude Code, Codex eller begge. Bruk Filutforsker eller en vanlig Windows-terminal, utenfor Claude- og Codex-appene.
 2. Fortsett i samme vindu. Oppsettet klargjør nødvendige filverktøy, kontrollerer OCR og lar deg sette opp Codex, Claude Code eller begge for abonnementslesing. Eksisterende innlogginger brukes videre. Du trenger ikke ordne PATH selv.
 3. Start en ny lokal samtale med pluginen aktivert, åpne dokumentmappen og beskriv oppgaven:
 
