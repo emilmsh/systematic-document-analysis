@@ -114,8 +114,6 @@ CLI readers use your subscription sign-in and the vendor's agent harness with a 
 
 ### Data
 
-v0.10.0 removes old criteria-based plans and database migration support. For a store containing analyses from v0.9.0 or earlier, keep the old store and exports, then select a fresh empty directory with `SDA_DATA` before starting the updated plugin. Do not point the new version at that old store. This is separate from installing/updating the plugin; installation does not delete analysis data.
-
 Analysis data is stored in `%LOCALAPPDATA%\systematic-document-analysis` and shared by both apps. `SDA_DATA` selects another directory. Nothing is moved or deleted automatically; `show_setup` displays the directory in use.
 
 ## Azure AI Foundry
