@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "document_analysis": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/d", "/c", "${CLAUDE_PLUGIN_ROOT}\\bin\\start_server.cmd"]
+    }
+  }
+}

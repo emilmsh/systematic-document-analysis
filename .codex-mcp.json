@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "document_analysis": {
+      "command": "cmd.exe",
+      "args": [
+        "/d",
+        "/s",
+        "/c",
+        "call",
+        "./bin/start_server.cmd"
+      ],
+      "cwd": ".",
+      "env": {
+        "PYTHONUTF8": "1"
+      },
+      "env_vars": [
+        "SDA_DATA",
+        "SDA_PROJECTS_ROOT",
+        "CODEX_HOME",
+        "SDA_CODEX_BIN",
+        "SDA_CLAUDE_BIN",
+        "SDA_TESSERACT_BIN",
+        "SDA_SETTINGS_DIR",
+        "SDA_MAINTENANCE_DIR",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "OPENROUTER_API_KEY",
+        "AZURE_AI_API_KEY",
+        "SDA_CUSTOM_API_KEY"
+      ],
+      "startup_timeout_sec": 300
+    }
+  }
+}
