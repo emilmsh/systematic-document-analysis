@@ -10,7 +10,7 @@ The installer prepares separate Claude Code and Codex plugin copies and installs
 
 The host assistant can run these local setup helpers when it has terminal permissions, with one exception: a terminal inside the packaged Claude or Codex desktop app has file-system virtualization, so anything written below `%LOCALAPPDATA%` lands in the app's LocalCache and later masks the real installation. `installer.cmd` and `installer.cmd update` detect this and refuse. In the ChatGPT/Codex app, let the assistant download, verify and extract the release, then double-click `installer.cmd` yourself. The detailed user guides (USAGE.md and USAGE.no.md) contain ready-made setup prompts for both apps. The assistant cannot grant itself permissions, bypass workspace policy, authenticate as the user or turn an ordinary web chat into a local service. Claude's Code desktop interface and CLI share the underlying engine; the plugin uses a standalone CLI subprocess for worker calls. See [Claude Desktop Code](https://code.claude.com/docs/en/desktop), [Claude installation](https://code.claude.com/docs/en/setup) and [Codex CLI](https://learn.chatgpt.com/docs/codex/cli).
 
-For an existing installation, version checks and source selection happen before files are replaced. `installer.cmd update` in the installed folder controls update checks and optional automatic installation. See [installation and updates](UPDATES.md) for source conflicts, backups, private GitHub access and command-line options.
+For an existing installation, version checks and source selection happen before files are replaced. `installer.cmd update` in the installed folder controls update checks and optional automatic installation. See [installation and updates](UPDATES.md) for source conflicts, backups, GitHub access and command-line options.
 
 ## Optional API keys without environment-variable setup
 
@@ -24,7 +24,7 @@ Keys are used only for authentication. Plans, previews, history and exports excl
 
 The vendors support app-facing plugin installation, so manual ZIP delivery need not be the final distribution model:
 
-- **Claude Code / Desktop Code:** users can install plugins from configured marketplaces through the Plugins interface; a shared Git marketplace can distribute this repository. Private Git access still needs authentication. See [Claude plugin discovery](https://code.claude.com/docs/en/discover-plugins).
+- **Claude Code / Desktop Code:** users can install plugins from configured marketplaces through the Plugins interface; a shared Git marketplace can distribute this repository. See [Claude plugin discovery](https://code.claude.com/docs/en/discover-plugins).
 - **ChatGPT and Codex:** the Plugins catalog supports personal, shared and workspace plugins. Workspace publication requires an administrator and may be restricted by policy. Plugin compatibility depends on the app surface and available runtime. See [Plugins in ChatGPT and Codex](https://learn.chatgpt.com/docs/plugins) and [building and publishing plugins](https://developers.openai.com/plugins/build/plugins).
 
 This release contains compatible plugin manifests and a local marketplace. Its verified installation route is **Windows local Codex and Claude Code through installer.cmd**. It has not been published to a workspace catalog/public directory, and direct installation into every ChatGPT or Claude surface has not been tested. A local Windows MCP process needs a local runtime; publishing its manifest does not deploy a web server. Public-directory distribution can require different hosting and review.
