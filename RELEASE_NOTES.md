@@ -1,3 +1,13 @@
+# 0.11.0 — Concurrent runs within an agreed ceiling
+
+- Run several files at once within one analysis. The plan records `max_concurrent_runs` (1–16) as an approved ceiling; plans without it, including existing plans, still run one at a time. Each file keeps its own worker thread, reader, fresh session or request and attempt workspace. The setting is not part of the input package or its hash.
+- `start_runs` and `resume_runs` accept a lower `concurrent_runs`, for example for a pilot round or after rate limits. A higher number pauses the routine with `CONCURRENCY_NOT_APPROVED` before any reader call. Stop, shared blockers and a pending update prevent new dispatch. Stop and shared blockers also cancel attempts in flight; a pending update lets them finish.
+- Take the worker lock per analysis instead of per data directory. The same analysis still cannot start twice, while different analyses can run side by side. A start no longer appears to succeed only to fail later because another analysis is active.
+- The skill asks whether the user prefers a batch size and proposes one from the task, explaining that concurrency shortens waiting time without reducing quota or cost. Plan views, status and start reports show the ceiling and the number used.
+- No database migration or dependency change.
+
+Verification: 486 tests passed after the version bump, with one known worktree-environment failure also present before the change; the new concurrency tests passed five consecutive times. Plugin and skill validators passed. Built the release ZIP from fresh staging (179,253 bytes, SHA-256 `445b73ecc93b544220d534c6e86df71d7761b3c69288fcc5b3d6622094f49573`); the unpacked package passed the MCP probe with an independent runtime. No live reader calls: concurrent Claude/Codex processes and provider rate-limit behaviour are not verified.
+
 # 0.10.10 — Explicit execution-settings sign-off
 
 - Present the worker engine, exact requested model or deployment, and reasoning effort before execution; distinguish these from the host conversation's model.

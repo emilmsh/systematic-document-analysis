@@ -11,7 +11,7 @@ API_MOTORER = {
 }
 API_ENV = tuple(item[1] for item in API_MOTORER.values())
 API_FELT = {'tenkenivaa', 'tidsavbrudd_sek', 'maks_output_tokens', 'base_url', 'provider', 'api_format',
-            'input_budget_bytes'}
+            'input_budget_bytes', 'maks_samtidige'}
 
 
 def local_key(motor):

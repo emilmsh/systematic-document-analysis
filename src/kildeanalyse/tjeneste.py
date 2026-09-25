@@ -19,7 +19,7 @@ from .kjoring import KoFeil, Koer
 from .lager import FS_FULLFORT, FS_VALIDERINGSFEIL, KJ_AKTIV, KJ_PLANLAGT, KONTROLL_AVVIST, KONTROLL_GODKJENT, KONTROLL_RETTET, PLAN_GODKJENT, Lager, KJ_FEILET, KJ_VALIDERINGSFEIL, KJ_ULESELIG, KJ_UAVKLART, naa
 from .modell import Plan
 from .prompt import bygg_inputpakke
-from .parametre import normaliser, fra_plan
+from .parametre import normaliser, samtidighet, visningsvalg
 from .source_formats import SUPPORTED, metadata
 
 
@@ -361,9 +361,10 @@ def vis_inputpakke(lager: Lager, kjoring_id: str) -> dict[str, Any]:
             "input_path": save_input(lager, kj, package)}
 
 
-def start(lager: Lager, analyse_id: str, kjoring_ider: list[str] | None = None, maks: int | None = None) -> dict[str, Any]:
+def start(lager: Lager, analyse_id: str, kjoring_ider: list[str] | None = None, maks: int | None = None,
+          samtidige: int | None = None) -> dict[str, Any]:
     try:
-        result = Koer(lager).start(analyse_id, kjoring_ider, maks)
+        result = Koer(lager).start(analyse_id, kjoring_ider, maks, samtidige=samtidige)
         from .project_files import write_index
         write_index(lager, lager.analyse(analyse_id)['prosjekt_id'])
         return result
@@ -375,7 +376,8 @@ _traader: dict[str, threading.Thread] = {}
 _traadresultat: dict[str, Any] = {}
 
 
-def start_i_bakgrunnen(lager: Lager, analyse_id: str, kjoring_ider: list[str] | None = None, maks: int | None = None) -> dict[str, Any]:
+def start_i_bakgrunnen(lager: Lager, analyse_id: str, kjoring_ider: list[str] | None = None, maks: int | None = None,
+                       samtidige: int | None = None) -> dict[str, Any]:
     t = _traader.get(analyse_id)
     if t and t.is_alive():
         raise TjenesteFeil(f"Analysen {analyse_id} kjører allerede i bakgrunnen i denne prosessen. Bruk vis_status.")
@@ -384,14 +386,14 @@ def start_i_bakgrunnen(lager: Lager, analyse_id: str, kjoring_ider: list[str] | 
     if koer.aktiv_arbeider(analyse_id):
         raise TjenesteFeil("Analysen har en aktiv arbeider i en annen prosess.")
     try:
-        planrad, _, stotte = koer.sjekk_forutsetninger(analyse_id, kjoring_ider, maks)
+        planrad, _, stotte = koer.sjekk_forutsetninger(analyse_id, kjoring_ider, maks, samtidige)
     except KoFeil as exc:
         raise TjenesteFeil(str(exc)) from exc
     plan = planrad['plan']
 
     def arbeid() -> None:
         try:
-            _traadresultat[analyse_id] = start(lager, analyse_id, kjoring_ider, maks)
+            _traadresultat[analyse_id] = start(lager, analyse_id, kjoring_ider, maks, samtidige)
         except Exception as e:  # noqa: BLE001
             _traadresultat[analyse_id] = {"feil": str(e)}
 
@@ -399,6 +401,7 @@ def start_i_bakgrunnen(lager: Lager, analyse_id: str, kjoring_ider: list[str] | 
     _traader[analyse_id] = t
     t.start()
     return {"analyse_id": analyse_id, "motor": plan.motor, "simulert": ADAPTERE[plan.motor].simulert,
+            "samtidige": samtidige or samtidighet(plan), "maks_samtidige": samtidighet(plan),
             "motoregenskaper": stotte.egenskaper, "meldinger": stotte.meldinger}
 
 
@@ -407,10 +410,11 @@ def stopp(lager: Lager, analyse_id: str) -> dict[str, Any]:
     return Koer(lager).be_om_stopp(analyse_id)
 
 
-def gjenoppta(lager: Lager, analyse_id: str, i_bakgrunnen: bool = False) -> dict[str, Any]:
+def gjenoppta(lager: Lager, analyse_id: str, i_bakgrunnen: bool = False, samtidige: int | None = None) -> dict[str, Any]:
     koer = Koer(lager)
     ryddet = koer.rydd_opp(analyse_id)
-    rapport = start_i_bakgrunnen(lager, analyse_id) if i_bakgrunnen else start(lager, analyse_id)
+    rapport = (start_i_bakgrunnen(lager, analyse_id, samtidige=samtidige) if i_bakgrunnen
+               else start(lager, analyse_id, samtidige=samtidige))
     rapport["ryddet_uavklart"] = ryddet
     return rapport
 
@@ -449,7 +453,7 @@ def vis_status(lager: Lager, analyse_id: str, *, details: bool = True) -> dict[s
         plan = result['gjeldende_plan']
         if plan:
             result['gjeldende_plan'] = {k: plan[k] for k in ('id', 'versjon', 'status', 'godkjent_av', 'godkjent')}
-            result['gjeldende_plan']['reader_settings'] = fra_plan(plan['plan'])
+            result['gjeldende_plan']['reader_settings'] = visningsvalg(plan['plan'])
         for row in rader:
             row['dokument'] = {k: row['dokument'][k] for k in ('id', 'navn', 'antall_sider', 'lesbarhet')}
             if row['siste_forsok']:
@@ -458,7 +462,7 @@ def vis_status(lager: Lager, analyse_id: str, *, details: bool = True) -> dict[s
                     'modell_rapportert', 'sesjon_id', 'feil')}
         result['hendelser'] = [{k: v for k, v in event.items() if k != 'detaljer_json'} for event in result['hendelser']]
         result['bakgrunnsresultat'] = ({k: v for k, v in result['bakgrunnsresultat'].items()
-                                      if k in ('feil', 'utfall', 'run_issues')} if result['bakgrunnsresultat'] else None)
+                                      if k in ('feil', 'utfall', 'run_issues', 'samtidige')} if result['bakgrunnsresultat'] else None)
     result['detail_level'] = 'full' if details else 'compact'
     return result
 

@@ -33,7 +33,7 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
             initialized = await session.initialize()
             assert initialized.server_info.version == VERSJON
             names = {tool.name for tool in (await session.list_tools()).tools}
-            assert len(names) == 19 and 'set_project_directory' in names and 'create_analysis' in names, names
+            assert len(names) == 21 and 'set_project_directory' in names and 'create_analysis' in names, names
             assert 'opprett_analyse' not in names
             async def call(name, arguments):
                 result = await session.call_tool(name, arguments)
@@ -88,7 +88,8 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
             # General tasks have no criteria prerequisite and expose their actual deliverable.
             generic = json.loads(await call('create_analysis', {
                 'project_id': 'pr2' if expected_project else 'pr1', 'name': 'Generic task smoke test',
-                'request': 'Produce a readable summary of each file.', 'engine': 'simulert'}))
+                'request': 'Produce a readable summary of each file.', 'engine': 'simulert',
+                'engine_settings': {'max_concurrent_runs': 2}}))
             task_id = generic['analysis']['id']
             task_runs = json.loads(await call('add_runs', {'analysis_id': task_id}))
             task_run = task_runs['new'][0]['id']
@@ -96,7 +97,8 @@ async def probe(root: Path, data: Path, *, expected_project: bool = False) -> No
             assert 'result' in task_input['package']['response_schema']['properties']
             assert 'vurderinger' not in task_input['package']['response_schema']['properties']
             await call('approve_plan', {'analysis_id': task_id, 'approved_by': 'Automated fixture only'})
-            await call('start_runs', {'analysis_id': task_id})
+            started = json.loads(await call('start_runs', {'analysis_id': task_id, 'concurrent_runs': 2}))
+            assert started['concurrent_runs'] == 2 and started['max_concurrent_runs'] == 2, started
             for _ in range(100):
                 task_detail = json.loads(await call('show_run', {'run_id': task_run}))
                 if task_detail['attempts'] and task_detail['attempts'][-1]['attempts']['status'] != 'aktiv':
@@ -128,7 +130,7 @@ async def main(plugin_root: Path | None = None) -> None:
         python = data / "runtime" / "venv" / "Scripts" / "python.exe"
         origin = subprocess.check_output([str(python), "-I", "-X", "utf8", "-c", "import kildeanalyse; print(kildeanalyse.__file__)"], encoding="utf-8")
         assert str(ROOT) not in origin and "site-packages" in origin, origin
-        print(f"PASS: {'installed copy' if plugin_root else 'clean copy without .venv'}, MCP initialize, 19 tools, English/Norwegian plans, exports, restart and independent runtime.")
+        print(f"PASS: {'installed copy' if plugin_root else 'clean copy without .venv'}, MCP initialize, 21 tools, English/Norwegian plans, concurrent start settings, exports, restart and independent runtime.")
 
 
 if __name__ == "__main__":

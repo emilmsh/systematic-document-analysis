@@ -5,7 +5,7 @@ description: Run one agreed task independently across a list of files with fresh
 
 # Systematic Document Analysis
 
-Use the shared `document_analysis` service as a controlled loop: one file and a fresh worker context per run. The host agrees the task, starts and monitors runs, and presents the collected results. Each worker chooses a method suited to the task using the assigned file and available tools; no other file's result enters its context.
+Use the shared `document_analysis` service as a controlled loop: one file and a fresh worker context per run, with up to the agreed number of runs at once. The host agrees the task, starts and monitors runs, and presents the collected results. Each worker chooses a method suited to the task using the assigned file and available tools; no other file's result enters its context.
 
 1. Check `show_setup`, import the selected files and resolve material exclusions. Respect the user's reader, model and settings. Use `inspect_source` when extraction quality matters. A source limitation is not a negative finding.
 2. Turn the request into one repeatable instruction and useful result variables. Default to an object `output_schema` for a dataset; a prose result is also valid. Show the file scope, variables and execution settings through `show_plan` and `show_input_package`, then obtain the sign-off described below. Use sensible delivery defaults and ask only about consequential ambiguity. Preserve the agreed delivery choice in the plan purpose, then record actual authorization with `approve_plan`.
@@ -15,6 +15,8 @@ Use the shared `document_analysis` service as a controlled loop: one file and a 
 ## Execution settings and user sign-off
 
 Before starting workers, present a short, concrete proposal covering the reader (`engine`), exact requested model ID or deployment name (`model`), and reasoning effort (`reasoning_effort`). Distinguish these worker choices from the host conversation's model. Preserve choices the user has already supplied. If choices are missing, propose supported settings from `show_setup` and the plan, briefly explaining the quality, time or cost tradeoff; defaults are proposals, not approval.
+
+Also agree how many files may run at once (`engine_settings.max_concurrent_runs`, 1–16; plans without it run one at a time). Ask whether the user prefers a batch size, then propose one from the task: number and size of files, expected time per file, and the reader's quota, rate limits or cost. More at once shortens waiting time, not total quota or cost; a quota stop then interrupts several runs. Each file still gets its own independent run; files are never combined in one call. The approved value is a ceiling: `start_runs`/`resume_runs` may use a lower `concurrent_runs`, for example for a pilot round with `maximum` or after rate limits, while a higher number needs an approved plan version. Agree a ceiling that covers the intended full run.
 
 Include other supported parameters when they materially affect the task: timeout, output-token limit, input-byte budget, file-tool access, and API endpoint/format where applicable. Show concrete configured values and identify provider defaults or unsupported effort controls explicitly; do not invent values or imply that requested effort is guaranteed to be honoured. Do not expose credentials. Keep routine settings in the detailed plan rather than asking the user to configure every field.
 

@@ -8,7 +8,8 @@ def register(server, get_store):
     def settings(value):
         if value is None:
             return None
-        aliases = {'max_output_tokens':'maks_output_tokens', 'timeout_seconds':'tidsavbrudd_sek', 'reasoning_effort':'tenkenivaa'}
+        aliases = {'max_output_tokens':'maks_output_tokens', 'timeout_seconds':'tidsavbrudd_sek', 'reasoning_effort':'tenkenivaa',
+                   'max_concurrent_runs':'maks_samtidige'}
         result = {}
         for key, item in value.items():
             name = aliases.get(key, key)
@@ -51,7 +52,7 @@ def register(server, get_store):
     def verify_blank_pdf_page(document_id: str, physical_page: int, verified_by: str, visual_evidence: str) -> str:
         return call(tjeneste.verify_blank_pdf_page, document_id, physical_page, verified_by, visual_evidence)
 
-    @server.tool(description='Draft one task for the selected files. request is the instruction unless task_instructions is supplied. output_schema describes result, with readable titles and definitions. quote_checks optionally checks exact text: [{path, quote_field, unit_field}]. Returns a dataset preview.')
+    @server.tool(description='Draft one task for the selected files. request is the instruction unless task_instructions is supplied. output_schema describes result, with readable titles and definitions. quote_checks optionally checks exact text: [{path, quote_field, unit_field}]. engine_settings.max_concurrent_runs (1-16, default 1) is the agreed ceiling for files running at once. Returns a dataset preview.')
     def create_analysis(project_id: str, name: str, request: str,
                         engine: str = '', model: str = '', language: str = 'en', reasoning_effort: str = '',
                         engine_settings: dict | None = None, purpose: str = '',
@@ -98,17 +99,18 @@ def register(server, get_store):
     def add_runs(analysis_id: str, document_ids: list[str] | None = None) -> str:
         return call(tjeneste.legg_til_kjoringer, analysis_id, document_ids)
 
-    @server.tool(description='Start approved planned runs in the background. Omitted run_ids selects all eligible runs. Follow show_status.')
-    def start_runs(analysis_id: str, run_ids: list[str] | None = None, maximum: int | None = None) -> str:
-        return call(tjeneste.start_i_bakgrunnen, analysis_id, run_ids, maximum)
+    @server.tool(description='Start approved planned runs in the background. Omitted run_ids selects all eligible runs; maximum limits how many start in this round. concurrent_runs runs that many files at once, up to the approved max_concurrent_runs (default: that ceiling). Follow show_status.')
+    def start_runs(analysis_id: str, run_ids: list[str] | None = None, maximum: int | None = None,
+                   concurrent_runs: int | None = None) -> str:
+        return call(tjeneste.start_i_bakgrunnen, analysis_id, run_ids, maximum, concurrent_runs)
 
     @server.tool(description='Stop dispatch and request cancellation of the active attempt.')
     def stop_runs(analysis_id: str) -> str:
         return call(tjeneste.stopp, analysis_id)
 
-    @server.tool(description='Resume eligible unfinished work. Failed runs require retry_run.')
-    def resume_runs(analysis_id: str) -> str:
-        return call(tjeneste.gjenoppta, analysis_id, i_bakgrunnen=True)
+    @server.tool(description='Resume eligible unfinished work. Failed runs require retry_run. concurrent_runs may lower the approved max_concurrent_runs for this round.')
+    def resume_runs(analysis_id: str, concurrent_runs: int | None = None) -> str:
+        return call(tjeneste.gjenoppta, analysis_id, i_bakgrunnen=True, samtidige=concurrent_runs)
 
     @server.tool(description='Show progress, run issues and any shared blocker. details=true includes full records.')
     def show_status(analysis_id: str, details: bool = False) -> str:

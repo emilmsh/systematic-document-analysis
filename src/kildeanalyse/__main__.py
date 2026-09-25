@@ -36,8 +36,9 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("godkjenn", help="godkjenn plan"); s.add_argument("analyse_id"); s.add_argument("ansvarlig")
     s = sub.add_parser("kjoringer", help="legg til kjøringer"); s.add_argument("analyse_id"); s.add_argument("--dokumenter", nargs="*")
     s = sub.add_parser("start", help="start køen (i forgrunnen)"); s.add_argument("analyse_id"); s.add_argument("--kjoringer", nargs="*"); s.add_argument("--maks", type=int)
+    s.add_argument("--samtidige", type=int, help="antall filer samtidig, høyst planens godkjente tak")
     s = sub.add_parser("stopp", help="be om stopp"); s.add_argument("analyse_id")
-    s = sub.add_parser("gjenoppta", help="gjenoppta etter avbrudd"); s.add_argument("analyse_id")
+    s = sub.add_parser("gjenoppta", help="gjenoppta etter avbrudd"); s.add_argument("analyse_id"); s.add_argument("--samtidige", type=int)
     s = sub.add_parser("status", help="vis status"); s.add_argument("analyse_id")
     s = sub.add_parser("kjoring", help="vis kjøring"); s.add_argument("kjoring_id")
     s = sub.add_parser("nytt-forsok", help="bestill nytt forsøk"); s.add_argument("kjoring_id"); s.add_argument("begrunnelse")
@@ -89,11 +90,11 @@ def _utfor(lager: Lager, a: argparse.Namespace) -> str:
         r = tjeneste.legg_til_kjoringer(lager, a.analyse_id, a.dokumenter)
         return f"{len(r['nye'])} nye kjøringer: {', '.join(x['id'] for x in r['nye'])}. Fantes: {r['finnes_allerede']}"
     if k == "start":
-        return visning.md_startrapport(tjeneste.start(lager, a.analyse_id, a.kjoringer, a.maks))
+        return visning.md_startrapport(tjeneste.start(lager, a.analyse_id, a.kjoringer, a.maks, a.samtidige))
     if k == "stopp":
         return json.dumps(tjeneste.stopp(lager, a.analyse_id), ensure_ascii=False)
     if k == "gjenoppta":
-        return visning.md_startrapport(tjeneste.gjenoppta(lager, a.analyse_id))
+        return visning.md_startrapport(tjeneste.gjenoppta(lager, a.analyse_id, samtidige=a.samtidige))
     if k == "status":
         return visning.md_status(tjeneste.vis_status(lager, a.analyse_id))
     if k == "kjoring":

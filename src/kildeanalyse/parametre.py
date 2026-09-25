@@ -15,6 +15,19 @@ TENKENIVAA = {
     "kompatibel_api": ("standard", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
 }
 STANDARD_TENKENIVAA = "high"
+# Teknisk øvre grense for lokale prosesser; det avtalte taket står i planen.
+MAKS_SAMTIDIGE = 16
+
+
+def samtidige(verdi):
+    if type(verdi) is not int or not 1 <= verdi <= MAKS_SAMTIDIGE:
+        raise ValueError(f'max_concurrent_runs must be an integer from 1 to {MAKS_SAMTIDIGE}.')
+    return verdi
+
+
+def samtidighet(plan):
+    """Godkjent tak for samtidige kjøringer. Eldre planer kjørte én om gangen."""
+    return plan.motorinnstillinger.get('maks_samtidige', 1)
 
 
 def normaliser(motor, modell, innstillinger=None, tenkenivaa=None):
@@ -27,6 +40,7 @@ def normaliser(motor, modell, innstillinger=None, tenkenivaa=None):
     if any(k.lower() in ('api_key', 'apikey', 'nokkel', 'nøkkel', 'token', 'authorization', 'headers')
            or k.upper().endswith('_API_KEY') for k in valg):
         raise ValueError("API-nøkler og headers skal ikke lagres i planen. Bruk lokale miljøvariabler.")
+    valg['maks_samtidige'] = samtidige(valg.get('maks_samtidige', 1))
     if motor == "simulert":
         if tenkenivaa or valg.get("tenkenivaa"):
             raise ValueError("Simulert motor har ikke tenkenivå. Velg en ekte lesemotor.")
@@ -80,3 +94,8 @@ def fra_plan(plan):
     if 'file_tools' in plan.motorinnstillinger:
         result['file_tools'] = plan.motorinnstillinger['file_tools']
     return result
+
+
+def visningsvalg(plan):
+    """Leservalg pluss køens tak. Taket er ikke en del av inputpakken eller dens hash."""
+    return {**fra_plan(plan), 'maks_samtidige': samtidighet(plan)}

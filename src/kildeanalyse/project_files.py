@@ -68,7 +68,7 @@ def root_for(store, project_id: str) -> Path:
 
 def plan_text(analysis: dict, versions: list[dict], language: str) -> str:
     from .prompt import bygg_systeminstruks
-    from .parametre import fra_plan
+    from .parametre import visningsvalg
     nb = language == 'nb'
     lines = [f'# {"Plan" if nb else "Analysis plan"}: {analysis["navn"]}', '',
              ('Lesekopi. Eksakte historiske instrukser og input finnes i dokumentasjonen per modellkall.' if nb else
@@ -80,7 +80,7 @@ def plan_text(analysis: dict, versions: list[dict], language: str) -> str:
                   f'{"Endring" if nb else "Change"}: {version.get("endringsnotat") or "—"}', '',
                   f'### {"Bestilling" if nb else "Request"}', '', version['oppgavetekst'], '',
                   f'### {"Leserinnstillinger" if nb else "Reader settings"}', '', '```json',
-                  json.dumps(fra_plan(plan), ensure_ascii=False, indent=2), '```', '',
+                  json.dumps(visningsvalg(plan), ensure_ascii=False, indent=2), '```', '',
                   f'### {"Instruks" if nb else "Instructions"}', '',
                   '~~~~text', bygg_systeminstruks(plan), '~~~~', '']
         from .task_contract import schema

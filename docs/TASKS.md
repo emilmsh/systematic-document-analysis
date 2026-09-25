@@ -64,6 +64,8 @@ Each iteration creates a new adapter and a fresh CLI session or API request, wit
 
 `input_budget_bytes` defaults to 60000 and measures serialized request bytes, not tokens. CLI readers with `file_tools=true` use the complete original file, the source-unit map and small searchable text copies of those units when inline input exceeds the budget. The same worker chooses how to read them with its standard file tools. APIs and text-only readers fail if their request exceeds the budget; increase it in an agreed plan or use a file-capable CLI reader. Instructions/schema must fit too. There is no automatic model chunk extraction, summarization or synthesis. The byte budget does not bound CLI tool output or guarantee a model's context capacity. `timeout_seconds` bounds the worker call.
 
+`max_concurrent_runs` (1–16, default 1) is the agreed ceiling for workers running at once within one analysis. Each run still has its own thread, adapter, session or request and attempt workspace; it is not part of the input package or its hash. `start_runs` and `resume_runs` accept a lower `concurrent_runs`. Stop prevents new dispatch and cancels every attempt in flight. One worker lock per analysis prevents a second start of the same analysis while different analyses may run side by side.
+
 ## Results, review and further work
 
 `show_run` exposes `result` directly. Agree the delivery format, row unit, columns and location before execution. For an agreed workbook, call `export_results` after runs finish and link its returned `workbook`. The snapshot has three top-level files: **Results.xlsx**, a short **START_HERE.md**, and **Documentation.zip** (Norwegian names when selected). Users need not open JSON or navigate separate files for each run.

@@ -14,6 +14,7 @@ FIELD_NAMES = {
     'versjoner':'versions', 'gjeldende':'current', 'kjoringer':'runs', 'kjoring':'run', 'forsok':'attempts',
     'navn':'name', 'versjon':'version', 'formaal':'purpose', 'sprak':'language', 'motor':'engine', 'modell':'model',
     'tenkenivaa':'reasoning_effort', 'motorinnstillinger':'engine_settings', 'tidsavbrudd_sek':'timeout_seconds',
+    'maks_samtidige':'max_concurrent_runs', 'samtidige':'concurrent_runs',
     'oppgavetekst':'request', 'endringsnotat':'change_note', 'opprettet':'created', 'godkjent':'approved',
     'godkjent_av':'approved_by', 'dokument':'document', 'dokumenter':'documents',
     'feil':'error', 'melding':'message', 'meldinger':'messages', 'advarsler':'warnings', 'gyldig':'valid',

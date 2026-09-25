@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from .parametre import fra_plan, MODELLER, TENKENIVAA, STANDARD_TENKENIVAA
+from .parametre import fra_plan, samtidighet, MODELLER, TENKENIVAA, STANDARD_TENKENIVAA
 from .api_oppsett import API_MOTORER
 from .source_formats import metadata
 
@@ -74,6 +74,7 @@ def md_plan(d: dict[str, Any]) -> str:
                f"- Språk / Language: {'English' if p.sprak == 'en' else 'Norsk bokmål'}. Sitater beholdes på originalspråket.",
                f"- Tenkenivå: **{fra_plan(p)['tenkenivaa']}**. Tidsgrense per dokument: {fra_plan(p)['tidsavbrudd_sek']:g} sekunder.",
                '- Dokumentbehandling: ' + json.dumps(fra_plan(p)['document_processing'], ensure_ascii=False),
+               f"- Samtidige kjøringer: høyst **{samtidighet(p)}**. Flere samtidige gir kortere ventetid, men samme kvote- og kostnadsforbruk.",
                f"- Analyseenhet: én fil per kjøring. Sider uten tekst: {'tillatt (lesedekning merkes)' if p.tillat_sider_uten_tekst else 'stopper kjøringen'}.",
                "**Bestilling (oppgavetekst):**", "", v["oppgavetekst"], "", f"**Formål:** {p.formaal}", ""]
         from .task_contract import schema
@@ -214,7 +215,8 @@ def md_startrapport(d: dict[str, Any]) -> str:
         ut.append(f"- Forsøk fra en død arbeider ble merket uavklart: {', '.join(d['ryddet_uavklart'])}")
     if d.get("hoppet_over_gammel_planversjon"):
         ut.append(f"- Hoppet over kjøringer på erstattet planversjon: {', '.join(d['hoppet_over_gammel_planversjon'])}")
-    ut.append(f"- Startet {len(d['startet'])} kjøringer: " + (", ".join(f"{k} → {s}" for k, s in d["utfall"].items()) or "ingen"))
+    ut.append(f"- Startet {len(d['startet'])} kjøringer, høyst {d.get('samtidige', 1)} samtidig: "
+              + (", ".join(f"{k} → {s}" for k, s in d["utfall"].items()) or "ingen"))
     if d.get("stoppet_foer"):
         ut.append(f"- Stoppet før: {', '.join(d['stoppet_foer'])}")
     return "\n".join(ut)

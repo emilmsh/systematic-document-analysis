@@ -18,7 +18,7 @@ spec.loader.exec_module(bootstrap)
 
 
 def _hold_lock(path, ready):
-    with arbeiderlaas(Path(path)):
+    with arbeiderlaas(Path(path), 'A1'):
         ready.set()
         import time
         time.sleep(30)
@@ -32,12 +32,14 @@ def test_laas_avviser_annen_prosess_og_frigis_ved_krasj(tmp_path):
     try:
         assert ready.wait(10)
         with pytest.raises(KoFeil, match="aktiv arbeider"):
-            with arbeiderlaas(tmp_path):
+            with arbeiderlaas(tmp_path, 'A1'):
                 pytest.fail("En annen prosess holdt allerede låsen")
+        with arbeiderlaas(tmp_path, 'A2'):
+            pass  # En annen analyse i samme datamappe kan starte.
     finally:
         proc.terminate()
         proc.join(10)
-    with arbeiderlaas(tmp_path):
+    with arbeiderlaas(tmp_path, 'A1'):
         pass
 
 
