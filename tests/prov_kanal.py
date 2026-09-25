@@ -27,9 +27,12 @@ def cli(env, *args):
     return subprocess.run(list(args), env=env, check=True, timeout=240, capture_output=True, encoding='utf-8').stdout
 
 
-def installer(env, *args):
-    return subprocess.run([sys.executable, '-X', 'utf8', str(ROOT/'bin/installer.py'), *args],
-                          env=env, check=True, timeout=600)
+def install_channel(env):
+    """The channel registration itself. installer.main() adds OCR/reader setup (unit-tested) and refuses to run
+    inside a packaged desktop app; calling install_github directly lets this probe run from such a terminal too."""
+    code = ('import sys; sys.path.insert(0, sys.argv[1]); import installer\n'
+            'for host in ("claude", "codex"):\n    print(host, installer.install_github(host))')
+    return subprocess.run([sys.executable, '-X', 'utf8', '-c', code, str(ROOT/'bin')], env=env, check=True, timeout=600)
 
 
 def legacy_package(base):
@@ -66,7 +69,7 @@ def main():
             cli(env, host, *install)
         for round_ in range(2):
             print(f'Kanalinstallasjon, runde {round_ + 1}', flush=True)
-            installer(env, 'begge', '--non-interactive', '--reader', 'none', '--skip-ocr')
+            install_channel(env)
         claude = json.loads(cli(env, 'claude', 'plugin', 'list', '--json'))
         entry = next(p for p in claude if p['id'] == SELECTOR)
         assert entry['enabled'] and not any(p['id'].endswith('@' + LEGACY) for p in claude)
