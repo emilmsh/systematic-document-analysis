@@ -8,8 +8,6 @@
 
 If one task can be standardized and repeated across a file list, this plugin fits. The default output is a dataset: **one row per iteration/run, with generated variables in columns**, delivered as an Excel workbook. The task determines the variables: extracted entities or passages, scores, topics, sentiment, calculations or other results. Nested objects become meaningful columns; repeated collections can have linked detail sheets. Errors and other auxiliary information have their own sheets. Each file gets one fresh worker; large CLI inputs use file tools, while oversized API inputs fail explicitly.
 
-**Since v0.10.0, plan records from v0.9.0 and earlier are unsupported.** Keep their exported artifacts and use a fresh data store for new work; installation does not delete or migrate old analysis data. See [data location](docs/USAGE.md#data).
-
 [Task contracts and examples](docs/TASKS.md) · [Core principles and implementation plan](docs/CORE_REDESIGN.md)
 
 ## Start here
@@ -24,8 +22,6 @@ The assistant proposes a repeatable task and useful variables, then shows the se
 
 Open **installer.cmd** again and choose **Sign-in and settings** for reader sign-in or API keys, or **Update or repair** for maintenance. For update checks and update policy, use the menu in the **installed plugin folder**; its location is shown after installation. Never paste API keys into chat.
 
-**Moving from 0.8.7 or earlier:** install the new ZIP once. The older updater expects files removed from the simplified package. Existing analysis data and settings are retained; the previous plugin copy is backed up. Later updates use the new menu.
-
 [Detailed guide](docs/USAGE.md) · [Supported formats](docs/SOURCE_FORMATS.md) · [Updates and recovery](docs/UPDATES.md)
 
 ## Start her
@@ -39,8 +35,6 @@ Open **installer.cmd** again and choose **Sign-in and settings** for reader sign
 Pluginen er en kontrollert for-løkke over filer: én standardisert oppgave og én uavhengig CLI/API-arbeider per fil. Standardleveransen er **et regneark med én rad per kjøring og resultatvariabler i kolonnene**. Oppgaven bestemmer variablene. Nested objekter blir kolonner, mens gjentatte funn kan få koblede detaljfaner. Feil og øvrig tilleggsinformasjon får egne faner. Assistenten foreslår variablene før godkjenning og eksporterer regnearket etter kjøring. Åpne Resultater.xlsx; råsvar, JSON og kontrollsporet ligger samlet i Dokumentasjon.zip. Hver fil får én ny arbeider; store CLI-input leses med filverktøy, mens for store API-input gir en tydelig feil.
 
 Åpne **installer.cmd** igjen og velg **Innlogging og innstillinger** for lesermotor eller API-nøkler, eller **Oppdater eller reparer** for vedlikehold. Oppdateringer styres fra menyen i **den installerte pluginmappen**, som vises etter installasjon. Ikke lim API-nøkler inn i chatten.
-
-**Fra 0.8.7 eller eldre:** installer den nye ZIP-en én gang. Den gamle oppdatereren forventer filer som er fjernet fra den ryddede pakken. Analysedata og innstillinger beholdes, og forrige pluginkopi sikkerhetskopieres.
 
 [Utfyllende veiledning](docs/USAGE.no.md) · [Oppsett og deling](docs/SETUP_AND_SHARING.md)
 
