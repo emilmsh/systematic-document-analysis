@@ -10,7 +10,7 @@ import json
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
-FILER=('pyproject.toml','.mcp.json','installer.cmd','README.md',
+FILER=('pyproject.toml','.mcp.json','installer.cmd','README.md','LICENSE',
        'docs/USAGE.md','docs/USAGE.no.md','docs/UPDATES.md','docs/SETUP_AND_SHARING.md',
        'docs/DOCUMENT_PROCESSING.md','docs/SOURCE_FORMATS.md','docs/PROJECT_FILES.md',
        'docs/providers.env.example','docs/TASKS.md','docs/CORE_REDESIGN.md',

@@ -20,7 +20,7 @@ def test_felles_pakke_uten_maskinstier_og_byggemetadata(tmp_path):
     assert not any('build' in p.relative_to(target).parts for p in files)
     assert str(Path.home()) not in (target/'.mcp.json').read_text(encoding='utf-8')
     assert {p.name for p in target.iterdir() if p.is_file()} == {
-        'installer.cmd', 'README.md', 'pyproject.toml', '.mcp.json'}
+        'installer.cmd', 'README.md', 'LICENSE', 'pyproject.toml', '.mcp.json'}
     assert not any((target/name).exists() for name in (
         'tests', 'examples', 'eksempler', 'DEVELOPMENT.md',
         'oppsett.cmd', 'reader_setup.cmd', 'ocr_setup.cmd', 'settings.cmd', 'update.cmd',

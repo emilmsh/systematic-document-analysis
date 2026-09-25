@@ -4,5 +4,6 @@
   "version": "0.11.0",
   "author": {
     "name": "Emil Mathias Strøm Halseth"
-  }
+  },
+  "license": "MIT"
 }
