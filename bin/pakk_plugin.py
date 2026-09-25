@@ -17,7 +17,7 @@ FILER=('pyproject.toml','.mcp.json','installer.cmd','README.md','LICENSE',
        'bin/manage.py','bin/installer.py','bin/pakk_plugin.py','bin/launch.ps1',
        'bin/setup_reader.py','bin/setup_ocr.py','bin/configure_keys.py',
        'bin/update_plugin.py','bin/start_server.py','bin/start_server.cmd')
-MAPPER=('.codex-plugin','.claude-plugin','skills','src/kildeanalyse')
+MAPPER=('.codex-plugin','.claude-plugin','skills','src/kildeanalyse','assets')
 
 def pakkefiler(root=ROOT):
     """Eksplisitt filliste, også etter at pip har lagt byggemetadata i mappen."""

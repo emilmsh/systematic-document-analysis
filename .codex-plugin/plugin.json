@@ -12,6 +12,10 @@
     "longDescription": "Define one task and run an independent CLI or API worker per file. The task determines the result; instructions, settings, sources, errors and raw responses stay traceable. Works in English or Norwegian in Codex and Claude Code.",
     "developerName": "Emil Mathias Strøm Halseth",
     "category": "Productivity",
+    "websiteURL": "https://github.com/emilmsh/systematic-document-analysis",
+    "brandColor": "#1F4E5F",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/icon.svg",
     "capabilities": [],
     "defaultPrompt": "Help me analyse my documents with Systematic Document Analysis."
   },

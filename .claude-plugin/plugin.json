@@ -5,5 +5,7 @@
   "author": {
     "name": "Emil Mathias Strøm Halseth"
   },
+  "homepage": "https://github.com/emilmsh/systematic-document-analysis",
+  "repository": "https://github.com/emilmsh/systematic-document-analysis",
   "license": "MIT"
 }

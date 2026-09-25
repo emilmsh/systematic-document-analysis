@@ -1,3 +1,5 @@
+<img src="assets/icon.svg" alt="Systematic Document Analysis" width="96">
+
 # Systematic Document Analysis
 
 **[⬇ Download for Windows / Last ned for Windows](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** — latest release · [Release notes](https://github.com/emilmsh/systematic-document-analysis/releases/latest) · [Norsk](#start-her)
@@ -44,6 +46,6 @@ Pluginen er en kontrollert for-løkke over filer: én standardisert oppgave og �
 
 ## Package contents
 
-Start with **installer.cmd** and this **README.md**. `bin`, `src`, `skills`, plugin manifests, `.mcp.json`, `pyproject.toml` and `LICENSE` are supporting files; keep them with the installer. `docs` contains the detailed user guides. Development files, tests and optional examples remain in the [repository](https://github.com/emilmsh/systematic-document-analysis).
+Start with **installer.cmd** and this **README.md**. `bin`, `src`, `skills`, `assets`, plugin manifests, `.mcp.json`, `pyproject.toml` and `LICENSE` are supporting files; keep them with the installer. `docs` contains the detailed user guides. Development files, tests and optional examples remain in the [repository](https://github.com/emilmsh/systematic-document-analysis).
 
 Created and developed by **Emil Mathias Strøm Halseth**, with development assistance from **OpenAI Codex** and **Anthropic Claude Code**. Released under the [MIT License](LICENSE).
