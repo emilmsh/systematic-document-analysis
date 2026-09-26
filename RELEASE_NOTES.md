@@ -1,3 +1,11 @@
+# 0.12.1 — One shared data folder for every app
+
+- Store analysis data in `%USERPROFILE%\.systematic-document-analysis\data` instead of `%LOCALAPPDATA%\systematic-document-analysis`. The Claude and Codex desktop apps from the Microsoft Store redirect writes below `%LOCALAPPDATA%` into a hidden copy per app, so analyses run in one app were invisible to the others and would be lost if that app was reset. The user profile is not redirected, so every app, desktop version and terminal now shares one store.
+- Keep Codex's Python environment (`plugin-data`) and the private Python runtime under the same folder for the same reason. Claude Code keeps using its own plugin data folder.
+- Earlier data is not moved or deleted; `SDA_DATA` can still select any store. Project folders and exported workbooks are unaffected.
+
+Verification: 498 tests passed, with the one known worktree-environment failure. Plugin and skill validators passed. The release ZIP (199,182 bytes, SHA-256 `bb6ce5f53b5829f06692ac1fc196efd82da3e10f3d3a69a6986f54daf6eae1f1`) passed the MCP probe, and started through the Codex launcher with a temporary user profile and no data overrides: data, Python environment and maintenance state were created under `.systematic-document-analysis` in that profile, none under AppData. No live reader calls.
+
 # 0.12.0 — Automatic updates through Claude Code and Codex
 
 - Install the plugin from its release channel: the `stable` branch of the public repository, which holds exactly the release package and moves only at a release. Claude Code and Codex then install and update the plugin themselves, also in the desktop apps, and load a new version in the next conversation.

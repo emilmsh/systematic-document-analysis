@@ -82,8 +82,10 @@ def main() -> int:
     sys.path.insert(0, str(root/'src'))
     from kildeanalyse.maintenance import maintenance_lock
     from update_plugin import managed_install, startup, package_hash
-    data = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or
-                str(Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "systematic-document-analysis" / "plugin-data"))
+    from kildeanalyse.konfig import brukermappe
+    # Claude Code provides CLAUDE_PLUGIN_DATA; Codex does not. The shared root avoids a
+    # hidden per-app copy of the Python environment in the Store desktop apps.
+    data = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or str(brukermappe() / "plugin-data"))
     try:
         if startup(root):
             return 1  # New skills/tools must be loaded in a new conversation.

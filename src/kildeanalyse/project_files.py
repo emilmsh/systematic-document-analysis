@@ -21,7 +21,7 @@ def validate_directory(directory: str, store) -> Path:
     path = path.resolve()
     blocked = [store.mappe.resolve()]
     blocked += [(Path.home()/part).resolve() for part in
-                ('.systematic-document-analysis/plugins', '.codex/plugins', '.claude/plugins')]
+                ('.systematic-document-analysis', '.codex/plugins', '.claude/plugins')]
     for key in ('LOCALAPPDATA', 'APPDATA', 'CLAUDE_PLUGIN_ROOT'):
         if os.environ.get(key):
             blocked.append(Path(os.environ[key]).resolve())

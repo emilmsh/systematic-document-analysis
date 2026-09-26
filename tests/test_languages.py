@@ -75,9 +75,11 @@ def test_translation_preserves_identifiers_wire_payloads_and_quotes():
 
 
 def test_data_directory_is_explicit_and_non_destructive(tmp_path, monkeypatch):
-    monkeypatch.setenv('LOCALAPPDATA', str(tmp_path))
+    # Not below LOCALAPPDATA: the Store desktop apps would each keep a hidden copy there.
+    monkeypatch.setenv('LOCALAPPDATA', str(tmp_path/'appdata'))
+    monkeypatch.setattr(Path, 'home', lambda: tmp_path)
     monkeypatch.delenv('SDA_DATA', raising=False)
-    current = tmp_path/'systematic-document-analysis'
+    current = tmp_path/'.systematic-document-analysis'/'data'
     other = tmp_path/'another-store'
     assert datamappe() == current
     other.mkdir()

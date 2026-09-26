@@ -114,7 +114,7 @@ CLI readers use your subscription sign-in and the vendor's agent harness with a 
 
 ### Data
 
-Analysis data is stored in `%LOCALAPPDATA%\systematic-document-analysis` and shared by both apps. `SDA_DATA` selects another directory. Nothing is moved or deleted automatically; `show_setup` displays the directory in use.
+Analysis data is stored in `%USERPROFILE%\.systematic-document-analysis\data` and shared by both apps, their desktop versions and terminals. `SDA_DATA` selects another directory. Nothing is moved or deleted automatically; `show_setup` displays the directory in use. Versions before 0.12.1 used `%LOCALAPPDATA%\systematic-document-analysis`, which the Store desktop apps redirect into a hidden copy per app; that earlier data stays where it is.
 
 ## Azure AI Foundry
 
