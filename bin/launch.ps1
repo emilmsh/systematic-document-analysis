@@ -5,7 +5,8 @@ param(
 $ErrorActionPreference = 'Stop'
 try {
     $pluginRoot = Split-Path $PSScriptRoot -Parent
-    $runtimeRoot = if ($env:SDA_RUNTIME_DIR) { $env:SDA_RUNTIME_DIR } else { Join-Path $env:LOCALAPPDATA 'systematic-document-analysis\runtime' }
+    # The user profile, not LOCALAPPDATA: the Store desktop apps redirect writes there into a hidden per-app copy.
+    $runtimeRoot = if ($env:SDA_RUNTIME_DIR) { $env:SDA_RUNTIME_DIR } else { Join-Path $env:USERPROFILE '.systematic-document-analysis\runtime' }
     $selectedPython = $null
     if ($env:SDA_PYTHON) {
         $selectedPython = $env:SDA_PYTHON

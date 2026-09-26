@@ -15,9 +15,9 @@ class MaintenanceBusy(RuntimeError):
 
 def state_dir() -> Path:
     # Store-app virtualization can give Codex a different LOCALAPPDATA from the
-    # installer. USERPROFILE/Path.home gives both processes the same lock/policy.
-    return Path(os.environ.get('SDA_MAINTENANCE_DIR') or
-                str(Path.home() / '.systematic-document-analysis' / 'maintenance'))
+    # installer. The user profile gives every process the same lock/policy.
+    from .konfig import brukermappe
+    return Path(os.environ.get('SDA_MAINTENANCE_DIR') or str(brukermappe() / 'maintenance'))
 
 
 def read_json(path: Path, default=None):
