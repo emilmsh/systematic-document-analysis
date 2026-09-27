@@ -30,14 +30,18 @@ def opencode(tmp_path, monkeypatch):
 def test_register_keeps_other_settings_and_replaces_only_its_own(opencode, tmp_path):
     opencode.parent.mkdir(parents=True)
     other = {'type': 'local', 'command': ['npx', 'other']}
-    opencode.write_text(json.dumps({'model': 'anthropic/claude-sonnet-5', 'skills': ['~/team-skills'],
+    first, second = tmp_path/'a'/'opencode'/installer.NAME, tmp_path/'b'/'opencode'/installer.NAME
+    first.mkdir(parents=True)
+    (first/installer.MARKER).write_text('{}')
+    users_own = str(tmp_path/'home'/'.config'/'opencode'/'skills')
+    old_layout = str(tmp_path/'old'/installer.NAME/'skills')
+    opencode.write_text(json.dumps({'model': 'anthropic/claude-sonnet-5', 'skills': ['~/team-skills', users_own, old_layout],
                                     'mcp': {'servers': {'other': other}}}), encoding='utf-8')
-    first, second = tmp_path/'a'/installer.NAME, tmp_path/'b'/installer.NAME
     opencode_host.register(first)
     opencode_host.register(second)
     config = json.loads(opencode.read_text(encoding='utf-8'))
     assert config['model'] == 'anthropic/claude-sonnet-5' and config['mcp']['servers']['other'] == other
-    assert config['skills'] == ['~/team-skills', str(second/'skills')]
+    assert config['skills'] == ['~/team-skills', users_own, str(tmp_path/'b'/'opencode'/'skills')]
     entry = config['mcp']['servers']['document_analysis']
     assert entry['command'][-1] == str(second/'bin'/'start_server.cmd')
     assert entry['timeout'] == {'startup': opencode_host.STARTUP_MS}
@@ -121,21 +125,65 @@ def test_interrupted_install_is_recovered_without_deleting(source, opencode, tmp
     target = base/'opencode'/installer.NAME
     before = opencode.read_bytes()
     (target/'README.md').write_text('previous')
-    original = opencode_host.register
+    skill = opencode_host.skill_file(target)
+    skill.write_text('previous skill', encoding='utf-8')
+    original = opencode_host.move_when_released
 
-    def killed(new_target):
-        original(new_target)
-        raise Killed()
-    monkeypatch.setattr(opencode_host, 'register', killed)
+    def killed(source, destination, **kwargs):
+        original(source, destination, **kwargs)
+        raise Killed()  # after the old copy moved aside, before the new one is placed
+    monkeypatch.setattr(opencode_host, 'move_when_released', killed)
     with pytest.raises(Killed):
         opencode_host.install(base, repair=True)
-    assert installer.journal_path(target).exists()
+    assert installer.journal_path(target).exists() and not target.exists()
     with pytest.raises(RuntimeError, match='recovery'):
         opencode_host.install(base, repair=True)
+    monkeypatch.setattr(opencode_host, 'move_when_released', original)
     assert opencode_host.recover(base) == 'recovered previous installation'
     assert opencode.read_bytes() == before
     assert (target/'README.md').read_text() == 'previous'
-    assert list(target.parent.glob('failed-install-*')) and list(target.parent.glob('recovery-*.json'))
+    assert skill.read_text(encoding='utf-8') == 'previous skill'
+    assert list(target.parent.glob('recovery-*.json'))
+
+
+def test_update_from_a_watched_installation_switches_the_skills_path_first(source, opencode, tmp_path):
+    base = tmp_path/'installed'
+    opencode_host.install(base)
+    target = base/'opencode'/installer.NAME
+    config = json.loads(opencode.read_text(encoding='utf-8'))
+    config['skills'] = [str(target/'skills')]  # the layout of 0.13.0 and 0.13.1
+    opencode.write_text(json.dumps(config), encoding='utf-8')
+    opencode_host.skill_file(target).unlink()
+    assert opencode_host.install(base, repair=True) == 'installed'
+    config = json.loads(opencode.read_text(encoding='utf-8'))
+    assert config['skills'] == [str(opencode_host.skills_root(target))]
+    text = opencode_host.skill_file(target).read_text(encoding='utf-8')
+    assert f']({target.as_posix()}/docs/TASKS.md)' in text and '../../docs/' not in text
+    assert opencode_host.skills_root(target).parent == target.parent
+
+
+def test_a_move_blocked_by_opencode_is_retried_then_restored(source, opencode, tmp_path, monkeypatch):
+    base = tmp_path/'installed'
+    opencode_host.install(base)
+    target = base/'opencode'/installer.NAME
+    rename, blocked = Path.rename, {'left': 2}
+
+    def busy(self, destination):
+        if self == target and blocked['left']:
+            blocked['left'] -= 1
+            raise PermissionError(5, 'Access is denied')
+        return rename(self, destination)
+    monkeypatch.setattr(Path, 'rename', busy)
+    assert opencode_host.install(base, repair=True) == 'installed'  # released after two attempts
+    before, skill_before = opencode.read_bytes(), opencode_host.skill_file(target).read_bytes()
+    (target/'README.md').write_text('previous')
+    blocked['left'] = 10**6
+    original = opencode_host.move_when_released
+    monkeypatch.setattr(opencode_host, 'move_when_released', lambda s, d, **k: original(s, d, timeout=1))
+    with pytest.raises(RuntimeError, match='still in use'):
+        opencode_host.install(base, repair=True)
+    assert opencode.read_bytes() == before and opencode_host.skill_file(target).read_bytes() == skill_before
+    assert (target/'README.md').read_text() == 'previous' and not installer.journal_path(target).exists()
 
 
 def test_managed_update_replaces_the_opencode_copy(source, opencode, tmp_path, monkeypatch):
@@ -148,6 +196,20 @@ def test_managed_update_replaces_the_opencode_copy(source, opencode, tmp_path, m
         assert updater.apply_release(updater.managed_install(target), release_info('99.0.0'))
     assert installer.version(target) == '99.0.0'
     assert opencode_host.installed_target() == target
+
+
+@pytest.mark.parametrize('status,reloaded', [('stopped', False), ('http://127.0.0.1:49374', True)])
+def test_reconnect_reloads_only_a_running_opencode(monkeypatch, status, reloaded):
+    from types import SimpleNamespace
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append(args[1:])
+        return SimpleNamespace(returncode=0, stdout=status + '\n' if args[1] == 'service' else '')
+    monkeypatch.setattr(opencode_host, 'opencode_bin', lambda: 'opencode')
+    monkeypatch.setattr(opencode_host.subprocess, 'run', run)
+    assert opencode_host.reconnect() is reloaded
+    assert calls == ([['service', 'status'], ['reload']] if reloaded else [['service', 'status']])
 
 
 def test_prepare_timeout_is_not_an_installation_failure(tmp_path):
