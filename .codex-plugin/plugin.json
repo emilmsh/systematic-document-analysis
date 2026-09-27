@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "Systematic Document Analysis",
     "shortDescription": "A controlled for-loop over files.",
-    "longDescription": "Define one task and run an independent CLI or API worker per file. The task determines the result; instructions, settings, sources, errors and raw responses stay traceable. Works in English or Norwegian in Codex and Claude Code.",
+    "longDescription": "Define one task and run an independent CLI or API worker per file. The task determines the result; instructions, settings, sources, errors and raw responses stay traceable. Works in English or Norwegian in Codex, Claude Code and OpenCode.",
     "developerName": "Emil Mathias Strøm Halseth",
     "category": "Productivity",
     "websiteURL": "https://github.com/emilmsh/systematic-document-analysis",

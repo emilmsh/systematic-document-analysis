@@ -2,7 +2,7 @@
 
 The shared document engine prepares sources for every CLI/API reader. DOCX, XLSX,
 CSV/TSV and text extraction follow [the format guide](SOURCE_FORMATS.md). PDF OCR
-and file preparation use the same implementation from Codex and Claude Code.
+and file preparation use the same implementation from Codex, Claude Code and OpenCode.
 
 ## Local OCR
 
