@@ -17,9 +17,9 @@ ACTIONS = {
 HELP = '''Systematic Document Analysis
 
 Double-click installer.cmd for the menu, or use:
-  installer.cmd install [claude|codex|both] [installation options]
-  installer.cmd repair [claude|codex|both]
-  installer.cmd recover [claude|codex|both]
+  installer.cmd install [claude|codex|both|opencode] [installation options]
+  installer.cmd repair [claude|codex|both|opencode]
+  installer.cmd recover [claude|codex|both|opencode]
   installer.cmd reader [claude|codex|both] [--login]
   installer.cmd reader [claude|codex|both] --update
   installer.cmd ocr

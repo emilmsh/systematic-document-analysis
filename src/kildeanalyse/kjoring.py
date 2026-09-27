@@ -316,7 +316,7 @@ class Koer:
             raise KoFeil('The stored source has changed. Reimport it and approve a new plan before analysis.')
         uten = sider_uten_tekst(dok)
         opaque = dok.get('source_metadata', {}).get('format') == 'opaque'
-        can_inspect_without_text = (plan.motor in ('claude_cli', 'codex_cli')
+        can_inspect_without_text = (plan.motor in ('claude_cli', 'codex_cli', 'opencode_cli')
                                     and plan.motorinnstillinger.get('file_tools')
                                     and (plan.tillat_sider_uten_tekst or opaque))
         if (uten and not plan.tillat_sider_uten_tekst and not opaque) or (dok["lesbarhet"] == ULESELIG and not can_inspect_without_text):

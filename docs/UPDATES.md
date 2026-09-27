@@ -1,6 +1,6 @@
 # Installation and updates
 
-Run `installer.cmd` from an extracted release and choose Install to install Claude Code, Codex or both. It reports each app separately. Use File Explorer or a normal terminal as your ordinary Windows user, outside the Claude and Codex desktop apps. The main menu has three choices: Install, Sign-in and settings, and Update or repair. Reader sign-in and API settings are under Sign-in and settings; updates, plugin/OCR repair and recovery are under Update or repair. Choose 0 in a submenu to go back. After each action, choose 1 to return to the start menu or 0 to exit; this also works after an incomplete action. Direct commands run once and exit; `installer.cmd --help` lists them.
+Run `installer.cmd` from an extracted release and choose Install to install Claude Code, Codex, both or OpenCode ([OpenCode](#opencode) always gets a managed local copy). It reports each app separately. Use File Explorer or a normal terminal as your ordinary Windows user, outside the Claude and Codex desktop apps. The main menu has three choices: Install, Sign-in and settings, and Update or repair. Reader sign-in and API settings are under Sign-in and settings; updates, plugin/OCR repair and recovery are under Update or repair. Choose 0 in a submenu to go back. After each action, choose 1 to return to the start menu or 0 to exit; this also works after an incomplete action. Direct commands run once and exit; `installer.cmd --help` lists them.
 
 After successful installation, the interactive installer lets you choose Codex, Claude Code, both readers, or skip for API/later setup. It reuses existing subscription sign-in or starts login and verifies the result. It then asks whether to check for and install the latest available reader CLI version. Answering no leaves the CLI as it is; answering yes runs the separate reader updater for the selected reader(s). Failed or cancelled login leaves the plugin installed; finish with `installer.cmd reader`. A failed reader CLI update leaves the installed plugin and completed sign-in in place; retry with `installer.cmd reader <reader> --update`. Direct installations with an explicit `--reader`, noninteractive installations, `installer.cmd update`, `--recover` and `--prepare-only` do not ask this update question.
 
@@ -68,6 +68,14 @@ A process killed during installation can leave `<base>/<app>/pending-install.jso
 
 Resolve the interruption with `installer.cmd <app> --recover` from any release package. Recovery reads the journal and restores the state it describes: the previous files return from the backup, an incomplete copy is kept as `failed-install-<id>`, and the previous marketplace and plugin registration are restored through the host CLI and verified. A fresh installation that was interrupted ends with nothing registered. If every step had completed except closing the record, recovery verifies the installed copy and closes the record without changing files. Each recovery writes `recovery-<id>.json` beside the journal with the record and the actions taken. If the previous files or source are missing, recovery stops and keeps the record for manual restoration. Analysis data, provider settings and other marketplaces are never touched.
 
+## OpenCode
+
+`installer.cmd opencode` (or choice 4 in the install menu) installs the plugin for OpenCode 2. OpenCode has no plugin marketplace for skills and MCP servers, so it always gets a managed local copy under `%LOCALAPPDATA%\systematic-document-analysis\plugins\opencode`. The installer then adds one MCP server (`mcp.servers.document_analysis`) and one skills path to OpenCode's global `%USERPROFILE%\.config\opencode\opencode.json` and keeps the previous file as `opencode.json.sda-backup-<time>`. Other settings are preserved. OpenCode merges that file with `opencode.jsonc`, which the installer never rewrites, so comments there are kept. The installer does not rewrite an `opencode.json` with comments or an OpenCode 1 MCP layout, and stops if `opencode.jsonc` defines `document_analysis` itself; it then prints the entries to add yourself and changes nothing. An existing server with the same name that this installer did not write is replaced only with `--replace-source` or an interactive yes.
+
+OpenCode uses its own Python environment, `%USERPROFILE%\.systematic-document-analysis\plugin-data-opencode`, which the installer prepares before the first session. Analysis data and provider settings are shared with the other apps. Start a new OpenCode session afterwards; the plugin appears as the `document_analysis` MCP server and the `systematic-document-analysis` skill.
+
+Updates follow the local-copy policy above: run `installer.cmd update` from the installed OpenCode folder to check, update now, or choose notify, automatic or off. Repair, downgrade and `--recover` work as for local copies; recovery also restores the OpenCode configuration from its backup.
+
 ## Reader CLIs and shared state
 
 Analysis data, provider settings and reader login are outside the plugin copy. Claude reinstalls use `--keep-data`. Run manifests retain the application version and, for local copies, the installed package fingerprint. To update a reader CLI separately, choose **Check/update reader CLIs** under **Update or repair**, or run `installer.cmd reader claude --update`, `installer.cmd reader codex --update`, or `installer.cmd reader both --update`. Claude Code uses its own updater and verifies the reported version afterwards. A Codex CLI installed privately by this installer is downloaded from the latest official release and checked against the release asset's SHA-256 before replacement; the previous binary is restored if the new one fails its version check. For a Codex CLI owned by another installer or the desktop app, the command shows the current version and points to that installer's update instructions without replacing its files. Reader CLI updates do not change plugin updates or login.
@@ -91,6 +99,9 @@ Update policy for local copies and the shared OS lock live under `%USERPROFILE%/
 .\installer.cmd codex --local-copy --allow-downgrade
 .\installer.cmd codex --local-copy --move-shadow
 .\installer.cmd claude --recover
+.\installer.cmd opencode
+.\installer.cmd opencode --repair
+.\installer.cmd opencode --recover
 .\installer.cmd reader both --update
 ```
 

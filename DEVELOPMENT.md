@@ -1,6 +1,6 @@
 # Development guide
 
-Systematic Document Analysis is a controlled for-loop over files. The conversation stays in Codex or Claude Code; both use one local MCP interface. Each file gets the same agreed task through a fresh CLI/API worker. See [core design](docs/CORE_REDESIGN.md) and [task contracts](docs/TASKS.md).
+Systematic Document Analysis is a controlled for-loop over files. The conversation stays in Codex, Claude Code or OpenCode; all use one local MCP interface. Each file gets the same agreed task through a fresh CLI/API worker. See [core design](docs/CORE_REDESIGN.md) and [task contracts](docs/TASKS.md).
 
 ## Architecture
 
@@ -16,7 +16,7 @@ Use English public interfaces and documentation; Norwegian user guides and resul
 
 ## Verification and packaging
 
-Run `python -m pytest -q` with the project environment. Tests use local fixtures and fake transports, with no model calls. On Windows use a fresh, short `--basetemp` if the host restricts old temporary directories. `tests/prov_plugin.py` exercises a clean bootstrap, MCP and restart; it downloads dependencies. `tests/prov_installasjon.py` registers both hosts under temporary configurations.
+Run `python -m pytest -q` with the project environment. Tests use local fixtures and fake transports, with no model calls. On Windows use a fresh, short `--basetemp` if the host restricts old temporary directories. `tests/prov_plugin.py` exercises a clean bootstrap, MCP and restart; it downloads dependencies. `tests/prov_installasjon.py` registers both hosts under temporary configurations. OpenCode has no marketplace: `bin/opencode_host.py` installs a managed copy and edits OpenCode's global configuration (`tests/test_opencode_host.py`). The `opencode_cli` reader runs `opencode run --standalone` with a per-attempt configuration; OpenCode takes its working directory from `PWD`, so the reader sets it to the run workspace.
 
 Build with `python bin/lag_release.py`. After committing and tagging the release, `python bin/lag_stable.py` moves the `stable` release channel to that package; publish it with the tag (`git push origin stable`). Installations follow that branch, so push it only for a published release. The allowlist excludes credentials, analysis data, environments and downloaded reports. Validate manifests and the skill before release; update package/manifests together when releasing. Installation into an active user profile and publication are separate from local development verification.
 

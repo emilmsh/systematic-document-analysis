@@ -1,6 +1,6 @@
 ---
 name: systematic-document-analysis
-description: Run one agreed task independently across a list of files with fresh CLI or API workers, a structured result per run and a readable audit trail. Use for repeatable file tasks in Codex or Claude Code; cross-file synthesis happens after the independent runs.
+description: Run one agreed task independently across a list of files with fresh CLI or API workers, a structured result per run and a readable audit trail. Use for repeatable file tasks in Codex, Claude Code or OpenCode; cross-file synthesis happens after the independent runs.
 ---
 
 # Systematic Document Analysis

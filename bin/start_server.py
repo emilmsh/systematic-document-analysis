@@ -105,8 +105,18 @@ def main() -> int:
     from update_plugin import managed_install, startup, package_hash
     from kildeanalyse.konfig import brukermappe
     # Claude Code provides CLAUDE_PLUGIN_DATA; Codex does not. The shared root avoids a
-    # hidden per-app copy of the Python environment in the Store desktop apps.
-    data = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or str(brukermappe() / "plugin-data"))
+    # hidden per-app copy of the Python environment in the Store desktop apps. The
+    # OpenCode registration sets SDA_PLUGIN_DATA to keep its own environment.
+    data = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or os.environ.get("SDA_PLUGIN_DATA")
+                or str(brukermappe() / "plugin-data"))
+    if sys.argv[1:] == ["--prepare-only"]:
+        # Installer step: build the environment before the host's first start.
+        try:
+            prepare(root, data)
+            return 0
+        except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+            print(f"[Systematic Document Analysis] Preparation failed: {exc}", file=sys.stderr)
+            return 1
     try:
         if startup(root):
             return 1  # New skills/tools must be loaded in a new conversation.
