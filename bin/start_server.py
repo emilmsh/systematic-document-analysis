@@ -12,6 +12,7 @@ import subprocess
 import sys
 import shutil
 import tempfile
+import uuid
 
 
 def fingerprint(root: Path) -> str:
@@ -35,6 +36,16 @@ def usable(python: Path, source: Path | None = None) -> bool:
         return False
 
 
+def pip_works(python: Path) -> bool:
+    try:
+        return subprocess.run(
+            [str(python), "-I", "-m", "pip", "--version"],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60,
+        ).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
 def prepare(root: Path, data: Path) -> Path:
     local = root / ".venv" / "Scripts" / "python.exe"
     if usable(local, root / "src"):
@@ -48,6 +59,16 @@ def prepare(root: Path, data: Path) -> Path:
     # Fjern bare ferdigmarkøren. Et avbrudd skal aldri ligne et ferdig oppsett.
     marker.unlink(missing_ok=True)
     print(f"[Systematic Document Analysis] Preparing Python environment in {runtime}", file=sys.stderr, flush=True)
+    if python.is_file() and not pip_works(python):
+        # A start interrupted while the venv was created leaves an incomplete pip that
+        # every later start would reuse. Keep it for diagnosis and build a new one.
+        aside = runtime.with_name(f"{runtime.name}.broken-{uuid.uuid4().hex[:8]}")
+        try:
+            runtime.rename(aside)
+        except OSError as exc:
+            raise RuntimeError(f"The Python environment in {runtime} is incomplete and in use; close other plugin "
+                               "sessions and restart.") from exc
+        print(f"[Systematic Document Analysis] Incomplete Python environment kept at {aside}", file=sys.stderr, flush=True)
     if not python.is_file():
         subprocess.run([sys.executable, "-X", "utf8", "-m", "venv", str(runtime)], check=True, stdout=sys.stderr)
     # Windows app installations can have very long source paths. Build a fresh,

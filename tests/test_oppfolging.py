@@ -71,6 +71,7 @@ def test_bootstrap_avbrutt_installering_proves_igjen(tmp_path, monkeypatch):
     python.touch()  # venv eksisterer, men første pip-installasjon ble avbrutt
     calls = []
     monkeypatch.setattr(bootstrap, "usable", lambda p, source=None: source is None)
+    monkeypatch.setattr(bootstrap, "pip_works", lambda p: True)
     monkeypatch.setattr(bootstrap.subprocess, "run", lambda command, **kw: calls.append(command))
     assert bootstrap.prepare(root, data) == python
     assert len(calls) == 1 and "pip" in calls[0]
@@ -79,6 +80,31 @@ def test_bootstrap_avbrutt_installering_proves_igjen(tmp_path, monkeypatch):
     (root / "src" / "kildeanalyse" / "__init__.py").write_text("# endret kode")
     bootstrap.prepare(root, data)
     assert len(calls) == 2
+
+
+def test_bootstrap_bygger_nytt_miljo_etter_avbrutt_venv_oppretting(tmp_path, monkeypatch):
+    root = tmp_path / "plugin"
+    (root / "src" / "kildeanalyse").mkdir(parents=True)
+    (root / "pyproject.toml").write_text("test")
+    data = tmp_path / "data"
+    python = data / "venv" / "Scripts" / "python.exe"
+    python.parent.mkdir(parents=True)
+    python.touch()  # venv avbrutt under ensurepip: python.exe finnes, pip er ufullstendig
+    calls = []
+
+    def run(command, **kw):
+        calls.append(command)
+        if "venv" in command:
+            python.parent.mkdir(parents=True)
+            python.touch()
+    monkeypatch.setattr(bootstrap, "usable", lambda p, source=None: source is None)
+    monkeypatch.setattr(bootstrap, "pip_works", lambda p: False)
+    monkeypatch.setattr(bootstrap.subprocess, "run", run)
+    assert bootstrap.prepare(root, data) == python
+    assert "venv" in calls[0] and "pip" in calls[1]
+    broken = list(data.glob("venv.broken-*"))
+    assert len(broken) == 1 and (broken[0] / "Scripts" / "python.exe").is_file()
+    assert (data / "venv" / "kildeanalyse-source.sha256").is_file()
 
 
 def test_editable_miljo_aksepteres_bare_for_riktig_kilde(tmp_path):
