@@ -675,6 +675,7 @@ def main():
             parser.error('Invalid choice; installation has not started.')
     failures = []
     installed = False
+    reload_opencode = False
     try:
         if not args.prepare_only and packaged_process():
             raise RuntimeError(PACKAGED_MESSAGE)
@@ -697,6 +698,7 @@ def main():
                                                            interactive=interactive, locked=True)
                             print(f'{host}: {result}')
                             installed = installed or result in ('installed', 'already up to date')
+                            reload_opencode = result == 'installed'
                     elif args.recover:
                         print(f'{host}: {recover(host, args.base_dir, locked=True)}')
                     elif not local_copy:
@@ -719,6 +721,10 @@ def main():
     except (RuntimeError, OSError, ValueError) as exc:
         print(f'Installation stopped: {exc}', file=sys.stderr)
         return 1
+    if reload_opencode:
+        import opencode_host
+        if opencode_host.reconnect():
+            print('opencode: reloaded the running OpenCode so new sessions load the plugin.')
     if installed and not failures:
         if not args.skip_ocr:
             try:

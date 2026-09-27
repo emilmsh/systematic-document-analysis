@@ -51,8 +51,43 @@ def server_entry(target):
             'timeout': {'startup': STARTUP_MS}}
 
 
+MOVE_TIMEOUT_SEC = 30
+
+
+def skills_root(target):
+    """Beside the installation, not inside it: OpenCode watches its skills paths, and Windows
+    refuses to move a folder while any folder below it is watched. Files inside can still change."""
+    return Path(target).parent/'skills'
+
+
+def skill_file(target):
+    return skills_root(target)/NAME/'SKILL.md'
+
+
+def write_skill(package, target):
+    """Copy the skill in place; its guide links point at the installed documentation."""
+    text = (Path(package)/'skills'/NAME/'SKILL.md').read_text(encoding='utf-8')
+    destination = skill_file(target)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(text.replace('](../../docs/', f']({Path(target).as_posix()}/docs/'), encoding='utf-8')
+
+
+def move_when_released(source, destination, timeout=MOVE_TIMEOUT_SEC):
+    """OpenCode releases a watched folder about a second after its configuration stops naming it."""
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            Path(source).rename(destination)
+            return
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f'{source} is still in use, probably by OpenCode. Close OpenCode, run '
+                                   '"opencode service stop", then run the installer again.') from None
+            time.sleep(0.5)
+
+
 def snippet(target):
-    return json.dumps({'mcp': {'servers': {SERVER: server_entry(target)}}, 'skills': [str(Path(target)/'skills')]},
+    return json.dumps({'mcp': {'servers': {SERVER: server_entry(target)}}, 'skills': [str(skills_root(target))]},
                       ensure_ascii=False, indent=2)
 
 
@@ -100,13 +135,25 @@ def skill_paths(config):
     return skills.get('paths', []) if isinstance(skills, dict) else skills if isinstance(skills, list) else []
 
 
+def our_skills(item):
+    """A skills path this installer wrote: inside an installation (0.13.0-0.13.1) or beside one."""
+    if not isinstance(item, str):
+        return False
+    path = Path(item)
+    if path.name != 'skills':
+        return False
+    # Beside an installation only when that installation's record is there, so a user's
+    # own .../opencode/skills folder (such as ~/.config/opencode/skills) is never removed.
+    return path.parent.name == NAME or (path.parent/NAME/MARKER).is_file()
+
+
 def register(target):
     """Point this plugin's MCP server and skills path at target, keeping every other setting."""
     path = config_file()
     config = read_config(path, target)
     config.setdefault('mcp', {}).setdefault('servers', {})[SERVER] = server_entry(target)
-    skills = str(Path(target)/'skills')
-    kept = [item for item in skill_paths(config) if not (isinstance(item, str) and Path(item).parent.name == NAME)]
+    skills = str(skills_root(target))
+    kept = [item for item in skill_paths(config) if not our_skills(item) and item != skills]
     if isinstance(config.get('skills'), dict):
         config['skills']['paths'] = [*kept, skills]
     else:
@@ -143,6 +190,23 @@ def check_opencode():
     if found < MIN_VERSION:
         raise RuntimeError(f'OpenCode {output.strip()} is too old. Run "opencode upgrade", then run this installer again.')
     return output.strip()
+
+
+def reconnect():
+    """Reload a running OpenCode after an update, once the installation lock is released.
+
+    The update closes the plugin's connection, and OpenCode's own reload of the changed
+    configuration fails while the installer holds the lock. A stopped OpenCode is left stopped.
+    """
+    binary = opencode_bin()
+    try:
+        status = subprocess.run([binary, 'service', 'status'], capture_output=True, text=True, encoding='utf-8',
+                                errors='replace', timeout=30, stdin=subprocess.DEVNULL).stdout.strip()
+        if not status.startswith('http'):
+            return False
+        return subprocess.run([binary, 'reload'], capture_output=True, timeout=60, stdin=subprocess.DEVNULL).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 PREPARE_TIMEOUT_SEC = 900
@@ -231,30 +295,42 @@ def _install(base, root, *, replace_source, repair, allow_downgrade, interactive
         validate_package(staged)
         config_existed = path.exists()
         config_backup = backup_config(path)
+        skill = skill_file(target)
+        if target.exists() or skill.exists():
+            backup.parent.mkdir(parents=True)
+        skill_backup = backup.parent/'SKILL.md' if skill.exists() else None
+        if skill_backup:
+            skill_backup.write_bytes(skill.read_bytes())
         # The journal describes the state before any change, so --recover can restore it at any later step.
         write_json(transaction, {'host': HOST, 'target': str(target), 'backup': str(backup), 'config': str(path),
                                  'config_existed': config_existed, 'config_backup': str(config_backup) if config_backup else None,
+                                 'skill': str(skill), 'skill_backup': str(skill_backup) if skill_backup else None,
                                  'previous_source': str(source) if source else None, 'previous_version': installed_version,
                                  'target_existed': target.exists(), 'incoming_version': incoming,
                                  'incoming_sha256': wanted_hash, 'started_at': time.time()})
         moved = placed = False
         try:
+            # Register first, so OpenCode watches the skill copy beside the installation and
+            # releases any watch inside it (installations from 0.13.0-0.13.1) before the move.
+            write_skill(staged, target)
+            register(target)
             if target.exists():
-                backup.parent.mkdir(parents=True)
-                target.rename(backup)
+                move_when_released(target, backup)
                 moved = True
             staged.rename(target)
             placed = True
-            register(target)
             if registration(path, target)[1] != target:
                 raise RuntimeError('The OpenCode configuration does not point at the new installation.')
         except Exception as failure:
             try:
-                restore_config(path, config_backup, config_existed)
+                # Files first: a restored configuration can make OpenCode watch the installation folder again.
                 if placed:
-                    target.rename(target.parent/f'failed-install-{uuid.uuid4().hex}')
+                    move_when_released(target, target.parent/f'failed-install-{uuid.uuid4().hex}')
                 if moved:
                     backup.rename(target)
+                restore_config(path, config_backup, config_existed)
+                if skill_backup:
+                    skill.write_bytes(skill_backup.read_bytes())
                 transaction.unlink()
             except Exception as recovery:
                 raise RuntimeError(f'Installation failed: {failure}. Recovery also failed: {recovery}. '
@@ -295,19 +371,23 @@ def _recover(base):
     if not backup.is_relative_to(target.parent):
         raise RuntimeError('The recovery record points outside the installation folder. No files changed.')
     actions = []
-    restore_config(Path(journal['config']), journal.get('config_backup'), journal.get('config_existed', True))
-    actions.append('restored the OpenCode configuration from before the installation')
+    # Files first: a restored configuration can make OpenCode watch the installation folder again.
     if backup.exists():
         if target.exists():
             failed = target.parent/f'failed-install-{uuid.uuid4().hex}'
-            target.rename(failed)
+            move_when_released(target, failed)
             actions.append(f'incomplete copy kept at {failed}')
         backup.rename(target)
         actions.append(f'previous files restored from {backup}')
     elif not journal.get('target_existed') and target.exists():
         failed = target.parent/f'failed-install-{uuid.uuid4().hex}'
-        target.rename(failed)
+        move_when_released(target, failed)
         actions.append(f'incomplete copy kept at {failed}; nothing was installed before')
+    restore_config(Path(journal['config']), journal.get('config_backup'), journal.get('config_existed', True))
+    actions.append('restored the OpenCode configuration from before the installation')
+    if journal.get('skill_backup') and Path(journal['skill_backup']).exists():
+        Path(journal['skill']).write_bytes(Path(journal['skill_backup']).read_bytes())
+        actions.append('restored the previous skill copy')
     receipt = transaction.parent/f'recovery-{uuid.uuid4().hex}.json'
     write_json(receipt, {'host': HOST, 'recovered_at': time.time(), 'record': journal, 'actions': actions})
     transaction.unlink()

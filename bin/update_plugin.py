@@ -184,6 +184,14 @@ def apply_release(marker, release):
     return result == 'installed'
 
 
+def reconnect(marker):
+    """After the lock is released: a running OpenCode reconnects the updated plugin."""
+    if marker.get('host') == 'opencode':
+        import opencode_host
+        if opencode_host.reconnect():
+            print('Reloaded the running OpenCode so new sessions load the plugin.', file=sys.stderr)
+
+
 def startup(root):
     """Runs before a session takes the shared lock. All output stays off MCP stdout."""
     try:
@@ -215,6 +223,7 @@ def startup(root):
                 applied = apply_release(marker, release)
             if applied:
                 print('[Systematic Document Analysis] Updated. Start a new conversation to load the new plugin and tools.', file=sys.stderr)
+                reconnect(marker)
             return applied
     except MaintenanceBusy:
         return False  # Another live session: defer without disrupting that session.
@@ -303,6 +312,7 @@ def main():
         # while plugin sessions are open. Installing still requires exclusivity.
         if args.install and packaged_process():
             raise RuntimeError(PACKAGED_MESSAGE)
+        marker, applied = None, False
         with installation_lock(notify=lambda message: print(message, flush=True)) if args.install else maintenance_lock(shared=True):
             if args.mode:
                 write_json(state_dir()/'updates.json', {'mode':args.mode})
@@ -317,7 +327,10 @@ def main():
                     marker = managed_install(root)
                     if not marker:
                         raise RuntimeError('Run installer.cmd update from the installed plugin folder. For first setup, run installer.cmd.')
-                    print('Updated. Start a new conversation.' if apply_release(marker, release) else 'Already up to date.')
+                    applied = apply_release(marker, release)
+                    print('Updated. Start a new conversation.' if applied else 'Already up to date.')
+        if applied:
+            reconnect(marker)
     except (OSError, ValueError, RuntimeError, KeyError, subprocess.SubprocessError) as exc:
         print(f'Update stopped: {exc}', file=sys.stderr)
         return 1
