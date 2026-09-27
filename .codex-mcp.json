@@ -19,6 +19,7 @@
         "CODEX_HOME",
         "SDA_CODEX_BIN",
         "SDA_CLAUDE_BIN",
+        "SDA_OPENCODE_BIN",
         "SDA_TESSERACT_BIN",
         "SDA_SETTINGS_DIR",
         "SDA_MAINTENANCE_DIR",

@@ -2,7 +2,10 @@
 import os
 import ntpath
 from pathlib import Path
+import re
 import shutil
+
+OPENCODE_MIN_VERSION = (2, 0, 0)
 
 
 def windows_path_directories():
@@ -89,3 +92,18 @@ def find_cli(name):
         if path.is_file():
             return str(path)
     return name
+
+
+def opencode_bin(explicit=None):
+    """The native executable; an npm shim cannot be stopped together with the process it starts."""
+    found = explicit or find_cli('opencode')
+    shim = Path(found)
+    native = shim.parent/'node_modules'/'@opencode'/'cli'/'bin'/'opencode.exe'
+    if shim.suffix.lower() in ('', '.cmd', '.ps1') and native.is_file():
+        return str(native)
+    return found
+
+
+def version_tuple(text):
+    match = re.search(r'(\d+)\.(\d+)\.(\d+)', text or '')
+    return tuple(map(int, match.groups())) if match else None

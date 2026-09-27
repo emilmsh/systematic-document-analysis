@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import math
+import re
 from .api_oppsett import API_MOTORER, api_valg, api_metadata, wire_engine
 
 MODELLER = {"claude_cli": "sonnet", "codex_cli": "gpt-5.6-terra"}
 TENKENIVAA = {
     "claude_cli": ("low", "medium", "high", "xhigh", "max"),
     "codex_cli": ("low", "medium", "high", "xhigh", "max", "ultra"),
+    # OpenCode model variants; "standard" sends none, and each model supports its own subset.
+    "opencode_cli": ("standard", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
     "openai_api": ("standard", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
     "azure_foundry_api": ("standard", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
     "anthropic_api": ("standard", "low", "medium", "high", "xhigh", "max"),
@@ -47,7 +50,7 @@ def normaliser(motor, modell, innstillinger=None, tenkenivaa=None):
         return modell or "simulert", valg
     if motor not in TENKENIVAA:
         raise ValueError("Velg en kjent CLI- eller API-motor. Simulert brukes bare ved uttrykkelig ønske.")
-    if motor in ('claude_cli', 'codex_cli'):
+    if motor in ('claude_cli', 'codex_cli', 'opencode_cli'):
         valg.setdefault('file_tools', True)
         if type(valg['file_tools']) is not bool:
             raise ValueError('file_tools must be true or false.')
@@ -58,11 +61,15 @@ def normaliser(motor, modell, innstillinger=None, tenkenivaa=None):
         if not modell:
             raise ValueError("API krever eksplisitt modell-ID fra den valgte leverandøren.")
     modell = (modell or MODELLER.get(motor, '')).strip()
+    if motor == 'opencode_cli' and not re.fullmatch(r'[A-Za-z0-9][\w.-]*/[^#\s]+', modell):
+        raise ValueError('OpenCode krever eksplisitt modell i formatet leverandør/modell, for eksempel '
+                         'anthropic/claude-sonnet-5. Velg tenkenivå separat, ikke som #-suffiks.')
     if not modell or any(c.isspace() for c in modell) or modell.startswith("-"):
         raise ValueError("Modell må være et modellnavn eller en modell-ID uten mellomrom.")
     if motor == 'openrouter_api' and (modell.startswith('openrouter/') or modell.startswith('~') or ':' in modell):
         raise ValueError('Velg en konkret OpenRouter-modell uten automatisk modellruting eller variant-suffiks.')
-    nivaa = tenkenivaa if tenkenivaa is not None else valg.get("tenkenivaa", "standard" if motor in API_MOTORER else STANDARD_TENKENIVAA)
+    standard = "standard" if motor in API_MOTORER or motor == 'opencode_cli' else STANDARD_TENKENIVAA
+    nivaa = tenkenivaa if tenkenivaa is not None else valg.get("tenkenivaa", standard)
     levels = TENKENIVAA[wire_engine(motor, valg)]
     if nivaa not in levels:
         raise ValueError(f"Ugyldig tenkenivå for {motor}. Velg: {', '.join(levels)}.")

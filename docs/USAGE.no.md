@@ -1,6 +1,6 @@
 # Systematic Document Analysis
 
-En kontrollert for-løkke over filer i Claude Code eller Codex: én standardisert oppgave, én uavhengig CLI/API-arbeider per fil, og et etterprøvbart spor fra resultat til kilde, instruks, innstillinger og råsvar. Oppgaven bestemmer leveransen. Se [oppgaver, resultater og validering](TASKS.md).
+En kontrollert for-løkke over filer i Claude Code, Codex eller OpenCode: én standardisert oppgave, én uavhengig CLI/API-arbeider per fil, og et etterprøvbart spor fra resultat til kilde, instruks, innstillinger og råsvar. Oppgaven bestemmer leveransen. Se [oppgaver, resultater og validering](TASKS.md).
 
 [English](USAGE.md) · [Start her](../README.md) · [Installasjon og oppdateringer](UPDATES.md)
 
@@ -9,7 +9,7 @@ En kontrollert for-løkke over filer i Claude Code eller Codex: én standardiser
 **Du trenger bare å dobbeltklikke `installer.cmd`.** Det installerer pluginen og eventuelt manglende kommandolinjeverktøy (CLI), lar deg velge lesemotor og sjekker abonnementsinnloggingen. Er CLI-et ikke innlogget med abonnement, starter innloggingen, og du fullfører den i nettleseren. Eksisterende abonnementsinnlogging brukes videre. At du er innlogget i skrivebordsappen, er ikke en bekreftelse på at CLI-et er innlogget.
 
 1. Last ned **[Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** og pakk den ut under Nedlastinger. Se [siste publiserte utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest).
-2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, velg **1 = Installer**, deretter **1 = Claude Code, 2 = Codex eller 3 = begge**. Kjør som din vanlige Windows-bruker, utenfor Claude- og Codex-appene.
+2. Åpne den utpakkede mappen i Filutforsker, dobbeltklikk **installer.cmd**, velg **1 = Installer**, deretter **1 = Claude Code, 2 = Codex, 3 = begge eller 4 = OpenCode**. Kjør som din vanlige Windows-bruker, utenfor Claude- og Codex-appene.
 3. **Fortsett i samme installasjonsvindu:** velg lesemotor, **1 = Codex / ChatGPT, 2 = Claude Code eller 3 = begge**, og fullfør eventuell innlogging med riktig konto i nettleseren. Vent til installasjonsvinduet bekrefter innloggingen. Velg **4 = hopp over** hvis du skal bruke API eller sette opp lesemotoren senere. Valg av lesemotor er uavhengig av appen du valgte i steg 2.
 4. Åpne arbeidsmappen i **Code-fanen** i Claude eller i Codex, start en **ny lokal samtale**, og beskriv oppgaven: **«Bruk Systematic Document Analysis. Jeg vil undersøke hvordan disse årsrapportene omtaler egen bruk av KI. Filene ligger i [mappe].»**
 
@@ -45,7 +45,7 @@ Når samme oppgave gjentas over førti rapporter, tilbud eller regneark, trenger
 - **Registrerer menneskelig kontroll.** En person godkjenner, korrigerer eller avviser hver vurdering med begrunnelse. Automatiske kontroller registreres aldri som menneskelig kontroll.
 - **Leverer et datasett automatisk.** Regnearket har én rad per kjøring og variabler som passer oppgaven. Gjentatte poster, feil og omkjøringer får egne faner når de er relevante. Kontrollsporet er samlet i ett arkiv.
 
-Samtalen foregår i Claude Code eller Codex. Pluginen legger til bokføringen og den repeterbare lesingen; assistenten hjelper fortsatt med spørsmålet, kriteriene og vanskelige filer.
+Samtalen foregår i Claude Code, Codex eller OpenCode. Pluginen legger til bokføringen og den repeterbare lesingen; assistenten hjelper fortsatt med spørsmålet, kriteriene og vanskelige filer.
 
 ## Hva den ikke gjør
 
@@ -75,14 +75,14 @@ Hvis innloggingen ble hoppet over, åpne **installer.cmd**, velg Innlogging og i
 ### Manuelt
 
 1. Last ned [Windows-ZIP-en](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) fra [siste utgave](https://github.com/emilmsh/systematic-document-analysis/releases/latest) og pakk den ut.
-2. Dobbeltklikk `installer.cmd` i Filutforsker og velg Claude Code, Codex eller begge. Programmet klargjør Python 3.12 eller nyere, installerer et manglende kommandolinjeverktøy for appen og registrerer pluginens utgivelseskanal, slik at appen holder den oppdatert.
+2. Dobbeltklikk `installer.cmd` i Filutforsker og velg Claude Code, Codex eller begge. Programmet klargjør Python 3.12 eller nyere, installerer et manglende kommandolinjeverktøy for appen og registrerer pluginens utgivelseskanal, slik at appen holder den oppdatert. For OpenCode 2 velger du OpenCode; installer OpenCode og logg inn hos en leverandør først. Se [OpenCode](UPDATES.md#opencode).
 3. I samme vindu velger du lesemotor, **1 = Codex / ChatGPT, 2 = Claude Code eller 3 = begge**, og fullfører eventuell innlogging i nettleseren. Installeringen sjekker innloggingen før den melder at oppsettet er ferdig. **4 = hopp over** utsetter dette steget eller lar deg bruke API. Start deretter en ny lokal samtale. Første oppstart installerer Python-avhengighetene.
 
 Lesing med abonnementet ditt bruker appens egen CLI. Normalinstallasjonen klargjør valgt CLI og lokal OCR med norsk og engelsk språkstøtte; innloggingen fullfører du selv. PATH håndteres automatisk. Lesesesjonene får filverktøy, parsere, PDF-sidebilder og OCR i en egen arbeidsmappe per kjøring. `installer.cmd reader` og `installer.cmd ocr` brukes ved senere oppsett eller reparasjon. `installer.cmd settings` åpner en lokal fil for valgfrie API-nøkler.
 
 ### Oppdateringer
 
-Claude Code og Codex holder pluginen oppdatert fra utgivelseskanalen og laster en ny versjon i en ny samtale. `installer.cmd update` sjekker eller oppdaterer med en gang og slår automatisk oppdatering av eller på. Se [installasjon og oppdateringer](UPDATES.md) for innstillinger og feilsøking.
+Claude Code og Codex holder pluginen oppdatert fra utgivelseskanalen og laster en ny versjon i en ny samtale. `installer.cmd update` sjekker eller oppdaterer med en gang og slår automatisk oppdatering av eller på. OpenCode bruker en administrert lokal kopi: kjør `installer.cmd update` fra den installerte mappen. Se [installasjon og oppdateringer](UPDATES.md) for innstillinger og feilsøking.
 
 ## Bruk
 
@@ -104,7 +104,7 @@ Før kjøring foreslår assistenten oppgave, filutvalg, resultatvariabler med fo
 
 Filene kjøres uavhengig med én ny arbeider per forsøk. Store CLI-input leses med filverktøy; for store API-input gir en tydelig feil. Du kan stoppe, gjenoppta, se enkeltforsøk, registrere faktisk menneskelig kontroll og eksportere. Endret oppgave, resultatskjema eller kjøreinnstilling gir ny planversjon. Etterpå kan dere lage tabeller, rapporter og videre analyser i samtalen og beholde referanser til opprinnelige kjøringer.
 
-Vert og lesemotor velges uavhengig: Claude Code eller Codex som samtaleapp; `claude_cli` (standard `sonnet`, high), `codex_cli` (standard `gpt-5.6-terra`, high) eller en API-motor med eksplisitt modell-ID som leser. CLI-motorene bruker abonnementsinnloggingen din; API-motorer faktureres av leverandøren. Ønsket modell og tenkenivå lagres; om leverandøren faktisk fulgte tenkenivået, vet vi bare når den rapporterer det.
+Vert og lesemotor velges uavhengig: Claude Code, Codex eller OpenCode som samtaleapp; `claude_cli` (standard `sonnet`, high), `codex_cli` (standard `gpt-5.6-terra`, high), `opencode_cli` (eksplisitt `leverandør/modell`, tenkenivå `standard` som utgangspunkt) eller en API-motor med eksplisitt modell-ID som leser. CLI-motorene bruker abonnementsinnloggingen din; API-motorer faktureres av leverandøren. `opencode_cli` bruker leverandørene du er logget inn hos i OpenCode 2, og faktureres etter den innloggingen (abonnement eller API-nøkkel). Hver fil kjøres i en privat OpenCode-server uten dine OpenCode-innstillinger, plugins, MCP-servere, skills og AGENTS.md-filer. Leseren kan lese, søke og redigere i sin egen arbeidsmappe og bruke den medfølgende hjelperen; andre skallkommandoer, andre mapper, nett, skills og underagenter er sperret. Lesesesjonen eksporteres til kontrollsporet og slettes deretter fra OpenCode-historikken. OpenCodes gratismodeller kan ikke brukes på denne måten. Ønsket modell og tenkenivå lagres; om leverandøren faktisk fulgte tenkenivået, vet vi bare når den rapporterer det.
 
 Før kjøring viser assistenten lesemotor, eksakt ønsket modell-ID eller deployment-navn og resonneringsinnsats (tenkenivå), samlet med oppgaven og filutvalget. Manglende valg foreslås eksplisitt, med relevante avveininger mellom kvalitet, tid og kostnad. Andre vesentlige parametre tas med når de er relevante: tidsavbrudd, grense for output-tokens, inputbudsjett i byte, tilgang til filverktøy og API-endepunkt/grensesnitt. Leverandørstandarder og innstillinger som ikke støttes, merkes tydelig. Assistenten spør også hvor mange filer du vil kjøre samtidig, og foreslår et antall ut fra oppgaven (`max_concurrent_runs`, 1–16; én om gangen hvis ikke annet er avtalt). Hver fil får fortsatt sin egen, uavhengige kjøring. Flere samtidige gir kortere ventetid, men samme kvote- eller API-forbruk, og en kvotestopp avbryter da flere kjøringer. Det godkjente antallet er et tak: en start eller gjenopptakelse kan bruke færre, mens flere krever en revidert, godkjent plan. Du kan godta eller justere forslaget før oppstart. Én godkjenning dekker den konkrete planen og innstillingene; samme godkjenning brukes videre så lenge planen er uendret. Endringer må godkjennes for den reviderte planen før kjøring.
 

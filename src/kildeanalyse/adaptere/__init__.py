@@ -5,12 +5,14 @@ from .base import Adapter, AdapterFeil
 from .simulert import SimulertAdapter
 from .claude_cli import ClaudeCliAdapter
 from .codex_cli import CodexCliAdapter
+from .opencode_cli import OpencodeCliAdapter
 from .api import OpenAiApiAdapter, AzureFoundryApiAdapter, AnthropicApiAdapter, OpenRouterApiAdapter, KompatibelApiAdapter
 
 ADAPTERE: dict[str, type[Adapter]] = {
     SimulertAdapter.navn: SimulertAdapter,
     ClaudeCliAdapter.navn: ClaudeCliAdapter,
     CodexCliAdapter.navn: CodexCliAdapter,
+    OpencodeCliAdapter.navn: OpencodeCliAdapter,
     **{cls.navn: cls for cls in (OpenAiApiAdapter, AzureFoundryApiAdapter, AnthropicApiAdapter, OpenRouterApiAdapter, KompatibelApiAdapter)},
 }
 

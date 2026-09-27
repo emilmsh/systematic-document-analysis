@@ -1,6 +1,6 @@
 # Systematic Document Analysis
 
-A controlled for-loop over files in Claude Code or Codex: one agreed task, one independent CLI/API worker per file, and an audit trail from result back to source, instruction, settings and raw response. The task determines the deliverable. See [task contracts and examples](TASKS.md).
+A controlled for-loop over files in Claude Code, Codex or OpenCode: one agreed task, one independent CLI/API worker per file, and an audit trail from result back to source, instruction, settings and raw response. The task determines the deliverable. See [task contracts and examples](TASKS.md).
 
 [Norsk](USAGE.no.md) · [Start here](../README.md) · [Installation and updates](UPDATES.md)
 
@@ -9,7 +9,7 @@ A controlled for-loop over files in Claude Code or Codex: one agreed task, one i
 **You only need to double-click `installer.cmd`.** It installs the plugin and any missing command-line tool (CLI), lets you choose a reader, and checks subscription sign-in. If the CLI is not signed in with a subscription, it starts sign-in for you to complete in your browser. Existing subscription sign-in is reused. Being signed in to the desktop app does not confirm that the CLI is signed in.
 
 1. Download the **[Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip)** and extract it under Downloads. See the [latest published release](https://github.com/emilmsh/systematic-document-analysis/releases/latest).
-2. Open the extracted folder in File Explorer, double-click **installer.cmd**, choose **1 = Install**, then **1 = Claude Code, 2 = Codex, or 3 = both**. Run as your ordinary Windows user, outside the Claude and Codex desktop apps.
+2. Open the extracted folder in File Explorer, double-click **installer.cmd**, choose **1 = Install**, then **1 = Claude Code, 2 = Codex, 3 = both, or 4 = OpenCode**. Run as your ordinary Windows user, outside the Claude and Codex desktop apps.
 3. **Continue in the same installer window:** choose your reader, **1 = Codex / ChatGPT, 2 = Claude Code or 3 = Both**, and complete any required browser sign-in with the intended account. Wait for the installer to confirm sign-in. Choose **4 = Skip** if you will use an API or set up the reader later. The reader is independent of the app selected in step 2.
 4. Open your working folder in Claude Code's **Code tab** or in Codex, start a **new local conversation**, and describe your task: **“Use Systematic Document Analysis. I want to understand how these annual reports describe their use of AI. The files are in [folder].”**
 
@@ -39,7 +39,7 @@ When one task is repeated across forty reports, offers or workbooks, you need to
 - **Records human review.** A person approves, corrects or rejects each assessment with a reason. Automatic checks are never recorded as human review.
 - **Delivers a dataset automatically.** One workbook row per run, task-specific variables in columns, and separate sheets for repeated records, errors and retries when relevant. Original results and the full audit trail are preserved in one documentation ZIP.
 
-The conversation stays in Claude Code or Codex. The plugin adds the record keeping and the repeatable reading; the assistant still helps you think about the question, the criteria and problem files.
+The conversation stays in Claude Code, Codex or OpenCode. The plugin adds the record keeping and the repeatable reading; the assistant still helps you think about the question, the criteria and problem files.
 
 ## What it does not do
 
@@ -69,14 +69,14 @@ If sign-in was skipped, open **installer.cmd**, choose Sign-in and settings → 
 ### By hand
 
 1. Download the [Windows ZIP](https://github.com/emilmsh/systematic-document-analysis/releases/latest/download/systematic-document-analysis-windows.zip) from the [latest release](https://github.com/emilmsh/systematic-document-analysis/releases/latest) and extract it.
-2. Double-click `installer.cmd` in File Explorer, choose Install, then Claude Code, Codex or both. It prepares Python 3.12 or newer, installs a missing host CLI and registers the plugin's release channel, so the app keeps it updated.
+2. Double-click `installer.cmd` in File Explorer, choose Install, then Claude Code, Codex or both. It prepares Python 3.12 or newer, installs a missing host CLI and registers the plugin's release channel, so the app keeps it updated. For OpenCode 2, choose OpenCode; install OpenCode and sign in to a provider first. See [OpenCode](UPDATES.md#opencode).
 3. In the same window, choose your reader, **1 = Codex / ChatGPT, 2 = Claude Code or 3 = Both**, and complete any required browser sign-in. The installer checks sign-in before reporting setup complete. **4 = Skip** postpones this step or lets you use an API. Then start a new local conversation. The first start installs the Python dependencies.
 
 Subscription reading uses the app's CLI. Normal installation sets up the selected CLI and local OCR with English/Norwegian language data; you complete the vendor's sign-in yourself. CLI discovery handles stale PATH automatically. Reader sessions get file tools, parsers, PDF page images and OCR in a fresh workspace per call. `installer.cmd reader` and `installer.cmd ocr` remain available for later setup or repair. `installer.cmd settings` opens a local file for optional API keys.
 
 ### Updates
 
-Claude Code and Codex keep the plugin updated from its release channel and load a new version in a new conversation. `installer.cmd update` checks or updates now and turns automatic updates on or off. See [installation and updates](UPDATES.md) for settings and troubleshooting.
+Claude Code and Codex keep the plugin updated from its release channel and load a new version in a new conversation. `installer.cmd update` checks or updates now and turns automatic updates on or off. OpenCode uses a managed local copy: run `installer.cmd update` from its installed folder. See [installation and updates](UPDATES.md) for settings and troubleshooting.
 
 ## Using it
 
@@ -104,9 +104,11 @@ The app you talk to and the model that reads the documents are chosen separately
 
 | Host (conversation) | Reader (reads each document) |
 |---|---|
-| Claude Code, Codex desktop | `claude_cli` (default `sonnet`, high), `codex_cli` (default `gpt-5.6-terra`, high), or `openai_api`, `azure_foundry_api`, `anthropic_api`, `openrouter_api`, `kompatibel_api` with an explicit model ID |
+| Claude Code, Codex desktop, OpenCode | `claude_cli` (default `sonnet`, high), `codex_cli` (default `gpt-5.6-terra`, high), `opencode_cli` (explicit `provider/model`, effort `standard` by default), or `openai_api`, `azure_foundry_api`, `anthropic_api`, `openrouter_api`, `kompatibel_api` with an explicit model ID |
 
 CLI readers use your subscription sign-in and the vendor's agent harness with a fresh context per file and access to their built-in tools. API readers make direct calls and are billed by the provider. The requested model and effort are recorded; whether a provider honoured the effort is only known if it reports it.
+
+`opencode_cli` uses the providers you have signed in to in OpenCode 2 (`opencode auth login`); billing follows that login, which can be a subscription or an API key. Name the model as `provider/model`, for example `openai/gpt-5.6-terra`; the effort maps to an OpenCode model variant that the model must support. Each file runs in a private OpenCode server with its own configuration, so your OpenCode settings, plugins, MCP servers, skills and AGENTS.md files are not loaded. File plans may read, search and edit in the run workspace and run the bundled helper; other shell commands, other folders, web access, skills and subagents are denied. Provider API keys in the environment are not passed on. OpenCode stores sessions together with its logins, so each reader session is exported for the audit and then deleted from OpenCode's history. OpenCode's free models cannot be used this way.
 
 ### API keys (optional)
 

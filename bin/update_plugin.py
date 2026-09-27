@@ -139,7 +139,7 @@ def managed_install(root):
         return None
     target = local_path(marker['target'])
     base = local_path(marker['base'])
-    if marker.get('host') not in ('claude', 'codex') or target != base/marker['host']/NAME:
+    if marker.get('host') not in ('claude', 'codex', 'opencode') or target != base/marker['host']/NAME:
         raise ValueError('Invalid installation record.')
     current = read_json(target/MARKER)
     if current.get('target') != str(target) or current.get('host') != marker['host']:
@@ -160,6 +160,13 @@ def apply_release(marker, release):
     # Never overwrite a development copy or local edits during automatic updates.
     if package_hash(target) != marker.get('installed_sha256'):
         raise RuntimeError('Installed files have local changes. Use installer.cmd to repair or keep them.')
+    if marker['host'] == 'opencode':
+        import opencode_host
+        if opencode_host.installed_target() != target:
+            raise RuntimeError('This copy is not the active OpenCode installation. Run installer.cmd opencode.')
+        with tempfile.TemporaryDirectory(prefix='sda-release-') as temporary:
+            source = download(release, temporary)
+            return opencode_host.install(marker['base'], root=source, locked=True) == 'installed'
     exe = find_cli(marker['host'])
     if not Path(exe).is_file() and not shutil.which(exe):
         raise RuntimeError('The host CLI is unavailable. Run installer.cmd reader before updating.')
@@ -246,7 +253,7 @@ def channel_updates(args, parser):
     hosts = channel_installs()
     if not hosts:
         raise RuntimeError('No installation from the GitHub release channel was found. Run installer.cmd to install it. '
-                           'For a --local-copy installation, run installer.cmd update in its installed folder.')
+                           'For a --local-copy or OpenCode installation, run installer.cmd update in its installed folder.')
     if args.mode:
         for host, _, _ in hosts:
             if host == 'claude':
@@ -274,7 +281,7 @@ def channel_updates(args, parser):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--mode', choices=('off','notify','auto'), help='Save the policy for future sessions in both apps')
+    parser.add_argument('--mode', choices=('off','notify','auto'), help='Save the policy for future sessions in all apps')
     parser.add_argument('--check', action='store_true')
     parser.add_argument('--install', action='store_true', help='Install the latest stable release now')
     args = parser.parse_args()
@@ -299,7 +306,7 @@ def main():
         with installation_lock(notify=lambda message: print(message, flush=True)) if args.install else maintenance_lock(shared=True):
             if args.mode:
                 write_json(state_dir()/'updates.json', {'mode':args.mode})
-                print(f'Update policy: {args.mode}. Applies to managed installations in both apps.')
+                print(f'Update policy: {args.mode}. Applies to managed installations in all apps.')
             if args.check or args.install:
                 release = check(force=True)
                 print(release['message'])

@@ -637,7 +637,8 @@ def finish_reader_setup(reader, *, interactive):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('app', nargs='?', choices=['claude','codex','both','begge'])
+    parser.add_argument('app', nargs='?', choices=['claude','codex','both','begge','opencode'],
+                        help='both = Claude Code and Codex. OpenCode always gets a managed local copy.')
     parser.add_argument('--local-copy', action='store_true',
                         help='Install this package as a managed local copy instead of the GitHub release channel '
                              '(offline or development; updates through installer.cmd update)')
@@ -659,17 +660,17 @@ def main():
     if args.reader is not None and (args.prepare_only or args.recover):
         parser.error('--reader cannot be combined with --prepare-only or --recover.')
     local_copy = args.local_copy or args.prepare_only or args.recover
-    if not local_copy and (args.allow_downgrade or args.move_shadow):
+    if not local_copy and (args.move_shadow or (args.allow_downgrade and args.app != 'opencode')):
         parser.error('--allow-downgrade and --move-shadow apply to --local-copy installations.')
     if sys.version_info < (3,12) or os.name != 'nt':
         parser.error('This installation package requires Windows and Python 3.12 or newer.')
     interactive = not args.non_interactive and sys.stdin.isatty()
     app = args.app
     if not interactive and not app:
-        parser.error('Choose claude, codex or both when running without an interactive terminal.')
+        parser.error('Choose claude, codex, both or opencode when running without an interactive terminal.')
     if not app:
-        print('Install Systematic Document Analysis: 1 = Claude Code, 2 = Codex, 3 = both')
-        app = {'1':'claude','2':'codex','3':'begge'}.get(input('Choose 1, 2 or 3: ').strip())
+        print('Install Systematic Document Analysis: 1 = Claude Code, 2 = Codex, 3 = both, 4 = OpenCode')
+        app = {'1':'claude','2':'codex','3':'begge','4':'opencode'}.get(input('Choose 1, 2, 3 or 4: ').strip())
         if not app:
             parser.error('Invalid choice; installation has not started.')
     failures = []
@@ -680,12 +681,22 @@ def main():
         # One gate for both hosts: clients cannot reconnect between local-copy installations.
         # The hosts manage release-channel copies themselves, so open sessions are left alone.
         gate = (installation_lock(notify=lambda message: print(message, flush=True))
-                if local_copy and not args.prepare_only else nullcontext())
+                if (local_copy or app == 'opencode') and not args.prepare_only else nullcontext())
         with gate:
             for host in (['claude','codex'] if app in ('both','begge') else [app]):
                 try:
                     if args.prepare_only:
                         print(prepare(host, args.base_dir))
+                    elif host == 'opencode':
+                        import opencode_host
+                        if args.recover:
+                            print(f'{host}: {opencode_host.recover(args.base_dir, locked=True)}')
+                        else:
+                            result = opencode_host.install(args.base_dir, replace_source=args.replace_source,
+                                                           repair=args.repair, allow_downgrade=args.allow_downgrade,
+                                                           interactive=interactive, locked=True)
+                            print(f'{host}: {result}')
+                            installed = installed or result in ('installed', 'already up to date')
                     elif args.recover:
                         print(f'{host}: {recover(host, args.base_dir, locked=True)}')
                     elif not local_copy:
@@ -702,7 +713,7 @@ def main():
                 except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
                     failures.append(host)
                     print(f'{host}: installation stopped: {exc}', file=sys.stderr)
-                    if not local_copy:
+                    if not local_copy and host != 'opencode':
                         print(f'{host}: if GitHub cannot be reached, install this package with '
                               f'installer.cmd {host} --local-copy (no automatic updates).', file=sys.stderr)
     except (RuntimeError, OSError, ValueError) as exc:
