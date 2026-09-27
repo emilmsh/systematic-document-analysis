@@ -150,6 +150,13 @@ def test_managed_update_replaces_the_opencode_copy(source, opencode, tmp_path, m
     assert opencode_host.installed_target() == target
 
 
+def test_prepare_timeout_is_not_an_installation_failure(tmp_path):
+    target = tmp_path/installer.NAME
+    (target/'bin').mkdir(parents=True)
+    (target/'bin'/'start_server.py').write_text('import time; time.sleep(60)', encoding='utf-8')
+    assert opencode_host.prepare_runtime(target, timeout=2) is False
+
+
 def test_prepare_only_builds_the_separate_opencode_environment(tmp_path, monkeypatch):
     spec = importlib.util.spec_from_file_location('bootstrap_prepare', Path(__file__).resolve().parents[1]/'bin'/'start_server.py')
     bootstrap = importlib.util.module_from_spec(spec)

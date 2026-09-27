@@ -12,6 +12,8 @@ import subprocess
 import sys
 import shutil
 import tempfile
+import threading
+import time
 import uuid
 
 
@@ -46,6 +48,65 @@ def pip_works(python: Path) -> bool:
         return False
 
 
+PIP_TIMEOUT_SEC = 600
+# pip checks certificates against the Windows store (truststore). On some machines that
+# native call crashes with an access violation and pip then hangs; its bundled
+# certificates (legacy-certs) still work.
+CERTIFICATE_FAILURES = ("access violation", "CERTIFICATE_VERIFY_FAILED")
+
+
+def stop_tree(process: subprocess.Popen) -> None:
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                       stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if process.poll() is None:
+        process.kill()
+
+
+def pip_run(command: list[str], env: dict[str, str], timeout: float = PIP_TIMEOUT_SEC) -> tuple[int | None, bool]:
+    """Exit code, or None when stopped, and whether a certificate failure was reported."""
+    process = subprocess.Popen(command, env=env, stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=subprocess.PIPE,
+                               text=True, encoding="utf-8", errors="replace")
+    failed = threading.Event()
+
+    def forward() -> None:
+        for line in process.stderr:
+            sys.stderr.write(line)
+            if any(text in line for text in CERTIFICATE_FAILURES):
+                failed.set()
+    reader = threading.Thread(target=forward, daemon=True)
+    reader.start()
+    deadline = time.monotonic() + timeout
+    stopped = False
+    while process.poll() is None:
+        if failed.is_set() or time.monotonic() > deadline:
+            stop_tree(process)
+            stopped = True
+            break
+        time.sleep(0.2)
+    process.wait()
+    reader.join(timeout=5)
+    return (None if stopped else process.returncode), failed.is_set()
+
+
+def pip_install(python: Path, source: Path) -> None:
+    command = [str(python), "-X", "utf8", "-m", "pip", "install", "--disable-pip-version-check", "--quiet", str(source)]
+    code, certificate = pip_run(command, dict(os.environ))
+    if code == 0:
+        return
+    if certificate:
+        print("[Systematic Document Analysis] pip's Windows certificate check failed; retrying once with pip's "
+              "bundled certificates.", file=sys.stderr, flush=True)
+        # The environment variable also reaches pip's build-dependency subprocess.
+        code, _ = pip_run(command, dict(os.environ, PIP_USE_DEPRECATED="legacy-certs"))
+        if code == 0:
+            return
+    if code is None:
+        raise RuntimeError("pip did not finish installing the plugin dependencies. Check the network connection "
+                           "to pypi.org and restart the plugin.")
+    raise subprocess.CalledProcessError(code, command)
+
+
 def prepare(root: Path, data: Path) -> Path:
     local = root / ".venv" / "Scripts" / "python.exe"
     if usable(local, root / "src"):
@@ -78,10 +139,7 @@ def prepare(root: Path, data: Path) -> Path:
         shutil.copy2(root/'pyproject.toml', source/'pyproject.toml')
         shutil.copytree(root/'src/kildeanalyse', source/'src/kildeanalyse',
                         ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
-        subprocess.run(
-            [str(python), "-X", "utf8", "-m", "pip", "install", "--disable-pip-version-check", "--quiet", str(source)],
-            check=True, stdout=sys.stderr,
-        )
+        pip_install(python, source)
     if not usable(python):
         raise RuntimeError("The Python environment could not import the MCP server after installation.")
     marker.write_text(wanted, encoding="ascii")

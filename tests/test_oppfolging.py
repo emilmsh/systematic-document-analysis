@@ -1,7 +1,9 @@
 """Regresjoner funnet ved overtakelse: låsing, kontrollhistorikk og bootstrap."""
 import importlib.util
 import multiprocessing
+import os
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -73,6 +75,7 @@ def test_bootstrap_avbrutt_installering_proves_igjen(tmp_path, monkeypatch):
     monkeypatch.setattr(bootstrap, "usable", lambda p, source=None: source is None)
     monkeypatch.setattr(bootstrap, "pip_works", lambda p: True)
     monkeypatch.setattr(bootstrap.subprocess, "run", lambda command, **kw: calls.append(command))
+    monkeypatch.setattr(bootstrap, "pip_install", lambda python, source: calls.append(["pip", "install", str(source)]))
     assert bootstrap.prepare(root, data) == python
     assert len(calls) == 1 and "pip" in calls[0]
     bootstrap.prepare(root, data)
@@ -100,11 +103,38 @@ def test_bootstrap_bygger_nytt_miljo_etter_avbrutt_venv_oppretting(tmp_path, mon
     monkeypatch.setattr(bootstrap, "usable", lambda p, source=None: source is None)
     monkeypatch.setattr(bootstrap, "pip_works", lambda p: False)
     monkeypatch.setattr(bootstrap.subprocess, "run", run)
+    monkeypatch.setattr(bootstrap, "pip_install", lambda python, source: calls.append(["pip", "install", str(source)]))
     assert bootstrap.prepare(root, data) == python
     assert "venv" in calls[0] and "pip" in calls[1]
     broken = list(data.glob("venv.broken-*"))
     assert len(broken) == 1 and (broken[0] / "Scripts" / "python.exe").is_file()
     assert (data / "venv" / "kildeanalyse-source.sha256").is_file()
+
+
+def test_pip_stoppes_ved_sertifikatkrasj_og_proves_en_gang_med_pip_sertifikater(monkeypatch):
+    runs = []
+
+    def pip_run(command, env):
+        runs.append(env.get("PIP_USE_DEPRECATED"))
+        return (None, True) if len(runs) == 1 else (0, False)
+    monkeypatch.setattr(bootstrap, "pip_run", pip_run)
+    bootstrap.pip_install(Path("python.exe"), Path("source"))
+    assert runs == [None, "legacy-certs"]
+    runs.clear()
+    monkeypatch.setattr(bootstrap, "pip_run", lambda command, env: runs.append(1) or (1, False))
+    with pytest.raises(bootstrap.subprocess.CalledProcessError):
+        bootstrap.pip_install(Path("python.exe"), Path("source"))
+    assert runs == [1]  # other pip errors are reported without a retry
+
+
+def test_pip_run_stopper_hengende_prosess_etter_sertifikatkrasj():
+    script = ("import sys, time; print('WARNING: Retrying after connection broken by OSError(\"exception: access "
+              "violation writing 0x48\")', file=sys.stderr, flush=True); time.sleep(120)")
+    started = time.monotonic()
+    code, certificate = bootstrap.pip_run([sys.executable, "-c", script], dict(os.environ), timeout=60)
+    assert code is None and certificate and time.monotonic() - started < 30
+    code, certificate = bootstrap.pip_run([sys.executable, "-c", "import time; time.sleep(30)"], dict(os.environ), timeout=1)
+    assert code is None and not certificate
 
 
 def test_editable_miljo_aksepteres_bare_for_riktig_kilde(tmp_path):
