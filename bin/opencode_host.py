@@ -145,12 +145,29 @@ def check_opencode():
     return output.strip()
 
 
-def prepare_runtime(target):
-    """Build the Python environment now, so the first OpenCode session starts quickly."""
+PREPARE_TIMEOUT_SEC = 900
+
+
+def prepare_runtime(target, timeout=PREPARE_TIMEOUT_SEC):
+    """Build the Python environment now, so the first OpenCode session starts quickly.
+
+    A failure or timeout is not an installation failure: OpenCode prepares it on first start.
+    """
     env = dict(os.environ, PYTHONUTF8='1', SDA_PLUGIN_DATA=str(plugin_data()))
-    result = subprocess.run([sys.executable, '-X', 'utf8', str(Path(target)/'bin'/'start_server.py'), '--prepare-only'],
-                            env=env, stdin=subprocess.DEVNULL, timeout=900)
-    return result.returncode == 0
+    try:
+        process = subprocess.Popen([sys.executable, '-X', 'utf8', str(Path(target)/'bin'/'start_server.py'),
+                                    '--prepare-only'], env=env, stdin=subprocess.DEVNULL)
+    except OSError:
+        return False
+    try:
+        return process.wait(timeout=timeout) == 0
+    except subprocess.TimeoutExpired:
+        # pip runs as a grandchild; stop the whole tree rather than leave it hanging.
+        subprocess.run(['taskkill', '/F', '/T', '/PID', str(process.pid)], capture_output=True)
+        if process.poll() is None:
+            process.kill()
+        process.wait()
+        return False
 
 
 def install(base, *, root=None, replace_source=False, repair=False, allow_downgrade=False, interactive=False, locked=False):
