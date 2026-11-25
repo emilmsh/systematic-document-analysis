@@ -1,3 +1,11 @@
+# 0.13.3 — Idle sessions no longer grow in memory
+
+- Stop an idle plugin session from growing by 2–3 GB of committed memory a day. Every open conversation in Claude Code, Codex or OpenCode runs one plugin process, which checks five times a second whether an update is waiting. Each check created new Windows lock types that Python never frees, so sessions left open for days could exhaust the machine's memory even when the plugin was not used. The types are now created once.
+- Sessions that are already open keep running the old version. Close them, or restart the app, after updating.
+- Plugin descriptions and the document-processing guide name OpenCode alongside Codex and Claude Code.
+
+Verification: 530 tests passed; a new test fails on 0.13.2 and requires that repeated update checks create no new types. Over 20,000 update checks, the process grew by 209 MB on 0.13.2 and by 0.6 MB with the fix. The plugin validator passed in strict mode. The release ZIP (75 files, 216,011 bytes, SHA-256 `b7c7f25c2c23f04ea9041ac220d0de2e381fff63005504e196b213b201e156ee`) was extracted to an empty folder, built its Python environment, answered the MCP handshake as 0.13.3 and exited when its input closed. That server's private memory stayed at 60.5 MB over two idle minutes; 0.13.2 grew by about 2 MB in 90 seconds. Growth over days was not re-measured. No live reader calls.
+
 # 0.13.2 — OpenCode updates while OpenCode is open
 
 - Update an OpenCode installation while OpenCode is running. OpenCode watches every skills folder it loads, and Windows refuses to move a folder while anything below it is watched, so installing over 0.13.0 or 0.13.1 failed with "access denied" and was rolled back. The skill now lives in its own folder beside the installation (`...\plugins\opencode\skills`) and is updated in place; its guide links point at the installed documentation. An existing installation is switched to that folder first, and the installer then waits up to 30 seconds for OpenCode to release the old one. Rollback and recovery restore the files before the configuration.
