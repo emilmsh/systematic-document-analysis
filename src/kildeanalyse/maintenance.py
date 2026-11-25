@@ -36,6 +36,29 @@ def write_json(path: Path, value) -> None:
         temporary.unlink(missing_ok=True)
 
 
+if os.name == 'nt':
+    # Built once: an idle session polls the lock several times a second, and ctypes
+    # keeps every structure and pointer type it is asked to create.
+    import ctypes
+    from ctypes import wintypes
+    import msvcrt
+
+    class _Overlapped(ctypes.Structure):
+        _fields_ = [('Internal', ctypes.c_size_t), ('InternalHigh', ctypes.c_size_t),
+                    ('Offset', wintypes.DWORD), ('OffsetHigh', wintypes.DWORD),
+                    ('hEvent', wintypes.HANDLE)]
+
+    _kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    _lock_file = _kernel.LockFileEx
+    _lock_file.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD,
+                           wintypes.DWORD, wintypes.DWORD, ctypes.POINTER(_Overlapped)]
+    _lock_file.restype = wintypes.BOOL
+    _unlock_file = _kernel.UnlockFileEx
+    _unlock_file.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD,
+                             wintypes.DWORD, ctypes.POINTER(_Overlapped)]
+    _unlock_file.restype = wintypes.BOOL
+
+
 @contextmanager
 def _file_lock(name, *, shared=False):
     """Sessions share an OS lock; installation requires exclusive access.
@@ -47,32 +70,14 @@ def _file_lock(name, *, shared=False):
     folder.mkdir(parents=True, exist_ok=True)
     with (folder / name).open('a+b') as stream:
         if os.name == 'nt':
-            import ctypes
-            from ctypes import wintypes
-            import msvcrt
-
-            class Overlapped(ctypes.Structure):
-                _fields_ = [('Internal', ctypes.c_size_t), ('InternalHigh', ctypes.c_size_t),
-                            ('Offset', wintypes.DWORD), ('OffsetHigh', wintypes.DWORD),
-                            ('hEvent', wintypes.HANDLE)]
-
-            kernel = ctypes.WinDLL('kernel32', use_last_error=True)
-            lock = kernel.LockFileEx
-            lock.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD,
-                             wintypes.DWORD, wintypes.DWORD, ctypes.POINTER(Overlapped)]
-            lock.restype = wintypes.BOOL
-            unlock = kernel.UnlockFileEx
-            unlock.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD,
-                               wintypes.DWORD, ctypes.POINTER(Overlapped)]
-            unlock.restype = wintypes.BOOL
             handle = msvcrt.get_osfhandle(stream.fileno())
-            overlap = Overlapped()
-            if not lock(handle, 1 | (0 if shared else 2), 0, 1, 0, ctypes.byref(overlap)):
+            overlap = _Overlapped()
+            if not _lock_file(handle, 1 | (0 if shared else 2), 0, 1, 0, ctypes.byref(overlap)):
                 raise MaintenanceBusy('Close other plugin sessions and retry; setup or a session is active.')
             try:
                 yield
             finally:
-                unlock(handle, 0, 1, 0, ctypes.byref(overlap))
+                _unlock_file(handle, 0, 1, 0, ctypes.byref(overlap))
         else:
             import fcntl
             try:
