@@ -25,6 +25,20 @@ def python_command(code, *args):
     return [sys._base_executable, '-I', '-X', 'utf8', '-c', bootstrap+code, *map(str, args)]
 
 
+def test_idle_update_poll_creates_no_new_types():
+    # An idle session polls several times a second for days. ctypes keeps every
+    # structure type whose pointer type was requested, so none may be created per poll.
+    import ctypes
+    import gc
+    maintenance.update_pending()
+    gc.collect()
+    before = len(ctypes.Structure.__subclasses__())
+    for _ in range(200):
+        assert not maintenance.update_pending()
+    gc.collect()
+    assert len(ctypes.Structure.__subclasses__()) == before
+
+
 def test_intent_excludes_reconnect_and_other_installer_and_clears_after_failure():
     with pytest.raises(ValueError, match='test interruption'):
         with maintenance.installation_lock(wait_seconds=0):
